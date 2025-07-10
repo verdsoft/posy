@@ -18,6 +18,7 @@ import {
   Globe,
   Zap,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
@@ -31,11 +32,13 @@ const menuItems = [
     label: "Dashboard",
     icon: BarChart3,
     href: "/dashboard",
+    roles: ['admin', 'user']
   },
   {
     id: "products",
     label: "Products",
     icon: Package,
+    roles: ['admin'],
     submenu: [
       { label: "Create Product", href: "/products/create" },
       { label: "Product List", href: "/products/list" },
@@ -46,6 +49,7 @@ const menuItems = [
     id: "adjustment",
     label: "Adjustment",
     icon: Settings,
+    roles: ['admin'],
     submenu: [
       { label: "Create Adjustment", href: "/adjustment/create" },
       { label: "Adjustment List", href: "/adjustment/list" },
@@ -55,6 +59,7 @@ const menuItems = [
     id: "quotations",
     label: "Quotations",
     icon: FileText,
+    roles: ['admin'],
     submenu: [
       { label: "Create Quotation", href: "/quotations/create" },
       { label: "Quotation List", href: "/quotations/list" },
@@ -64,6 +69,7 @@ const menuItems = [
     id: "purchases",
     label: "Purchases",
     icon: ShoppingCart,
+    roles: ['admin'],
     submenu: [
       { label: "Create Purchase", href: "/purchases/create" },
       { label: "Purchase List", href: "/purchases/list" },
@@ -73,15 +79,24 @@ const menuItems = [
     id: "sales",
     label: "Sales",
     icon: DollarSign,
+    roles: ['admin', 'user'],
     submenu: [
-      { label: "Create Sale", href: "/sales/create" },
+      { label: "Create Sale", href: "/sales/create", roles: ['admin'] },
       { label: "Sale List", href: "/sales/list" },
     ],
+  },
+  {
+    id: "pos",
+    label: "POS",
+    icon: ShoppingCart,
+    href: "/pos",
+    roles: ['admin', 'user']
   },
   {
     id: "hrm",
     label: "HRM",
     icon: Users,
+    roles: ['admin'],
     submenu: [
       { label: "Company", href: "/hrm/company" },
       { label: "Departments", href: "/hrm/departments" },
@@ -103,6 +118,7 @@ const menuItems = [
     id: "transfer",
     label: "Transfer",
     icon: ArrowLeftRight,
+    roles: ['admin'],
     submenu: [
       { label: "Create Transfer", href: "/transfer/create" },
       { label: "Transfer List", href: "/transfer/list" },
@@ -112,6 +128,7 @@ const menuItems = [
     id: "expenses",
     label: "Expenses",
     icon: DollarSign,
+    roles: ['admin'],
     submenu: [
       { label: "Create Expense", href: "/expenses/create" },
       { label: "Expense List", href: "/expenses/list" },
@@ -122,6 +139,7 @@ const menuItems = [
     id: "sales-return",
     label: "Sales Return",
     icon: RotateCcw,
+    roles: ['admin'],
     submenu: [
       { label: "Create Sales Return", href: "/sales-return/create" },
       { label: "Sales Return List", href: "/sales-return/list" },
@@ -131,6 +149,7 @@ const menuItems = [
     id: "purchases-return",
     label: "Purchases Return",
     icon: RotateCcw,
+    roles: ['admin'],
     submenu: [
       { label: "Create Purchase Return", href: "/purchases-return/create" },
       { label: "Purchase Return List", href: "/purchases-return/list" },
@@ -140,15 +159,17 @@ const menuItems = [
     id: "people",
     label: "People",
     icon: Users,
+    roles: ['admin', 'user'],
     submenu: [
       { label: "Customer List", href: "/people/customers" },
-      { label: "Supplier List", href: "/people/suppliers" },
+      { label: "Supplier List", href: "/people/suppliers", roles: ['admin'] },
     ],
   },
   {
     id: "settings",
     label: "Settings",
     icon: Settings,
+    roles: ['admin'],
     submenu: [
       { label: "Warehouse", href: "/settings/warehouses" },
       { label: "Category", href: "/settings/categories" },
@@ -162,6 +183,7 @@ const menuItems = [
     id: "reports",
     label: "Reports",
     icon: BarChart3,
+    roles: ['admin'],
     submenu: [
       {
         label: "Payments",
@@ -205,29 +227,45 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [ hoveredSubItem,setHoveredSubItem] = useState<string | null>(null)
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(true)
-
-
-
-
   const [profileOpen, setProfileOpen] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
   const pathname = usePathname()
+
+  // Get user role (replace with your actual auth logic)
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('UserRole') || 'user' : 'user'
 
   const handleLogout = () => {
     dispatch(logout())
     router.push("/")
   }
 
-  // Helper to check if a menu or submenu is active
   const isActive = (href?: string) => {
     if (!href) return false
-    // Exact match or startsWith for parent sections
     return pathname === href || pathname.startsWith(href + "/")
+  }
+
+  const toggleItem = (itemId: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }))
+  }
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!item.roles) return true
+    return item.roles.includes(userRole)
+  })
+
+  // Filter submenu items based on role
+  const filterSubmenu = (submenu: any[]) => {
+    return submenu.filter(subItem => {
+      if (!subItem.roles) return true
+      return subItem.roles.includes(userRole)
+    })
   }
 
   return (
@@ -258,63 +296,96 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 py-4">
-            {menuItems.map((item) => {
-              // Check if any submenu is active
+          <nav className="flex-1 py-4 overflow-y-auto">
+            {filteredMenuItems.map((item) => {
               const submenuActive = item.submenu?.some(sub => isActive(sub.href))
               const active = isActive(item.href) || submenuActive
+              const isExpanded = expandedItems[item.id]
 
               return (
-                <div
-                  key={item.id}
-                  className="relative"
-                  onMouseEnter={() => setHoveredItem(item.id)}
-                  onMouseLeave={() => {
-                    setHoveredItem(null)
-                    setHoveredSubItem(null)
-                  }}
-                >
-                  <Link href={item.href || "#"}>
-                    <div
-                      className={`flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 cursor-pointer
-                        ${active ? "bg-purple-50 border-r-2 border-purple-600 font-semibold text-purple-900" : ""}`}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {sidebarOpen && (
-                        <>
+                <div key={item.id} className="relative">
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 cursor-pointer
+                      ${active ? "bg-purple-50 border-r-2 border-purple-600 font-semibold text-purple-900" : ""}`}
+                    onClick={() => item.submenu && toggleItem(item.id)}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {sidebarOpen && (
+                      <>
+                        {item.href ? (
+                          <Link href={item.href} className="flex-1" onClick={(e) => e.stopPropagation()}>
+                            {item.label}
+                          </Link>
+                        ) : (
                           <span className="flex-1">{item.label}</span>
-                          {item.submenu && <ChevronRight className="h-4 w-4" />}
-                        </>
-                      )}
-                    </div>
-                  </Link>
+                        )}
+                        {item.submenu && (
+                          isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+                        )}
+                      </>
+                    )}
+                  </div>
 
-                  {/* Submenu */}
-                  {item.submenu && hoveredItem === item.id && (
-                    <div className="absolute left-full top-0 w-64 bg-white border border-gray-200 shadow-lg rounded-md z-50 ml-1">
-                      <div className="py-2">
-                        {item.submenu.map((subItem, index) => {
-                          const subActive = isActive(subItem.href)
-                          return (
+                  {/* Submenu - shown below parent when expanded */}
+                  {item.submenu && isExpanded && sidebarOpen && (
+                    <div className="bg-gray-50">
+                      {filterSubmenu(item.submenu).map((subItem, index) => {
+                        const subActive = isActive(subItem.href)
+                        const hasSubSubmenu = subItem.submenu
+                        const isSubExpanded = expandedItems[`${item.id}-${subItem.label}`]
+
+                        return (
+                          <div key={index}>
                             <div
-                              key={index}
-                              className="relative"
-                              onMouseEnter={() => setHoveredSubItem(subItem.label)}
-                              onMouseLeave={() => setHoveredSubItem(null)}
+                              className={`flex items-center gap-3 px-8 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer
+                                ${subActive ? "bg-purple-100 text-purple-900 font-semibold" : ""}`}
+                              onClick={(e) => {
+                                if (hasSubSubmenu) {
+                                  e.stopPropagation()
+                                  setExpandedItems(prev => ({
+                                    ...prev,
+                                    [`${item.id}-${subItem.label}`]: !prev[`${item.id}-${subItem.label}`]
+                                  }))
+                                }
+                              }}
                             >
-                              <Link href={subItem.href}>
-                                <div className={`px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex items-center justify-between
-                                  ${subActive ? "bg-purple-100 text-purple-900 font-semibold" : ""}
-                                `}>
-                                  <span>{subItem.label}</span>
-                                  {subItem.submenu && <ChevronRight className="h-3 w-3" />}
-                                </div>
-                              </Link>
-                              {/* Third level submenu ... */}
+                              {subItem.href ? (
+                                <Link 
+                                  href={subItem.href} 
+                                  className="flex-1" 
+                                  onClick={(e) => !hasSubSubmenu && e.stopPropagation()}
+                                >
+                                  {subItem.label}
+                                </Link>
+                              ) : (
+                                <span className="flex-1">{subItem.label}</span>
+                              )}
+                              {hasSubSubmenu && (
+                                isSubExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
+                              )}
                             </div>
-                          )
-                        })}
-                      </div>
+
+                            {/* Third level submenu */}
+                            {hasSubSubmenu && isSubExpanded && (
+                              <div className="bg-gray-100">
+                                {filterSubmenu(subItem.submenu || []).map((subSubItem, subIndex) => {
+                                  const subSubActive = isActive(subSubItem.href)
+                                  return (
+                                    <Link href={subSubItem.href} key={subIndex}>
+                                      <div
+                                        className={`flex items-center gap-3 px-12 py-1 text-xs text-gray-700 hover:bg-gray-200 cursor-pointer
+                                          ${subSubActive ? "bg-purple-100 text-purple-900 font-semibold" : ""}`}
+                                      >
+                                        {subSubItem.label}
+                                      </div>
+                                    </Link>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -322,9 +393,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
         </div>
+
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
+          {/* Header - Exactly as in your original design */}
           <header className="bg-white border-b px-6 py-3 flex items-center justify-between shadow-none" style={{ fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif", fontSize: "14px" }}>
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" className="rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }} onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -380,7 +452,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             </div>
           </header>
-
 
           {/* Page Content */}
           <main className="flex-1 overflow-auto">{children}</main>
