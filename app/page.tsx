@@ -77,9 +77,11 @@ export default function LoginPage() {
     )
   }
 
-  return !isConfigured ? (
-  <DatabaseSetup />
-) : (
+//   return !isConfigured ? (
+//   <DatabaseSetup />
+// ) : (
+
+return(
   <div className="min-h-screen relative flex items-center justify-center bg-gray-100 overflow-hidden">
 
     {/* Ballpit Background */}
