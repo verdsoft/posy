@@ -13,7 +13,7 @@ import { QueryClientProviderWrapper } from "@/components/query-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Verdsoft BMS",
+  title: "Posy",
   description: "Business Management System"
    
 }

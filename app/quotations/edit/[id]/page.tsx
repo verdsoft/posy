@@ -1,16 +1,22 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Plus, Minus, X } from "lucide-react"
-import { searchProducts } from "@/lib/api"
+import { useRouter } from "next/navigation"
+import { useEffect, useState, useMemo } from "react"
+import { Loader2, Search, Minus, Plus, X } from "lucide-react"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import type React from "react"
+import { use } from "react"
+
+// Interfaces matching your create page
+interface PageParams {
+  id: string
+}
 
 interface Product {
   id: string
@@ -32,6 +38,7 @@ interface Warehouse {
 
 interface QuotationItem {
   id: string
+  product_id: string
   name: string
   code: string
   price: number
@@ -41,89 +48,125 @@ interface QuotationItem {
   tax: number
 }
 
-export default function CreateQuotation() {
-  
-  const [ loading,setLoading] = useState(true)
+interface Quotation {
+  id: string
+  reference: string
+  date: string
+  valid_until?: string
+  customer_id: string
+  warehouse_id: string
+  subtotal: number
+  tax_rate: number
+  tax_amount: number
+  discount: number
+  shipping: number
+  total: number
+  status: string
+  notes?: string
+  created_by: string
+  items: QuotationItem[]
+}
+
+export default function EditQuotation({ params }: { params: Promise<PageParams> }) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const { id } = use(params)
+  
+  // Form state - matching create page structure
+  const [date, setDate] = useState("")
   const [customerId, setCustomerId] = useState("")
   const [warehouseId, setWarehouseId] = useState("")
+  const [validUntil, setValidUntil] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<Product[]>([])
   const [items, setItems] = useState<QuotationItem[]>([])
+  const [orderTax, setOrderTax] = useState(0)
+  const [discount, setDiscount] = useState(0)
+  const [shipping, setShipping] = useState(0)
   const [status, setStatus] = useState("pending")
   const [note, setNote] = useState("")
-  const [validUntil, setValidUntil] = useState<string>('');
-  const [orderTax, setOrderTax] = useState<number>(0);
-  const [discount, setDiscount] = useState<number>(0);
-  const [shipping, setShipping] = useState<number>(0);
+  
+  // Data - matching create page
   const [customers, setCustomers] = useState<Customer[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
 
-
+  // Calculations - matching create page logic
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => {
-      const price = Number(item.price) || 0;
-      const quantity = Number(item.quantity) || 0;
-      return sum + (price * quantity);
-    }, 0);
-  }, [items]);
+      const price = Number(item.price) || 0
+      const quantity = Number(item.quantity) || 0
+      return sum + (price * quantity)
+    }, 0)
+  }, [items])
 
   const taxAmount = useMemo(() => {
-    const taxRate = Number(orderTax) || 0;
-    return subtotal * (taxRate / 100);
-  }, [subtotal, orderTax]);
+    const taxRate = Number(orderTax) || 0
+    return subtotal * (taxRate / 100)
+  }, [subtotal, orderTax])
 
   const grandTotal = useMemo(() => {
-    const discountValue = Number(discount) || 0;
-    const shippingValue = Number(shipping) || 0;
-    return subtotal + taxAmount - discountValue + shippingValue;
-  }, [subtotal, taxAmount, discount, shipping]);
+    const discountValue = Number(discount) || 0
+    const shippingValue = Number(shipping) || 0
+    return subtotal + taxAmount - discountValue + shippingValue
+  }, [subtotal, taxAmount, discount, shipping])
 
- 
-  // Modify your updateItem function to ensure numbers
-  const updateItem = (id: string, field: string, value: number | string) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, [field]: numValue } : item
-      )
-    );
-  };
+  // Format date for input fields
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return ""
+    const date = new Date(dateString)
+    return date.toISOString().split('T')[0]
+  }
 
-  // Fetch initial data
+  // Fetch initial data - matching create page pattern
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
+        
+        // Fetch quotation data
+        const quotationRes = await fetch(`/api/quotations?id=${id}`)
+        if (!quotationRes.ok) throw new Error("Failed to fetch quotation")
+        const quotationData: Quotation = await quotationRes.json()
 
-        // Fetch customers
-        const customersRes = await fetch('/api/customers')
-        if (customersRes.ok) {
-          const customersData = await customersRes.json()
-          setCustomers(customersData)
+        // Fetch customers and warehouses in parallel
+        const [customersRes, warehousesRes] = await Promise.all([
+          fetch('/api/customers'),
+          fetch('/api/settings/warehouses')
+        ])
+
+        if (!customersRes.ok || !warehousesRes.ok) {
+          throw new Error("Failed to fetch reference data")
         }
 
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        if (warehousesRes.ok) {
-          const warehousesData = await warehousesRes.json()
-          setWarehouses(warehousesData)
-        }
+        // Set states
+        setDate(formatDateForInput(quotationData.date))
+        setValidUntil(formatDateForInput(quotationData.valid_until || ""))
+        setCustomerId(quotationData.customer_id)
+        setWarehouseId(quotationData.warehouse_id)
+        setItems(quotationData.items || [])
+        setOrderTax(quotationData.tax_rate)
+        setDiscount(quotationData.discount)
+        setShipping(quotationData.shipping)
+        setStatus(quotationData.status)
+        setNote(quotationData.notes || "")
+        
+        setCustomers(await customersRes.json())
+        setWarehouses(await warehousesRes.json())
+
       } catch (error) {
-        console.error("Failed to load data:", error)
+        console.error("Error fetching data:", error)
+        toast.error("Failed to load quotation data")
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+  }, [id])
 
-
-
-  const [isSearching, setIsSearching] = useState(false)
-
+  // Product search - matching create page
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast.error("Please enter a search term")
@@ -132,26 +175,28 @@ export default function CreateQuotation() {
 
     setIsSearching(true)
     try {
-      const results = await searchProducts(searchQuery)
+      const res = await fetch(`/api/products?search=${searchQuery}`)
+      if (!res.ok) throw new Error("Search failed")
+      const results = await res.json()
       setSearchResults(results)
       if (results.length === 0) {
         toast.info("No products found matching your search")
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Search error:", error)
-      const message = error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error(message || "Failed to search products")
+      toast.error("Failed to search products")
     } finally {
       setIsSearching(false)
     }
   }
 
-  // Add product to quotation
+  // Item management - matching create page
   const addProduct = (product: Product) => {
     setItems(prev => [
       ...prev,
       {
         id: product.id,
+        product_id: product.id,
         name: product.name,
         code: product.code,
         price: product.price,
@@ -161,141 +206,107 @@ export default function CreateQuotation() {
         tax: 0
       }
     ])
-
     setSearchQuery("")
     setSearchResults([])
-    console.log(items)
   }
 
+  const updateItem = (id: string, field: string, value: number | string) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value
+    setItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, [field]: numValue } : item
+      )
+    )
+  }
 
-  // Remove item
   const removeItem = (id: string) => {
     setItems(prev => prev.filter(item => item.id !== id))
   }
 
-
-  // Update the handleSubmit function
-const handleSubmit = async () => {
-  console.log("1 - Start of handleSubmit");
-
-  if (!customerId || !warehouseId || items.length === 0) {
-    toast.error("Please fill all required fields and add at least one product");
-    return;
-  }
-
-  try {
-    console.log("2 - Before getting user_id");
-    const user_id = localStorage.getItem('UserId');
-    if (!user_id) throw new Error("User authentication required");
-
-    console.log("3 - Before calculations");
-    
-    // Ensure all calculations use proper decimal formatting
-    const subtotal = parseFloat(
-  items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
-    .toFixed(2)
-);
-
-const tax_amount = parseFloat(
-  (subtotal * (Number(orderTax) / 100)).toFixed(2)
-);
-
-const total = parseFloat(
-  (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
-);
-
-    console.log("4 - Before fetch", {
-      customerId,
-      warehouseId,
-      subtotal,
-      items
-    });
-
-    // Format all numbers to 2 decimal places before sending
-    const payload = {
-      reference: `QT-${Date.now().toString().slice(-6)}`,
-      date,
-      valid_until: validUntil || null,
-      customer_id: customerId,
-      warehouse_id: warehouseId,
-      subtotal: Number(subtotal.toFixed(2)),
-      tax_rate: Number(Number(orderTax).toFixed(2)),
-      tax_amount: Number(tax_amount.toFixed(2)),
-      discount: Number(Number(discount).toFixed(2)),
-      shipping: Number(Number(shipping).toFixed(2)),
-      total: Number(total.toFixed(2)),
-      status,
-      notes: note || null,
-      created_by: user_id,
-      items: items.map(item => ({
-        product_id: item.id,
-        quantity: Number(Number(item.quantity).toFixed(2)),
-        unit_price: Number(Number(item.price).toFixed(2)),
-        discount: Number(Number(item.discount || 0).toFixed(2)),
-        tax: Number(Number(item.tax || 0).toFixed(2)),
-        subtotal: Number((
-          Number(item.price) * Number(item.quantity) - 
-          Number(item.discount || 0) + 
-          Number(item.tax || 0)
-        ).toFixed(2))
-      }))
-    };
-
-    console.log("Formatted Payload:", payload);
-
-    const response = await fetch('/api/quotations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    console.log("5 - After fetch, before response check");
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log("API Error Response:", errorText);
-      
+  // Submit handler - matching create page structure
+  const handleSubmit = async () => {
+    if (!customerId || !warehouseId || items.length === 0) {
+      toast.error("Please fill all required fields and add at least one product")
+      return
     }
- toast.success("Quotation created successfully");
-    console.log("6 - After response check");
-  
-    console.log("API", response);
-   
 
-  } catch (error: unknown) {
-    console.error("Full Error:", error);
-    const message = error instanceof Error ? error.message : "An unexpected error occurred";
-    toast.error(message);
-  } finally {
-    setIsSubmitting(false);
-    console.log("7 - Final cleanup");
+    setIsSubmitting(true)
+    try {
+      const payload = {
+        id: id,
+        reference: `QT-${Date.now().toString().slice(-6)}`,
+        date,
+        valid_until: validUntil || null,
+        customer_id: customerId,
+        warehouse_id: warehouseId,
+        subtotal: Number(Number(subtotal).toFixed(2)),
+        tax_rate:Number( Number(orderTax).toFixed(2)) ,
+        tax_amount: Number(Number(taxAmount).toFixed(2)),
+        discount: Number(Number(discount).toFixed(2)),
+        shipping: Number(Number(shipping).toFixed(2)),
+        total: Number(Number(grandTotal).toFixed(2)),
+        status,
+        notes: note || null,
+        items: items.map(item => ({
+          product_id: item.id,
+          quantity: Number(Number(item.quantity).toFixed(2)),
+          unit_price: Number(Number(item.price).toFixed(2)),
+          discount: Number(Number(item.discount).toFixed(2)),
+          tax: Number(Number(item.tax).toFixed(2)),
+          subtotal: Number(
+            (Number(item.price) * Number(item.quantity) - Number(item.discount) + Number(item.tax)).toFixed(2)
+          )
+        }))
+      }
+
+      const response = await fetch('/api/quotations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || "Failed to update quotation")
+      }
+
+      const result = await response.json()
+      toast.success("Quotation updated successfully")
+      router.push(`/quotations/view/${result.id}`)
+
+    } catch (error) {
+      console.error("Error updating quotation:", error)
+      const message = error instanceof Error ? error.message : "An unexpected error occurred"
+      toast.error(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
-};
-
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
-      </div>
-    );
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+        </div>
+      </DashboardLayout>
+    )
   }
 
+  // UI - Matches create page structure exactly
   return (
-
-    
     <DashboardLayout>
       <div className="p-6">
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
             <span>Quotation List</span>
             <span>|</span>
-            <span>Create Quotation</span>
+            <span>Edit Quotation</span>
           </div>
-          <h1 className="text-2xl font-bold">Create Quotation</h1>
+          <h1 className="text-2xl font-bold">Edit Quotation</h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+         <div className="bg-white rounded-lg shadow p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <div>
               <Label className="text-sm font-medium">Date *</Label>
@@ -377,7 +388,7 @@ const total = parseFloat(
                       >
                         <div className="font-medium">{product.name}</div>
                         <div className="text-sm text-gray-500">
-                          {subtotal}8
+                          {product.code} • Stock: {product.stock} 
                         </div>
                       </div>
                     ))}
@@ -419,7 +430,7 @@ const total = parseFloat(
                       <tr key={item.id}>
                         <td className="p-3 border">{idx + 1}</td>
                         <td className="p-3 border">{item.name}</td>
-                        <td className="p-3 border">${item.price}</td>
+                        <td className="p-3 border">${Number(item.price || 0).toFixed(2)}</td>
                         <td className="p-3 border">{item.stock}</td>
                         <td className="p-3 border">
                           <div className="flex items-center gap-1">
@@ -447,7 +458,7 @@ const total = parseFloat(
                             type="number"
                             min={0}
                             value={item.discount}
-                            onChange={e => setDiscount(Number(e.target.value))}
+                            onChange={e => updateItem(item.id, "discount", Number(e.target.value))}
                             className="w-20"
                           />
                         </td>
@@ -456,13 +467,17 @@ const total = parseFloat(
                             type="number"
                             min={0}
                             value={item.tax}
-                            onChange={e => setOrderTax(Number(e.target.value))}
+                            onChange={e => updateItem(item.id, "tax", Number(e.target.value))}
                             className="w-20"
                           />
                         </td>
                         <td className="p-3 border">
-                          ${((item.price * item.quantity) - (item.discount || 0) + (item.tax || 0)).toFixed(2)}
-                        </td>
+                                ${(
+                                  (Number(item.price || 0) * Number(item.quantity || 0)) - 
+                                  Number(item.discount || 0) + 
+                                  Number(item.tax || 0)
+                                ).toFixed(2)}
+                              </td>
                         <td className="p-3 border">
                           <Button
                             size="sm"
@@ -546,7 +561,7 @@ const total = parseFloat(
                 disabled={isSubmitting}
                 type='button'
               >
-                {isSubmitting ? "Submitting..." : "Submit"}
+                {isSubmitting ? "Updating..." : "Update Quotation"}
               </Button>
             </div>
 
@@ -554,18 +569,22 @@ const total = parseFloat(
               <div className="bg-gray-50 p-4 rounded">
                 <div className="space-y-2">
                   <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>${subtotal}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span>Order Tax</span>
                     <span>
-                      ${taxAmount.toFixed(2)} ({orderTax.toFixed(2)} %)
+                      ${taxAmount} ({orderTax} %)
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Discount</span>
-                    <span>${discount.toFixed(2)}</span>
+                    <span>${discount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>${shipping.toFixed(2)}</span>
+                    <span>${shipping}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Grand Total</span>
@@ -576,6 +595,7 @@ const total = parseFloat(
             </div>
           </div>
         </div>
+        
       </div>
     </DashboardLayout>
   )

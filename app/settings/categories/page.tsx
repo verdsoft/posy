@@ -18,8 +18,8 @@ export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ code: "", name: "" })
-  const [editId, setEditId] = useState<number | null>(null)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
   // Fetch categories
@@ -69,7 +69,7 @@ export default function Categories() {
 
   // Open edit dialog
   const openEdit = (category: Category) => {
-    setEditId(Number(category.id))
+    setEditId(category.id)
     setForm({
       code: category.code ?? "",
       name: category.name ?? "",
@@ -98,7 +98,7 @@ export default function Categories() {
   }
 
   // Open delete dialog
-  const openDelete = (id: number) => {
+  const openDelete = (id: string) => {
     setDeleteId(id)
     setIsDeleteOpen(true)
   }
@@ -158,7 +158,7 @@ export default function Categories() {
               {/* Create Dialog */}
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700">Create</Button>
+                  <Button className="bg-blue-700 hover:bg-purple-700">Create</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -256,7 +256,7 @@ export default function Categories() {
                           <Button variant="ghost" size="sm" onClick={() => openEdit(category)}>
                             <Edit className="h-4 w-4 text-green-600" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDelete(Number(category.id))}>
+                          <Button variant="ghost" size="sm" onClick={() => openDelete(category.id)}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>

@@ -97,6 +97,7 @@ const authSlice = createSlice({
           localStorage.setItem("username", action.payload.user.name)
           localStorage.setItem("email", action.payload.user.email)
           localStorage.setItem("UserRole", action.payload.user.role)
+          localStorage.setItem("UserId", action.payload.user.id)
         }
       })
       .addCase(loginUser.rejected, (state, action) => {

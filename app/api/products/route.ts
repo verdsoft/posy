@@ -226,9 +226,17 @@ export async function PUT(req: NextRequest) {
       )
 
       return NextResponse.json({ success: true })
-    } finally {
-     
-    }
+    }   catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error"
+    console.error("Product update error:", error)
+    return NextResponse.json(
+      { error: message || "Internal server error" },
+      { status: 500 }
+    )
+  }
+
+
+
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
     console.error("Product update error:", error)
@@ -275,9 +283,14 @@ export async function DELETE(req: NextRequest) {
       }
 
       return NextResponse.json({ success: true })
-    } finally {
-     
-    }
+    }  catch (error: unknown) {
+    console.error("Product deletion error:", error)
+    const message = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json(
+      { error: message  },
+      { status: 500 }
+    )
+  }
   } catch (error: unknown) {
     console.error("Product deletion error:", error)
     const message = error instanceof Error ? error.message : "Unknown error"
@@ -333,9 +346,14 @@ export async function POST(req: NextRequest) {
         ]
       )
       return NextResponse.json({ success: true })
-    } finally {
-     
-    }
+    }  catch (error: unknown) {
+    console.error("Product deletion error:", error)
+    const message = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json(
+      { error: message  },
+      { status: 500 }
+    )
+  }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json(
