@@ -15,8 +15,7 @@ import {
   RotateCcw,
   Menu,
   Bell,
-  Globe,
-  Zap,
+ Maximize2, Minimize2,
   ChevronRight,
   ChevronDown,
 } from "lucide-react"
@@ -25,6 +24,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useAppDispatch } from "@/lib/hooks"
 import { logout } from "@/lib/slices/authSlice"
 import AuthGuard from "./AuthGuard"
+
 
 const menuItems = [
   {
@@ -233,6 +233,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const dispatch = useAppDispatch()
   const pathname = usePathname()
+   const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Get user role (replace with your actual auth logic)
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('UserRole') || 'user' : 'user'
@@ -241,6 +242,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     dispatch(logout())
     router.push("/")
   }
+
+    const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+      setIsFullScreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullScreen(false);
+      }
+    }
+  };
 
   const isActive = (href?: string) => {
     if (!href) return false
@@ -284,13 +299,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             }}
           >
             <Link href="/dashboard">
-              <div className="w-10 h-10 bg-[#1a237e] rounded-lg flex items-center justify-center cursor-pointer">
-                <div className="text-white font-bold text-lg">B</div>
+              <div className="w-10 h-10  rounded-lg flex items-center justify-center cursor-pointer">
+                <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
               </div>
             </Link>
             {sidebarOpen && (
-              <span className="font-semibold text-lg text-[#1a237e]" style={{ letterSpacing: "0.02em" }}>
-                BMS
+              <span className="font-semibold text-xl text-[#1a237e]" style={{ letterSpacing: "0.02em" }}>
+                POSy
               </span>
             )}
           </div>
@@ -410,12 +425,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   POS
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" className="rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }}>
-                <Globe className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm" className="rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }}>
-                <Zap className="h-5 w-5" />
-              </Button>
+             <button
+              onClick={toggleFullScreen}
+              type="button"
+              aria-label={isFullScreen ? "Exit full screen" : "Enter full screen"}
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              {isFullScreen ? (
+                <Minimize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              ) : (
+                <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              )}
+            </button>
+
+           
               <Button variant="ghost" size="sm" className="relative rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }}>
                 <Bell className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-[#1a237e] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

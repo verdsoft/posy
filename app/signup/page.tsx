@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, UserPlus } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { signupUser } from "@/lib/slices/authSlice"
+import Ballpit from '@/components/ui/ballpit'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -54,14 +55,37 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen relative flex items-center justify-center bg-gray-100 overflow-hidden">
+
+        {/* Ballpit Background */}
+          <div className="absolute inset-0 z-0">
+            <Ballpit
+              count={70}
+              gravity={0.5}
+              friction={0.9975}
+              wallBounce={0.95}
+              followCursor={false}
+              minSize={0.5}
+              maxSize={1}
+              colors={[0x7c3aed, 0x1e3a8a, 0x9ca3af, 0xffffff]}
+      
+              ambientColor={0xffffff}
+              ambientIntensity={0.8}
+              lightIntensity={180}
+              maxVelocity={0.18}
+              maxX={5}
+              maxY={5}
+              maxZ={2}
+            />
+          </div>
+
+      <Card className="w-full max-w-md z-10 relative backdrop-blur-sm bg-white/80 border border-gray-300">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <UserPlus className="text-white h-8 w-8" />
+          <div className="w-16 h-16  rounded-lg flex items-center justify-center mx-auto mb-4">
+            <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
-          <p className="text-gray-600">Sign up for Verdsoft BMS</p>
+          <p className="text-gray-600">Sign up for POSy</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -132,7 +156,7 @@ export default function SignupPage() {
 
             <Button
               type="button"
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-[#1a237e] hover:bg-purple-700"
               disabled={loading || formData.password !== formData.confirmPassword}
               onClick={handleSignup}
             >
@@ -151,6 +175,7 @@ export default function SignupPage() {
           </div>
         </CardContent>
       </Card>
+
     </div>
   )
 }

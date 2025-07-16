@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X, ChevronDown, Minus, Plus, RotateCcw, CreditCard, Settings, Globe, Zap } from "lucide-react"
+import { Search, X,  Minus, Plus, RotateCcw, CreditCard, Settings, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,6 +11,10 @@ import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import type React from "react"
 import { fetchCategories, fetchBrands, fetchWarehouses, searchProducts } from "@/lib/api"
+import { useAppDispatch } from "@/lib/hooks"
+import { useRouter } from "next/navigation"
+import { logout } from "@/lib/slices/authSlice"
+
 
 interface CartItem {
   id: string
@@ -44,7 +48,7 @@ export default function POSSystem() {
   const [tax, setTax] = useState(0)
   const [discount, setDiscount] = useState(0)
   const [shipping, setShipping] = useState(0)
-  
+
 
   // Modal states
   const [showCategoryList, setShowCategoryList] = useState(false)
@@ -66,6 +70,31 @@ export default function POSSystem() {
   const [payingAmount, setPayingAmount] = useState("")
   const [paymentChoice, setPaymentChoice] = useState("Cash")
   const [paymentNote, setPaymentNote] = useState("")
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false)
+  const dispatch = useAppDispatch()
+  const router = useRouter()
+
+
+  
+  const handleLogout = () => {
+      dispatch(logout())
+      router.push("/")
+    }
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+      setIsFullScreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullScreen(false);
+      }
+    }
+  };
 
   // Fetch categories from reusable endpoint
   useEffect(() => {
@@ -156,50 +185,50 @@ export default function POSSystem() {
     setShowPaymentModal(true)
   }
 
-const handleSubmitPayment = async () => {
-  setShowPaymentModal(false)
-  // Prepare sale data
-  const saleData = {
-    reference: `SL-${Date.now()}`,
-    customer_id: selectedCustomer !== "walkin" ? selectedCustomer : null,
-    warehouse_id: selectedWarehouse || null,
-    date: new Date().toISOString().slice(0, 10),
-    subtotal,
-    tax_rate: 0, // If you have a tax rate field, set it here
-    tax_amount: tax,
-    discount,
-    shipping,
-    total: grandTotal,
-    paid: Number(payingAmount),
-    due: Math.max(0, grandTotal - Number(payingAmount)),
-    status: "completed",
-    payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
-    notes: paymentNote,
-    created_by: null, // Set user id if available
-    items: cartItems,
-    payment: {
-      paymentChoice,
-      paymentNote,
-    },
-  }
+  const handleSubmitPayment = async () => {
+    setShowPaymentModal(false)
+    // Prepare sale data
+    const saleData = {
+      reference: `SL-${Date.now()}`,
+      customer_id: selectedCustomer !== "walkin" ? selectedCustomer : null,
+      warehouse_id: selectedWarehouse || null,
+      date: new Date().toISOString().slice(0, 10),
+      subtotal,
+      tax_rate: 0, // If you have a tax rate field, set it here
+      tax_amount: tax,
+      discount,
+      shipping,
+      total: grandTotal,
+      paid: Number(payingAmount),
+      due: Math.max(0, grandTotal - Number(payingAmount)),
+      status: "completed",
+      payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
+      notes: paymentNote,
+      created_by: null, // Set user id if available
+      items: cartItems,
+      payment: {
+        paymentChoice,
+        paymentNote,
+      },
+    }
 
-  try {
-    const res = await fetch("/api/pos/sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(saleData),
-    })
-    if (res.ok) {
-      setShowReceiptModal(true)
-      // Optionally clear cart, etc.
-    } else {
+    try {
+      const res = await fetch("/api/pos/sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(saleData),
+      })
+      if (res.ok) {
+        setShowReceiptModal(true)
+        // Optionally clear cart, etc.
+      } else {
+        alert("Failed to save sale")
+      }
+    } catch (err) {
+      console.log(err)
       alert("Failed to save sale")
     }
-  } catch (err) {
-    console.log(err)  
-    alert("Failed to save sale")
   }
-}
 
   const handlePrintReceipt = () => {
     const receiptWindow = window.open("", "_blank")
@@ -294,22 +323,51 @@ const handleSubmitPayment = async () => {
         {/* Logo and Navigation Icons */}
         <div className="p-4 border-b flex items-center justify-between">
           <Link href="/dashboard">
-            <div className="w-12 h-12 bg-[#1a237e] hover:bg-[#23308c] rounded-lg flex items-center justify-center cursor-pointer">
-              <div className="text-white font-bold text-xl">B</div>
+            <div className="w-12 h-12  rounded-lg flex items-center justify-center cursor-pointer">
+              <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="p-2">
-              <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded"></div>
-            </Button>
-            <Button variant="ghost" size="sm" className="p-2">
-              <Globe className="h-5 w-5 text-gray-600" />
-            </Button>
-            <Button variant="ghost" size="sm" className="p-2">
-              <div className="w-6 h-6 bg-purple-200 rounded flex items-center justify-center">
-                <Zap className="h-4 w-4 text-purple-600" />
+            <button
+              onClick={toggleFullScreen}
+              type="button"
+              aria-label={isFullScreen ? "Exit full screen" : "Enter full screen"}
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              {isFullScreen ? (
+                <Minimize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              ) : (
+                <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              )}
+            </button>
+
+             <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-0 rounded bg-transparent hover:bg-blue-50"
+                  style={{ fontSize: "13px" }}
+                  onClick={() => setProfileOpen((open) => !open)}
+                >
+                  <div className="w-8 h-8 bg-[#1a237e] rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm">U</span>
+                  </div>
+                </Button>
+                {profileOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                    <div className="px-4 py-3">
+                      <div className="font-semibold text-gray-800">{typeof window !== "undefined" ? localStorage.getItem("username") || "Username" : "Username"}</div>
+                      <div className="text-sm text-gray-500">{typeof window !== "undefined" ? localStorage.getItem("email") || "user@email.com" : "user@email.com"}</div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
-            </Button>
           </div>
         </div>
 
@@ -332,9 +390,9 @@ const handleSubmitPayment = async () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 bg-[#1a237e] hover:bg-[#23308c]">
+            {/* <Button size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 bg-[#1a237e] hover:bg-[#23308c]">
               <ChevronDown className="h-3 w-3" />
-            </Button>
+            </Button> */}
           </div>
           {/* Warehouse Select */}
           <div className="relative">
@@ -472,7 +530,7 @@ const handleSubmitPayment = async () => {
       </div>
 
       {/* Main Content */}
-      <div className="w-[50%] flex flex-col">
+      <div className="w-[60%] flex flex-col">
         {/* Product Section */}
         <div className="flex-1 p-6">
           <div className="mb-6">
@@ -551,9 +609,8 @@ const handleSubmitPayment = async () => {
             {categories.map((category) => (
               <Card
                 key={category.id}
-                className={`cursor-pointer transition-all ${
-                  selectedCategory === category.id ? "ring-2 ring-purple-500" : ""
-                }`}
+                className={`cursor-pointer transition-all ${selectedCategory === category.id ? "ring-2 ring-purple-500" : ""
+                  }`}
                 onClick={() => {
                   setSelectedCategory(category.id)
                   setShowCategoryList(false)
@@ -575,25 +632,25 @@ const handleSubmitPayment = async () => {
 
       {/* Brand List Modal */}
       <Dialog open={showBrandList} onOpenChange={setShowBrandList}>
-  <DialogContent className="max-w-2xl">
-    <DialogHeader>
-      <DialogTitle>Brand List</DialogTitle>
-    </DialogHeader>
-    <div className="grid grid-cols-2 gap-4 p-4">
-      {brands.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No brands available</div>
-      ) : (
-        brands.map((brand) => (
-          <Card key={brand.id}>
-            <CardContent className="p-4 text-center">
-              <p className="text-sm font-medium">{brand.name}</p>
-            </CardContent>
-          </Card>
-        ))
-      )}
-    </div>
-  </DialogContent>
-</Dialog>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Brand List</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 p-4">
+            {brands.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">No brands available</div>
+            ) : (
+              brands.map((brand) => (
+                <Card key={brand.id}>
+                  <CardContent className="p-4 text-center">
+                    <p className="text-sm font-medium">{brand.name}</p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>

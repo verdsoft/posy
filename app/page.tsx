@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader} from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
@@ -12,14 +12,14 @@ import { useRouter } from "next/navigation"
 import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { loginUser, clearError } from "@/lib/slices/authSlice"
 import { setDatabaseConfig } from "@/lib/slices/databaseSlice"
-import { DatabaseSetup } from "@/components/database-setup"
+// import { DatabaseSetup } from "@/components/database-setup"
 import Ballpit from '@/components/ui/ballpit'
 
 export default function LoginPage() {
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth)
-  const { isConfigured } = useAppSelector((state) => state.database)
+  // const { isConfigured } = useAppSelector((state) => state.database)
   const [isCheckingConfig, setIsCheckingConfig] = useState(true) // New loading state
 
   useEffect(() => {
@@ -109,10 +109,10 @@ return(
     {/* Login Card */}
     <Card className="w-full max-w-md z-10 relative backdrop-blur-sm bg-white/80 border border-gray-300">
       <CardHeader className="text-center">
-        <div className="w-16 h-16 bg-[#1a237e] hover:bg-[#23308c] rounded-lg flex items-center justify-center mx-auto mb-4">
-          <div className="text-white font-bold text-2xl">B</div>
+        <div className="w-16 h-16  rounded-lg flex items-center justify-center mx-auto mb-4">
+          <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
         </div>
-        <CardTitle className="text-2xl">Posy</CardTitle>
+        {/* <CardTitle className="text-2xl">Posy</CardTitle> */}
         <p className="text-gray-600">Sign in to your account</p>
       </CardHeader>
 
@@ -165,6 +165,7 @@ return(
         </div>
       </CardContent>
     </Card>
+
   </div>
 )
 
