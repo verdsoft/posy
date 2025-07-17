@@ -353,7 +353,7 @@ export default function CreateAdjustment() {
           </div>
 
           <Button
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-[#1a237e] hover:bg-purple-700"
             onClick={handleSubmit}
             disabled={products.length === 0 || isSubmitting}
           >

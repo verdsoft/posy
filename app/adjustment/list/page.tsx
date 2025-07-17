@@ -11,47 +11,40 @@ import {
   Pagination,
   PaginationContent,
   PaginationItem,
- 
 } from "@/components/ui/pagination"
 import { useState } from "react"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, ChevronLeft, ChevronRight, Download, X } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Download, X, FileDown } from "lucide-react"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import type React from "react"
 
-// import * as XLSX from 'xlsx'
-// import { jsPDF } from 'jspdf'
-// import autoTable from 'jspdf-autotable'
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
-import type { PaginatedResponse } from "@/lib/types"
-import type { Adjustment } from "@/lib/types"
-
-
-// /declare module 'jspdf' {
-//   interface jsPDF {
-//     autoTable: (options: import('jspdf-autotable').UserOptions) => jsPDF;
-//   }
-// }
-
-
-
-// export interface Adjustment {
-//   id: string;
-//   reference: string;
-//   warehouse_name: string;
-//   date: Date;
-//   type: 'addition' | 'subtraction';
-//   notes?: string;
-//   created_by?: string;
-//   created_at: Date;
-//   updated_at: Date;
-// }
+export interface Adjustment {
+  id: string;
+  reference: string;
+  warehouse_name: string;
+  date: Date;
+  type: 'addition' | 'subtraction';
+  notes?: string;
+  created_by?: string;
+  created_at: Date;
+  updated_at: Date;
+  quantity?: number; // Added based on your table usage
+}
 
 export default function AdjustmentList() {
   const [page, setPage] = useState(1)
@@ -60,16 +53,60 @@ export default function AdjustmentList() {
   const [selectedAdjustment, setSelectedAdjustment] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
- const { data, isLoading, isError } = useQuery<PaginatedResponse<Adjustment>>({
-  queryKey: ['adjustments', page, limit, searchQuery],
-  queryFn: () => fetchAdjustments({
-    page,
-    limit,
-    search: searchQuery
-  }),
- staleTime: 1000 * 60 // 1 minute
+  const { data, isLoading, isError } = useQuery<PaginatedResponse<Adjustment>>({
+    queryKey: ['adjustments', page, limit, searchQuery],
+    queryFn: () => fetchAdjustments({
+      page,
+      limit,
+      search: searchQuery
+    }),
+    staleTime: 1000 * 60 // 1 minute
+  })
 
-})
+  // Export to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF()
+    
+    // Add title
+    doc.text('Adjustment List', 14, 16)
+    
+    // Prepare data for the table
+    const tableData = data?.data.map(adjustment => [
+      format(new Date(adjustment.date), 'MMM dd, yyyy'),
+      adjustment.reference,
+      adjustment.warehouse_name,
+      adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
+      adjustment.quantity?.toString() || '0'
+    ]) || []
+    
+    // Add table
+    autoTable(doc, {
+      head: [['Date', 'Reference', 'Warehouse', 'Type', 'Total Products']],
+      body: tableData,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [26, 35, 126] }
+    })
+    
+    doc.save('adjustments.pdf')
+  }
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      data?.data.map(adjustment => ({
+        Date: format(new Date(adjustment.date), 'MMM dd, yyyy'),
+        Reference: adjustment.reference,
+        Warehouse: adjustment.warehouse_name,
+        Type: adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
+        'Total Products': adjustment.quantity || 0
+      })) || []
+    )
+    
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Adjustments")
+    XLSX.writeFile(workbook, "adjustments.xlsx")
+  }
 
   // Fetch single adjustment details when dialog opens
   const { data: adjustmentDetails, isLoading: isDetailsLoading } = useQuery({
@@ -86,69 +123,6 @@ export default function AdjustmentList() {
   const handleViewAdjustment = (id: string) => {
     setSelectedAdjustment(id)
     setIsDialogOpen(true)
-  }
-
-  const exportToPDF = () => {
-  //   if (!data) return
-
-  // const adjustments = (data as PaginatedResponse<Adjustment>).data
-
-  // const doc = new jsPDF()
-    
-  //   // Add title
-  //   doc.text('Adjustments Report', 14, 16)
-    
-  //   // Add date
-  //   doc.text(`Generated on: ${format(new Date(), 'PPpp')}`, 14, 24)
-    
-  //   // Prepare data for table
-  //  const tableData = adjustments.map((adj) => [
-  //   adj.reference,
-  //   format(new Date(adj.date), 'MMM dd, yyyy'),
-  //   adj.warehouse_name,
-  //   adj.type.charAt(0).toUpperCase() + adj.type.slice(1),
-  //   adj.item_count.toString()
-  // ])
-    
-  //   // Add table
-  //   doc.autoTable({
-  //     head: [['Reference', 'Date', 'Warehouse', 'Type', 'Items']],
-  //     body: tableData,
-  //     startY: 30,
-  //     styles: {
-  //       cellPadding: 3,
-  //       fontSize: 9,
-  //       valign: 'middle'
-  //     },
-  //     headStyles: {
-  //       fillColor: [79, 70, 229], // Purple color
-  //       textColor: 255
-  //     }
-  //   })
-    
-  //   doc.save(`adjustments-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
-  }
-
-  const exportToExcel = () => {
-    // if (!data?.data) return
-
-    // const worksheet = XLSX.utils.json_to_sheet(
-    //   data.data.map(adj => ({
-    //     Reference: adj.reference,
-    //     Date: format(new Date(adj.date), 'MMM dd, yyyy'),
-    //     Warehouse: adj.warehouse_name,
-    //     Type: adj.type.charAt(0).toUpperCase() + adj.type.slice(1),
-    //     Items: adj.item_count
-    //   }))
-    // )
-    
-    // const workbook = XLSX.utils.book_new()
-    // XLSX.utils.book_append_sheet(workbook, worksheet, "Adjustments")
-    
-    // XLSX.writeFile(
-    //   workbook,
-    //   `adjustments-report-${format(new Date(), 'yyyy-MM-dd')}.xlsx`
-    // )
   }
 
   return (
@@ -181,25 +155,25 @@ export default function AdjustmentList() {
                 </Button>
               </form>
               <div className="flex items-center gap-2">
-                <Button variant="outline" className="text-blue-600 bg-transparent">
+                {/* <Button variant="outline" className="text-blue-600 bg-transparent">
                   🔍 Filter
-                </Button>
+                </Button> */}
                 <Button 
                   variant="outline" 
-                  className="text-green-600 bg-transparent"
+                  size="sm"
                   onClick={exportToPDF}
                 >
-                  <Download className="h-4 w-4 mr-2" /> PDF
+                  <FileDown className="h-4 w-4 mr-2" /> PDF
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="text-orange-600 bg-transparent"
+                  size="sm"
                   onClick={exportToExcel}
                 >
-                  <Download className="h-4 w-4 mr-2" /> EXCEL
+                  <FileDown className="h-4 w-4 mr-2" /> EXCEL
                 </Button>
                 <Link href="/adjustment/create">
-                  <Button className="bg-purple-600 hover:bg-purple-700">➕ Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
                 </Link>
               </div>
             </div>

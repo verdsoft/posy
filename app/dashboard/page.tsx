@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAppSelector } from "@/lib/hooks"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
-
+import type React from "react"
 import AuthGuard from "@/components/AuthGuard"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +33,7 @@ export default function Dashboard() {
   const router = useRouter()
   const { isAuthenticated } = useAppSelector((state) => state.auth)
 
-  const { data, isLoading, isError } = useQuery({
+  const { data} = useQuery({
     queryKey: ["dashboardStats"],
     queryFn: fetchDashboardStats,
   })
@@ -91,140 +91,152 @@ export default function Dashboard() {
 
   return (
     <AuthGuard>
-      <DashboardLayout>
-        <div className="p-6 space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {statsData.map((stat, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                      <p className="text-2xl font-bold text-purple-600">{stat.amount}</p>
-                    </div>
-                    <stat.icon className={`h-8 w-8 ${stat.color}`} />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales vs Purchases</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#7c3aed" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+  <DashboardLayout>
+    <div className="p-4 space-y-4">
+      {/* Stats Cards - Compact */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statsData.map((stat, index) => (
+          <Card key={index} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.title}</p>
+                  <p className="text-xl font-semibold text-gray-800">{stat.amount}</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Selling Products (2025)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={topProducts}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label
-                      >
-                        {topProducts.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className={`p-2 rounded-lg ${stat.color || 'bg-gray-100'}`}>
+                  <stat.icon className={`h-5 w-5 ${stat.color || 'text-gray-600'}`} />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-          {/* Product Alerts Table */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Product Quantity Alerts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Product</th>
-                        <th className="text-left p-2">Warehouse</th>
-                        <th className="text-left p-2">Quantity</th>
-                        <th className="text-left p-2">Alert Qty</th>
+      {/* Charts - Flat Design */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Sales vs Purchases</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-60">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Top Selling Products (2025)</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-60">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={topProducts}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                    innerRadius={40}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {topProducts.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value} units`, 'Sales']} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tables - Compact */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Low Stock Alerts</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium text-gray-500">Product</th>
+                    <th className="text-left p-2 font-medium text-gray-500">Location</th>
+                    <th className="text-right p-2 font-medium text-gray-500">Stock</th>
+                    <th className="text-right p-2 font-medium text-gray-500">Alert</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productAlerts.map((product, index) => (
+                    <tr key={index} className="border-b hover:bg-gray-50">
+                      <td className="p-2 text-gray-800">{product.name}</td>
+                      <td className="p-2 text-gray-500">{product.warehouse}</td>
+                      <td className="p-2 text-right font-medium">{product.quantity}</td>
+                      <td className="p-2 text-right">
+                        <span className="inline-block bg-red-50 text-red-600 px-2 py-0.5 rounded text-xs font-medium">
+                          {product.alert}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Top Sellers (July)</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium text-gray-500">Product</th>
+                    <th className="text-right p-2 font-medium text-gray-500">Units</th>
+                    <th className="text-right p-2 font-medium text-gray-500">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topProducts.length > 0 ? (
+                    topProducts.map((product, index) => (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="p-2 text-gray-800">{product.name}</td>
+                        <td className="p-2 text-right font-medium">{product.value}</td>
+                        <td className="p-2 text-right font-medium text-gray-800">${product.value.toLocaleString()}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {productAlerts.map((product, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-2">{product.name}</td>
-                          <td className="p-2">{product.warehouse}</td>
-                          <td className="p-2">{product.quantity}</td>
-                          <td className="p-2">
-                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
-                              {product.alert}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Selling Products (July)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Product</th>
-                        <th className="text-left p-2">Quantity</th>
-                        <th className="text-left p-2">Grand Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className="p-2" colSpan={3}>
-                          <div className="text-center text-gray-500 py-8">
-                            No data for table
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </DashboardLayout>
-    </AuthGuard>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="p-4 text-center text-gray-400 text-xs" colSpan={3}>
+                        No sales data available for this period
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </DashboardLayout>
+</AuthGuard>
   )
 }

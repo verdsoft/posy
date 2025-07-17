@@ -1,26 +1,32 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit } from "lucide-react"
+import { Eye, Edit, FileDown } from "lucide-react"
 import type React from "react"
 import { ViewProductDialog } from "@/components/view-product-dialog"
 import { Trash2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Product } from "@/lib/types/index"
 import AuthGuard from "@/components/AuthGuard"
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 export default function ProductList() {
-
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const router = useRouter()
-  // Inside your ProductList component, add state for the dialog:
   const [viewProduct, setViewProduct] = useState<Product | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const { toast } = useToast()
@@ -60,10 +66,61 @@ export default function ProductList() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filteredProducts = products.filter((product) =>
-    product.name?.toLowerCase().includes(search.toLowerCase()) ||
-    product.code?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) =>
+      product.name?.toLowerCase().includes(search.toLowerCase()) ||
+      product.code?.toLowerCase().includes(search.toLowerCase())
+    )
+  }, [products, search])
+
+  // Export to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF()
+    
+    // Add title
+    doc.text('Product List', 14, 16)
+    
+    // Prepare data for the table
+    const tableData = filteredProducts.map(product => [
+      product.name || '',
+      product.code || '',
+      product.category_name || '',
+      product.brand_name || '',
+      Number(product.price).toFixed(2),
+      product.unit_name || '',
+      Number(product.stock ?? 0).toFixed(2)
+    ])
+    
+    // Add table
+    autoTable(doc, {
+      head: [['Name', 'Code', 'Category', 'Brand', 'Price', 'Unit', 'Quantity']],
+      body: tableData,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [26, 35, 126] }
+    })
+    
+    doc.save('products.pdf')
+  }
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      filteredProducts.map(product => ({
+        Name: product.name,
+        Code: product.code,
+        Category: product.category_name,
+        Brand: product.brand_name,
+        Price: Number(product.price).toFixed(2),
+        Unit: product.unit_name,
+        Quantity: Number(product.stock ?? 0).toFixed(2)
+      }))
+    )
+    
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products")
+    XLSX.writeFile(workbook, "products.xlsx")
+  }
 
   return (
     <AuthGuard>
@@ -91,21 +148,27 @@ export default function ProductList() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-
-
-                <Button
-                  variant="outline"
-                  className="text-green-600 bg-transparent"
-                  onClick={() => window.open("/api/products/export?export=pdf", "_blank")}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={exportToPDF}
                 >
-                  📄 PDF
+                  <FileDown className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={exportToExcel}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  EXCEL
                 </Button>
                 <Button
-                  variant="outline"
-                  className="text-orange-600 bg-transparent"
-                  onClick={() => window.open("/api/products/export?export=excel", "_blank")}
+                  className="bg-[#1a237e] hover:bg-purple-700"
+                  onClick={() => router.push("/products/create")}
                 >
-                  📊 EXCEL
+                  Create Product
                 </Button>
               </div>
             </div>

@@ -282,7 +282,7 @@ useEffect(() => {
                 <Textarea id="description" value={form.description} onChange={handleInput} placeholder="A few words ..." className="mt-1" rows={4} />
               </div>
               {error && <div className="text-red-600 text-sm">{error}</div>}
-              <Button className="bg-purple-600 hover:bg-purple-700" type="submit" disabled={submitting}>
+              <Button className="bg-[#1a237e] hover:bg-purple-700" type="submit" disabled={submitting}>
                 {submitting ? "Submitting..." : "Submit"}
               </Button>
             </div>

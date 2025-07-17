@@ -1,17 +1,16 @@
 "use client"
 
-import DashboardLayout from "../../../components/dashboard-layout"
+import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Search, X } from "lucide-react"
-
 import { useState, useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { toast } from "sonner"
-
 import type React from "react"
+import { useRouter } from "next/navigation"
 
 interface Product {
   id: string
@@ -31,7 +30,6 @@ interface PurchaseItem {
   discount: number
   tax: number
   subtotal: number
-  
 }
 
 interface FormValues {
@@ -44,46 +42,56 @@ interface FormValues {
   status: string
   payment_status: string
   notes: string
-  created_by: string
 }
 
-export default function CreatePurchase() {
-  
+export default function EditPurchase({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const purchaseId = params.id
   const [searchQuery, setSearchQuery] = useState("")
-  // const [setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [selectedProducts, setSelectedProducts] = useState<PurchaseItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [suppliers, setSuppliers] = useState<{id: string, name: string}[]>([])
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
+  const [purchaseData, setPurchaseData] = useState<any>(null)
 
   const {
     register,
     handleSubmit,
     control,
     watch,
-    
+    reset,
     formState: { errors },
-  } = useForm<FormValues>({
-    defaultValues: {
-      date: new Date().toISOString().split('T')[0],
-      supplier_id: "",
-      warehouse_id: "",
-      tax_rate: 0,
-      discount: 0,
-      shipping: 0,
-      status: "received",
-      payment_status: "unpaid",
-      notes: "",
-      created_by: "1", 
-    }
-  })
+  } = useForm<FormValues>()
 
-  // Fetch suppliers and warehouses on mount
+  // Fetch initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setIsLoading(true)
+        
+        // Fetch purchase data
+        const purchaseRes = await fetch(`/api/purchases?id=${purchaseId}`)
+        if (!purchaseRes.ok) throw new Error('Failed to fetch purchase data')
+        const purchase = await purchaseRes.json()
+        
+        setPurchaseData(purchase)
+        setSelectedProducts(purchase.items || [])
+        
+        // Set form values
+        reset({
+          date: purchase.date.split('T')[0],
+          supplier_id: purchase.supplier_id,
+          warehouse_id: purchase.warehouse_id,
+          tax_rate: purchase.tax_rate,
+          discount: purchase.discount,
+          shipping: purchase.shipping,
+          status: purchase.status,
+          payment_status: purchase.payment_status,
+          notes: purchase.notes,
+        })
+
+        // Fetch suppliers and warehouses
         const [suppliersRes, warehousesRes] = await Promise.all([
           fetch('/api/suppliers'),
           fetch('/api/settings/warehouses')
@@ -99,16 +107,16 @@ export default function CreatePurchase() {
         setSuppliers(suppliersData)
         setWarehouses(warehousesData)
       } catch (error) {
-        toast.error("Failed to load initial data")
+        toast.error("Failed to load purchase data")
         console.error(error)
+        router.push('/purchases')
       } finally {
         setIsLoading(false)
       }
     }
     
     fetchInitialData()
-    
-  }, [])
+  }, [purchaseId, reset, router])
 
   // Search products with debounce
   useEffect(() => {
@@ -122,7 +130,6 @@ export default function CreatePurchase() {
         const res = await fetch(`/api/products?search=${searchQuery}`)
         if (!res.ok) throw new Error('Failed to search products')
         const data = await res.json()
-        // setProducts(data)
         setFilteredProducts(data.slice(0, 5))
       } catch (error) {
         toast.error("Failed to search products")
@@ -135,13 +142,12 @@ export default function CreatePurchase() {
 
   // Calculate totals
   const subtotal = selectedProducts.reduce((sum, item) => sum + item.subtotal, 0)
-  const tax_rate = watch("tax_rate")
-  const discount = watch("discount")
-  const shipping = watch("shipping")
+  const tax_rate = watch("tax_rate") || 0
+  const discount = watch("discount") || 0
+  const shipping = watch("shipping") || 0
   
   const tax_amount = subtotal * (tax_rate / 100)
-  const total = Number(subtotal) + Number(tax_amount) + Number(shipping) - Number(discount) // shipping - discount
-  
+  const total = Number(subtotal) + Number(tax_amount) + Number(shipping) - Number(discount)
 
   // Add product to purchase items
   const addProduct = (product: Product) => {
@@ -160,7 +166,6 @@ export default function CreatePurchase() {
         discount: 0,
         tax: 0,
         subtotal: product.cost
-        
       }
       setSelectedProducts([...selectedProducts, newItem])
     }
@@ -213,25 +218,20 @@ export default function CreatePurchase() {
       return
     }
 
-    const user_id = localStorage.getItem('UserId');
-    if (!user_id) throw new Error("User authentication required");
-
     setIsLoading(true)
     
     try {
       const payload = {
         ...data,
+        id: purchaseId,
         subtotal,
         tax_amount,
         total,
-        paid: 0,
-        due: total,
         items: selectedProducts,
-        created_by: user_id,
       }
 
       const response = await fetch('/api/purchases', {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -239,31 +239,44 @@ export default function CreatePurchase() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create purchase')
+        throw new Error('Failed to update purchase')
       }
 
-      // const result = await response.json()
-      toast.success("Purchase created successfully")
-      // router.push(`/dashboard/purchases/${result.id}`)
+      toast.success("Purchase updated successfully")
+      router.push('/purchases')
     } catch (error) {
-      toast.error("Failed to create purchase")
+      toast.error("Failed to update purchase")
       console.error(error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  return (
+  if (!purchaseData) {
+    return (
+     
+        <DashboardLayout>
+          <div className="p-6">
+            <div className="flex justify-center items-center h-64">
+              <p>Loading purchase data...</p>
+            </div>
+          </div>
+        </DashboardLayout>
 
+    )
+  }
+
+  return (
+ 
       <DashboardLayout>
         <div className="p-6">
           <div className="mb-6">
             <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
               <span>Purchase List</span>
               <span>|</span>
-              <span>Create Purchase</span>
+              <span>Edit Purchase - {purchaseData.reference}</span>
             </div>
-            <h1 className="text-2xl font-bold">Create Purchase</h1>
+            <h1 className="text-2xl font-bold">Edit Purchase</h1>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -376,7 +389,6 @@ export default function CreatePurchase() {
                         <th className="text-left p-3 border">#</th>
                         <th className="text-left p-3 border">Product</th>
                         <th className="text-left p-3 border">Net Unit Cost</th>
-                        
                         <th className="text-left p-3 border">Qty</th>
                         <th className="text-left p-3 border">Subtotal</th>
                         <th className="text-left p-3 border">Action</th>
@@ -407,7 +419,6 @@ export default function CreatePurchase() {
                                 className="w-24"
                               />
                             </td>
-                          
                             <td className="p-3 border">
                               <Input 
                                 type="number" 
@@ -514,6 +525,27 @@ export default function CreatePurchase() {
                           <SelectContent>
                             <SelectItem value="received">Received</SelectItem>
                             <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Payment Status</label>
+                    <Controller
+                      name="payment_status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="partial">Partial</SelectItem>
+                            <SelectItem value="unpaid">Unpaid</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
@@ -530,13 +562,22 @@ export default function CreatePurchase() {
                     />
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="bg-[#1a237e] hover:bg-purple-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Processing..." : "Submit"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="submit" 
+                      className="bg-[#1a237e] hover:bg-purple-700"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Updating..." : "Update Purchase"}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      type="button"
+                      onClick={() => router.push('/purchases')}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -570,6 +611,6 @@ export default function CreatePurchase() {
           </form>
         </div>
       </DashboardLayout>
-  
+    
   )
 }

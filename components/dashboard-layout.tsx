@@ -25,6 +25,8 @@ import { useAppDispatch } from "@/lib/hooks"
 import { logout } from "@/lib/slices/authSlice"
 import AuthGuard from "./AuthGuard"
 
+type IconType =| typeof BarChart3 | typeof Package | typeof Settings | typeof FileText | typeof ShoppingCart | typeof Users | typeof ArrowLeftRight | typeof DollarSign | typeof RotateCcw | typeof Menu | typeof Bell | typeof Maximize2 | typeof Minimize2 | typeof ChevronRight | typeof ChevronDown;  
+type UserRole = 'admin' | 'user';
 
 const menuItems = [
   {
@@ -42,7 +44,7 @@ const menuItems = [
     submenu: [
       { label: "Create Product", href: "/products/create" },
       { label: "Product List", href: "/products/list" },
-      { label: "Print Barcode", href: "/products/barcode" },
+      
     ],
   },
   {
@@ -222,9 +224,29 @@ const menuItems = [
   },
 ]
 
+interface MenuItem {
+
+  label: string;
+  href?: string; // Adjust based on your URL type
+  icon?: IconType | React.ComponentType; // Adjust based on your icon type
+  roles: UserRole[]; // Adjust based on your user role type
+  submenu?: SubMenuItem[];
+}
+
+interface SubMenuItem {
+  label: string;
+  href?: string; 
+   roles: UserRole[];
+    submenu?: SubMenuItem[];// Adjust based on your URL type
+ 
+}
+
+
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
+
+
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
@@ -276,12 +298,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   })
 
   // Filter submenu items based on role
-  const filterSubmenu = (submenu: any[]) => {
-    return submenu.filter(subItem => {
-      if (!subItem.roles) return true
-      return subItem.roles.includes(userRole)
-    })
-  }
+const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
+  return submenu.filter(subItem => {
+    if (!subItem.roles) return true;
+    return subItem.roles.includes(userRole as UserRole);
+  });
+};
 
   return (
     <AuthGuard>
@@ -440,11 +462,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
            
               <Button variant="ghost" size="sm" className="relative rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }}>
-                <Bell className="h-5 w-5" />
+                <Bell className="h-10 w-10"  />
                 <span className="absolute -top-1 -right-1 bg-[#1a237e] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   1
                 </span>
               </Button>
+              
               {/* Profile Dropdown */}
               <div className="relative">
                 <Button
@@ -477,13 +500,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-auto pt-4">{children}</main>
 
           {/* Footer */}
           <footer className="bg-gray-100 px-6 py-3 border-t">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                <div className="text-white text-xs font-bold">B</div>
+              <div className="w-6 h-6  rounded flex items-center justify-center">
+               <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
               </div>
               <span>© 2025 Developed by Verdsoft </span>
               <span className="ml-auto">All rights reserved</span>

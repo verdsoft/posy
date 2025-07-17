@@ -537,17 +537,17 @@ export default function POSSystem() {
             <div className="flex items-center gap-4 mb-4">
               <Button
                 variant="outline"
-                className="flex-1 text-blue-700 border-blue-200 bg-transparent"
+                className="flex-1 text-[#1a237e] border-blue-200 bg-transparent"
                 onClick={() => setShowCategoryList(true)}
               >
-                📋 List of Category
+                List of Category
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 text-blue-700 border-blue-200 bg-transparent"
+                className="flex-1 text-[#1a237e] border-blue-200 bg-transparent"
                 onClick={() => setShowBrandList(true)}
               >
-                🏷️ Brand List
+                Brand List
               </Button>
               <div className="ml-auto">
                 <Button className="bg-[#1a237e] hover:bg-[#23308c] hover:bg-purple-700">
