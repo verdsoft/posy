@@ -10,7 +10,9 @@ import { useState, useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { toast } from "sonner"
 import type React from "react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import {Purchase} from "@/lib/types/index"
+
 
 interface Product {
   id: string
@@ -44,16 +46,18 @@ interface FormValues {
   notes: string
 }
 
-export default function EditPurchase({ params }: { params: { id: string } }) {
+export default function EditPurchase() {
   const router = useRouter()
-  const purchaseId = params.id
+  const unwrappedParams = useParams()
+  const purchaseId = unwrappedParams.id as string
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [selectedProducts, setSelectedProducts] = useState<PurchaseItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [suppliers, setSuppliers] = useState<{id: string, name: string}[]>([])
   const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
-  const [purchaseData, setPurchaseData] = useState<any>(null)
+  const [purchaseData, setPurchaseData] = useState<Purchase[]>([])
+  
 
   const {
     register,
@@ -64,59 +68,63 @@ export default function EditPurchase({ params }: { params: { id: string } }) {
     formState: { errors },
   } = useForm<FormValues>()
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Fetch purchase data
-        const purchaseRes = await fetch(`/api/purchases?id=${purchaseId}`)
-        if (!purchaseRes.ok) throw new Error('Failed to fetch purchase data')
-        const purchase = await purchaseRes.json()
-        
-        setPurchaseData(purchase)
-        setSelectedProducts(purchase.items || [])
-        
-        // Set form values
-        reset({
-          date: purchase.date.split('T')[0],
-          supplier_id: purchase.supplier_id,
-          warehouse_id: purchase.warehouse_id,
-          tax_rate: purchase.tax_rate,
-          discount: purchase.discount,
-          shipping: purchase.shipping,
-          status: purchase.status,
-          payment_status: purchase.payment_status,
-          notes: purchase.notes,
-        })
 
-        // Fetch suppliers and warehouses
-        const [suppliersRes, warehousesRes] = await Promise.all([
-          fetch('/api/suppliers'),
-          fetch('/api/settings/warehouses')
-        ])
-        
-        if (!suppliersRes.ok || !warehousesRes.ok) {
-          throw new Error('Failed to fetch initial data')
-        }
-        
-        const suppliersData = await suppliersRes.json()
-        const warehousesData = await warehousesRes.json()
-        
-        setSuppliers(suppliersData)
-        setWarehouses(warehousesData)
-      } catch (error) {
-        toast.error("Failed to load purchase data")
-        console.error(error)
-        router.push('/purchases')
-      } finally {
-        setIsLoading(false)
-      }
+
+
+  // Fetch initial data
+ useEffect(() => {
+  const fetchInitialData = async () => {
+    try {
+      setIsLoading(true)
+
+      const purchaseRes = await fetch(`/api/purchases?id=${purchaseId}`)
+      if (!purchaseRes.ok) throw new Error("Failed to fetch purchase data")
+      const purchase = await purchaseRes.json()
+
+      const [suppliersRes, warehousesRes] = await Promise.all([
+        fetch("/api/suppliers"),
+        fetch("/api/settings/warehouses"),
+      ])
+
+      if (!suppliersRes.ok || !warehousesRes.ok)
+        throw new Error("Failed to fetch suppliers or warehouses")
+
+      const suppliersData = await suppliersRes.json()
+      const warehousesData = await warehousesRes.json()
+
+      setSuppliers(suppliersData)
+      setWarehouses(warehousesData)
+      setPurchaseData(purchase)
+      setSelectedProducts(purchase.items || [])
+
+      console.log("suppliers", suppliersData)
+      console.log("warehouses", warehousesData)
+
+      // Only reset after options are ready
+      reset({
+        date: purchase.date.split("T")[0],
+        supplier_id: purchase.supplier_id,
+        warehouse_id: purchase.warehouse_id,
+        tax_rate: purchase.tax_rate,
+        discount: purchase.discount,
+        shipping: purchase.shipping,
+        status: purchase.status,
+        payment_status: purchase.payment_status,
+        notes: purchase.notes,
+      })
+    } catch (error) {
+      toast.error("Failed to load purchase data")
+      console.error(error)
+      router.push("/purchases")
+    } finally {
+      setIsLoading(false)
     }
-    
-    fetchInitialData()
-  }, [purchaseId, reset, router])
+  }
+
+  fetchInitialData()
+}, [purchaseId, reset, router])
+
+
 
   // Search products with debounce
   useEffect(() => {
@@ -213,6 +221,7 @@ export default function EditPurchase({ params }: { params: { id: string } }) {
 
   // Submit form
   const onSubmit = async (data: FormValues) => {
+    console.log("Form Data:", data)
     if (selectedProducts.length === 0) {
       toast.error("Please add at least one product")
       return
@@ -243,7 +252,7 @@ export default function EditPurchase({ params }: { params: { id: string } }) {
       }
 
       toast.success("Purchase updated successfully")
-      router.push('/purchases')
+      router.push('/purchases/list')
     } catch (error) {
       toast.error("Failed to update purchase")
       console.error(error)
@@ -266,6 +275,13 @@ export default function EditPurchase({ params }: { params: { id: string } }) {
     )
   }
 
+
+
+const onError = (errors: unknown) => {
+  console.log("Validation errors", errors)
+  toast.error("Please fix validation errors")
+}
+
   return (
  
       <DashboardLayout>
@@ -274,12 +290,12 @@ export default function EditPurchase({ params }: { params: { id: string } }) {
             <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
               <span>Purchase List</span>
               <span>|</span>
-              <span>Edit Purchase - {purchaseData.reference}</span>
+              <span>Edit Purchase </span>
             </div>
             <h1 className="text-2xl font-bold">Edit Purchase</h1>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit,onError)}>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>

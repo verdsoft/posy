@@ -1,5 +1,4 @@
 
-
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
@@ -8,16 +7,13 @@ import { ReduxProvider } from "@/components/providers/redux-provider"
 import { DatabaseSetupWrapper } from "@/components/database-setup-wrapper"
 import { AuthHydrator } from "@/components/auth-hydrator"
 import { QueryClientProviderWrapper } from "@/components/query-provider"
-
-
+import { Toaster } from "sonner" 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Posy",
   description: "Business Management System"
-   
 }
-
 
 export default function RootLayout({
   children,
@@ -30,7 +26,10 @@ export default function RootLayout({
         <ReduxProvider>
           <AuthHydrator />
           <QueryClientProviderWrapper>
-            <DatabaseSetupWrapper>{children}</DatabaseSetupWrapper>
+            <DatabaseSetupWrapper>
+              {children}
+              <Toaster richColors /> 
+            </DatabaseSetupWrapper>
           </QueryClientProviderWrapper>
         </ReduxProvider>
       </body>

@@ -179,6 +179,7 @@ const menuItems = [
       { label: "Currency", href: "/settings/currencies" },
       { label: "Unit", href: "/settings/units" },
       { label: "Backup", href: "/settings/backup" },
+      { label: "System", href: "/settings/system" },
     ],
   },
   {
@@ -224,14 +225,14 @@ const menuItems = [
   },
 ]
 
-interface MenuItem {
+// interface MenuItem {
 
-  label: string;
-  href?: string; // Adjust based on your URL type
-  icon?: IconType | React.ComponentType; // Adjust based on your icon type
-  roles: UserRole[]; // Adjust based on your user role type
-  submenu?: SubMenuItem[];
-}
+//   label: string;
+//   href?: string; // Adjust based on your URL type
+//   icon?: IconType | React.ComponentType; // Adjust based on your icon type
+//   roles: UserRole[]; // Adjust based on your user role type
+//   submenu?: SubMenuItem[];
+// }
 
 interface SubMenuItem {
   label: string;
@@ -487,6 +488,11 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
                       <div className="font-semibold text-gray-800">{typeof window !== "undefined" ? localStorage.getItem("username") || "Username" : "Username"}</div>
                       <div className="text-sm text-gray-500">{typeof window !== "undefined" ? localStorage.getItem("email") || "user@email.com" : "user@email.com"}</div>
                     </div>
+                    <Link href="/profile">
+                      <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 border-b">
+                        Profile
+                      </button>
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t"

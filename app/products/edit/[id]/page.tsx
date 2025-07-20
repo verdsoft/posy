@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Eye, Edit, Trash2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
+import type React from "react"
+import {Category} from "@/lib/types/index"
 
 interface FormData {
   name: string
@@ -44,8 +46,6 @@ export default function EditProduct() {
   const [isLoading, setIsLoading] = useState(true)
     const [images, setImages] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
-
-  
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
@@ -125,10 +125,10 @@ export default function EditProduct() {
         })
 
         // Set dropdown options
-        setCategories((cats || []).map((c: any) => ({ value: c.id, label: c.name })))
-        setBrands((brs || []).map((b: any) => ({ value: b.id, label: b.name })))
-        setUnits((unts || []).map((u: any) => ({ value: u.id, label: u.name })))
-        setWarehouses((whs || []).map((w: any) => ({ value: w.id, label: w.name })))
+        setCategories((cats || []).map((c: Category) => ({ value: c.id, label: c.name })))
+        setBrands((brs || []).map((b: Category) => ({ value: b.id, label: b.name })))
+        setUnits((unts || []).map((u: Category) => ({ value: u.id, label: u.name })))
+        setWarehouses((whs || []).map((w: Category) => ({ value: w.id, label: w.name })))
 
       } catch (error) {
         console.error("Failed to fetch data:", error)

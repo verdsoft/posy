@@ -217,115 +217,78 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT: Update purchase
-export async function PUT(req: NextRequest) {
-  const conn = await getConnection()
-  try {
-    await conn.beginTransaction()
 
-    const { fields } = await parseForm(req)
-    const purchaseId = getField(fields, 'id')
-    
-    if (!purchaseId) {
+
+// PUT: Update purchase
+export async function PUT(request: Request) {
+  const conn = await getConnection();
+  
+  try {
+    // Parse incoming JSON data
+    const data = await request.json();
+
+    // Validate required fields
+    if (!data.id) {
       return NextResponse.json(
         { error: "Purchase ID is required" },
         { status: 400 }
-      )
+      );
     }
 
     // Get current purchase status
-    const [current]: [RowDataPacket[], FieldPacket[]] = await conn.query(
+    const [current]: [any[], any] = await conn.query(
       `SELECT status FROM purchases WHERE id = ?`,
-      [purchaseId]
-    )
+      [data.id]
+    );
 
     if (current.length === 0) {
       return NextResponse.json(
         { error: "Purchase not found" },
         { status: 404 }
-      )
+      );
     }
 
-    const currentStatus = current[0].status
+    const currentStatus = current[0].status;
 
-    // Parse purchase data
+    // Prepare purchase data
     const purchaseData = {
-      supplier_id: getField(fields, 'supplier_id'),
-      warehouse_id: getField(fields, 'warehouse_id'),
-      date: getField(fields, 'date'),
-      subtotal: parseFloat(getField(fields, 'subtotal')) || 0,
-      tax_rate: parseFloat(getField(fields, 'tax_rate')) || 0,
-      tax_amount: parseFloat(getField(fields, 'tax_amount')) || 0,
-      discount: parseFloat(getField(fields, 'discount')) || 0,
-      shipping: parseFloat(getField(fields, 'shipping')) || 0,
-      total: parseFloat(getField(fields, 'total')) || 0,
-      paid: parseFloat(getField(fields, 'paid')) || 0,
-      due: parseFloat(getField(fields, 'due')) || 0,
-      status: getField(fields, 'status') || 'pending',
-      payment_status: getField(fields, 'payment_status') || 'unpaid',
-      notes: getField(fields, 'notes'),
+      supplier_id: data.supplier_id,
+      warehouse_id: data.warehouse_id,
+      date: data.date,
+      subtotal: parseFloat(data.subtotal) || 0,
+      tax_rate: parseFloat(data.tax_rate) || 0,
+      tax_amount: parseFloat(data.tax_amount) || 0,
+      discount: parseFloat(data.discount) || 0,
+      shipping: parseFloat(data.shipping) || 0,
+      total: parseFloat(data.total) || 0,
+      status: data.status || 'pending',
+      payment_status: data.payment_status || 'unpaid',
+      notes: data.notes,
       updated_at: new Date()
-    }
+    };
 
     // Update purchase
     await conn.query(
       `UPDATE purchases SET ? WHERE id = ?`,
-      [purchaseData, purchaseId]
-    )
+      [purchaseData, data.id]
+    );
 
-    // Handle status change from pending to received
-    if (currentStatus === 'pending' && purchaseData.status === 'received') {
-      // Get current items to update stock
-      const [currentItems]: [RowDataPacket[], FieldPacket[]] = await conn.query(
-        `SELECT product_id, quantity FROM purchase_items WHERE purchase_id = ?`,
-        [purchaseId]
-      )
-
-      for (const item of currentItems) {
-        await conn.query(
-          `UPDATE products 
-           SET quantity = quantity + ? 
-           WHERE id = ?`,
-          [item.quantity, item.product_id]
-        )
-      }
-    }
-
-    // Handle status change from received to pending/cancelled
-    if (currentStatus === 'received' && 
-        (purchaseData.status === 'pending' || purchaseData.status === 'cancelled')) {
-      // Get current items to reverse stock
-      const [currentItems]: [RowDataPacket[], FieldPacket[]] = await conn.query(
-        `SELECT product_id, quantity FROM purchase_items WHERE purchase_id = ?`,
-        [purchaseId]
-      )
-
-      for (const item of currentItems) {
-        await conn.query(
-          `UPDATE products 
-           SET quantity = quantity - ? 
-           WHERE id = ?`,
-          [item.quantity, item.product_id]
-        )
-      }
-    }
-
-    // Parse and update purchase items
-    const items = JSON.parse(getField(fields, 'items') || [])
+    // Process items
+    const items = Array.isArray(data.items) ? data.items : [];
     
-    // First delete all existing items
+    // Delete existing items
     await conn.query(
       `DELETE FROM purchase_items WHERE purchase_id = ?`,
-      [purchaseId]
-    )
+      [data.id]
+    );
 
-    // Then insert the new items
+    // Insert new items
     for (const item of items) {
       await conn.query(
         `INSERT INTO purchase_items SET ?`,
         [{
           id: uuidv4(),
-          purchase_id: purchaseId,
+          purchase_id: data.id,
           product_id: item.product_id,
           quantity: item.quantity,
           unit_cost: item.unit_cost,
@@ -333,31 +296,58 @@ export async function PUT(req: NextRequest) {
           tax: item.tax || 0,
           subtotal: item.subtotal
         }]
-      )
+      );
     }
 
-    // If status is received after update, update stock
-    if (purchaseData.status === 'received') {
+    // Handle stock updates
+    if (currentStatus === 'pending' && purchaseData.status === 'received') {
+      // Add stock
       for (const item of items) {
         await conn.query(
           `UPDATE products 
-           SET quantity = quantity + ? 
+           SET stock = stock + ? 
            WHERE id = ?`,
           [item.quantity, item.product_id]
-        )
+        );
+      }
+    } else if (currentStatus === 'received' && 
+              (purchaseData.status === 'pending' || purchaseData.status === 'cancelled')) {
+      // Remove stock
+      for (const item of items) {
+        await conn.query(
+          `UPDATE products 
+           SET stock = stock - ? 
+           WHERE id = ?`,
+          [item.quantity, item.product_id]
+        );
+      }
+    } else if (purchaseData.status === 'received') {
+      // Direct received status
+      for (const item of items) {
+        await conn.query(
+          `UPDATE products 
+           SET stock = stock + ? 
+           WHERE id = ?`,
+          [item.quantity, item.product_id]
+        );
       }
     }
 
-    await conn.commit()
-    return NextResponse.json({ success: true })
-  } catch (error: unknown) {
-  
+    return NextResponse.json({ 
+      success: true,
+      message: "Purchase updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Error updating purchase:", error);
     return NextResponse.json(
-      { error: (error instanceof Error && error.message) || "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
-    )
-  }
-}
+    );
+  } }
+
+
+
 
 // DELETE: Delete purchase
 export async function DELETE(req: NextRequest) {
@@ -419,7 +409,7 @@ export async function DELETE(req: NextRequest) {
       [id]
     )
 
-    await conn.commit()
+   
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
    
