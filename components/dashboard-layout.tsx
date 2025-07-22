@@ -94,38 +94,38 @@ const menuItems = [
     href: "/pos",
     roles: ['admin', 'user']
   },
-  {
-    id: "hrm",
-    label: "HRM",
-    icon: Users,
-    roles: ['admin'],
-    submenu: [
-      { label: "Company", href: "/hrm/company" },
-      { label: "Departments", href: "/hrm/departments" },
-      { label: "Office Shift", href: "/hrm/shifts" },
-      { label: "Employees", href: "/hrm/employees" },
-      { label: "Attendance", href: "/hrm/attendance" },
-      {
-        label: "Leave Request",
-        href: "#",
-        submenu: [
-          { label: "Leave Request", href: "/hrm/leave-request" },
-          { label: "Leave Type", href: "/hrm/leave-type" },
-        ],
-      },
-      { label: "Holidays", href: "/hrm/holidays" },
-    ],
-  },
-  {
-    id: "transfer",
-    label: "Transfer",
-    icon: ArrowLeftRight,
-    roles: ['admin'],
-    submenu: [
-      { label: "Create Transfer", href: "/transfer/create" },
-      { label: "Transfer List", href: "/transfer/list" },
-    ],
-  },
+  // {
+  //   id: "hrm",
+  //   label: "HRM",
+  //   icon: Users,
+  //   roles: ['admin'],
+  //   submenu: [
+  //     { label: "Company", href: "/hrm/company" },
+  //     { label: "Departments", href: "/hrm/departments" },
+  //     { label: "Office Shift", href: "/hrm/shifts" },
+  //     { label: "Employees", href: "/hrm/employees" },
+  //     { label: "Attendance", href: "/hrm/attendance" },
+  //     {
+  //       label: "Leave Request",
+  //       href: "#",
+  //       submenu: [
+  //         { label: "Leave Request", href: "/hrm/leave-request" },
+  //         { label: "Leave Type", href: "/hrm/leave-type" },
+  //       ],
+  //     },
+  //     { label: "Holidays", href: "/hrm/holidays" },
+  //   ],
+  // },
+  // {
+  //   id: "transfer",
+  //   label: "Transfer",
+  //   icon: ArrowLeftRight,
+  //   roles: ['admin'],
+  //   submenu: [
+  //     { label: "Create Transfer", href: "/transfer/create" },
+  //     { label: "Transfer List", href: "/transfer/list" },
+  //   ],
+  // },
   {
     id: "expenses",
     label: "Expenses",
