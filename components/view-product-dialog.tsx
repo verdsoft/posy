@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
+import type React from "react"
 
 export function ViewProductDialog({
   product,
@@ -15,8 +16,8 @@ export function ViewProductDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto my-4">
+        <DialogHeader className="sticky top-0 bg-background z-10">
           <DialogTitle>Product Details</DialogTitle>
         </DialogHeader>
         
@@ -31,67 +32,70 @@ export function ViewProductDialog({
             </div>
           )}
           
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Name</TableCell>
-                <TableCell>{product.name}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Code</TableCell>
-                <TableCell>{product.code}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Category</TableCell>
-                <TableCell>{product.category_name || product.category_id}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Brand</TableCell>
-                <TableCell>{product.brand_name || product.brand_id}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Price</TableCell>
-                <TableCell>${Number(product.price).toFixed(2)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-          
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Cost</TableCell>
-                <TableCell>${Number(product.cost).toFixed(2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Stock</TableCell>
-                <TableCell>{Number(product.stock).toFixed(2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Unit</TableCell>
-                <TableCell>{product.unit_name || product.unit_id}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Status</TableCell>
-                <TableCell className="capitalize">{product.status}</TableCell>
-              </TableRow>
-              {product.description && (
+          <div className="space-y-4">
+            <Table>
+              <TableBody>
                 <TableRow>
-                  <TableCell colSpan={2}>
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-2">Description</h4>
-                      <p className="text-sm text-gray-600">{product.description}</p>
-                    </div>
-                  </TableCell>
+                  <TableCell className="font-medium w-[40%]">Name</TableCell>
+                  <TableCell>{product.name}</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                <TableRow>
+                  <TableCell className="font-medium">Code</TableCell>
+                  <TableCell>{product.code}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Category</TableCell>
+                  <TableCell>{product.category_name || product.category_id}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Brand</TableCell>
+                  <TableCell>{product.brand_name || product.brand_id}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Price</TableCell>
+                  <TableCell>${Number(product.price).toFixed(2)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+          
+          <div className="space-y-4">
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium w-[40%]">Cost</TableCell>
+                  <TableCell>${Number(product.cost).toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Stock</TableCell>
+                  <TableCell>{Number(product.stock).toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Unit</TableCell>
+                  <TableCell>{product.unit_name || product.unit_id}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Status</TableCell>
+                  <TableCell className="capitalize">{product.status}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </div>
         
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
+        {product.description && (
+          <div className="mt-4">
+            <h4 className="font-medium mb-2">Description</h4>
+            <p className="text-sm text-gray-600">{product.description}</p>
+          </div>
+        )}
+        
+        <div className="sticky bottom-0 bg-background pt-4 pb-2">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

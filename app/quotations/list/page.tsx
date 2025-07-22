@@ -12,6 +12,8 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type React from "react"
+import { Eye } from "lucide-react"
+import { ViewQuotationDialog } from "./view-quotation/page"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -34,6 +36,8 @@ export default function QuotationList() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const router = useRouter()
+  const [viewQuotation, setViewQuotation] = useState<Quotation | null>(null)
+const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
 
   useEffect(() => {
     const fetchQuotations = async () => {
@@ -235,24 +239,35 @@ const handleDelete = async (id: string) => {
                         </Badge>
                       </td>
                       <td className="p-4">${quotation.total}</td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => router.push(`/quotations/edit/${quotation.id}`)}
-                          >
-                            <Edit className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDelete(quotation.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
+                          <td className="p-4">
+  <div className="flex gap-2">
+    <Button 
+      variant="ghost" 
+      size="sm"
+      onClick={() => {
+        setViewQuotation(quotation)
+        setIsViewDialogOpen(true)
+      }}
+    >
+      <Eye className="h-4 w-4 text-blue-600" />
+    </Button>
+    <Button 
+      variant="ghost" 
+      size="sm"
+      onClick={() => router.push(`/quotations/edit/${quotation.id}`)}
+    >
+      <Edit className="h-4 w-4 text-green-600" />
+    </Button>
+    <Button 
+      variant="ghost" 
+      size="sm"
+      onClick={() => handleDelete(quotation.id)}
+    >
+      <Trash2 className="h-4 w-4 text-red-600" />
+    </Button>
+  </div>
+</td>
+
                     </tr>
                   ))
                 )}
@@ -291,6 +306,13 @@ const handleDelete = async (id: string) => {
           </div>
         </div>
       </div>
+      {viewQuotation && (
+  <ViewQuotationDialog
+    quotation={viewQuotation}
+    open={isViewDialogOpen}
+    onOpenChange={setIsViewDialogOpen}
+  />
+)}
     </DashboardLayout>
   )
 }

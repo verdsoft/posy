@@ -3,7 +3,6 @@
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useQuery } from "@tanstack/react-query"
 import AuthGuard from "@/components/AuthGuard"
 import { fetchAdjustments, fetchAdjustmentDetails } from "@/lib/api"
 import Link from "next/link"
@@ -15,7 +14,7 @@ import {
 import { useState } from "react"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, ChevronLeft, ChevronRight, Download, X, FileDown } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight,  X, FileDown } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,9 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type React from "react"
+import { Edit, Trash2,Eye } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -52,6 +54,8 @@ export default function AdjustmentList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedAdjustment, setSelectedAdjustment] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const { data, isLoading, isError } = useQuery<PaginatedResponse<Adjustment>>({
     queryKey: ['adjustments', page, limit, searchQuery],
@@ -66,10 +70,10 @@ export default function AdjustmentList() {
   // Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF()
-    
+
     // Add title
     doc.text('Adjustment List', 14, 16)
-    
+
     // Prepare data for the table
     const tableData = data?.data.map(adjustment => [
       format(new Date(adjustment.date), 'MMM dd, yyyy'),
@@ -78,7 +82,7 @@ export default function AdjustmentList() {
       adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
       adjustment.quantity?.toString() || '0'
     ]) || []
-    
+
     // Add table
     autoTable(doc, {
       head: [['Date', 'Reference', 'Warehouse', 'Type', 'Total Products']],
@@ -87,7 +91,7 @@ export default function AdjustmentList() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-    
+
     doc.save('adjustments.pdf')
   }
 
@@ -102,7 +106,7 @@ export default function AdjustmentList() {
         'Total Products': adjustment.quantity || 0
       })) || []
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Adjustments")
     XLSX.writeFile(workbook, "adjustments.xlsx")
@@ -125,6 +129,25 @@ export default function AdjustmentList() {
     setIsDialogOpen(true)
   }
 
+  const handleDeleteAdjustment = async (id: string) => {
+  if (!confirm("Are you sure you want to delete this adjustment?")) return
+  
+  try {
+    const response = await fetch(`/api/adjustments?id=${id}`, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) throw new Error('Failed to delete adjustment')
+
+    // Refresh the data after deletion
+    queryClient.invalidateQueries(['adjustments', page, limit, searchQuery])
+    toast.success("Adjustment deleted successfully")
+  } catch (error) {
+    console.error("Error deleting adjustment:", error)
+    toast.error("Failed to delete adjustment")
+  }
+}
+
   return (
     <AuthGuard>
       <DashboardLayout>
@@ -143,8 +166,8 @@ export default function AdjustmentList() {
               <form onSubmit={handleSearch} className="flex items-center gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Search adjustments..." 
+                  <Input
+                    placeholder="Search adjustments..."
                     className="w-64 pl-10"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -158,15 +181,15 @@ export default function AdjustmentList() {
                 {/* <Button variant="outline" className="text-blue-600 bg-transparent">
                   🔍 Filter
                 </Button> */}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={exportToPDF}
                 >
                   <FileDown className="h-4 w-4 mr-2" /> PDF
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={exportToExcel}
                 >
@@ -230,25 +253,41 @@ export default function AdjustmentList() {
                           {adjustment.warehouse_name}
                         </td>
                         <td className="p-3">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            adjustment.type === 'addition' 
-                              ? 'bg-green-100 text-green-800' 
+                          <span className={`px-2 py-1 rounded text-xs ${adjustment.type === 'addition'
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
-                          }`}>
+                            }`}>
                             {adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1)}
                           </span>
                         </td>
                         <td className="p-3">
-                          {adjustment.quantity }
+                          {adjustment.quantity}
                         </td>
                         <td className="p-3">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleViewAdjustment(adjustment.id)}
-                          >
-                            View
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewAdjustment(adjustment.id)}
+                            >
+                             <Eye className="h-4 w-4 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/adjustment/edit/${adjustment.id}`)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteAdjustment(adjustment.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -260,7 +299,7 @@ export default function AdjustmentList() {
             <div className="p-4 border-t flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Rows per page:</span>
-                <select 
+                <select
                   value={limit}
                   onChange={(e) => setLimit(Number(e.target.value))}
                   className="border rounded text-sm p-1"
@@ -272,7 +311,7 @@ export default function AdjustmentList() {
                   ))}
                 </select>
               </div>
-              
+
               {data && (
                 <Pagination>
                   <PaginationContent>
@@ -285,13 +324,13 @@ export default function AdjustmentList() {
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                     </PaginationItem>
-                    
+
                     <span className="text-sm text-gray-600 mx-4">
-                      {data.pagination.total > 0 
+                      {data.pagination.total > 0
                         ? `${(page - 1) * limit + 1}-${Math.min(page * limit, data.pagination.total)} of ${data.pagination.total}`
                         : '0-0 of 0'}
                     </span>
-                    
+
                     <PaginationItem>
                       <Button
                         variant="ghost"
@@ -314,16 +353,16 @@ export default function AdjustmentList() {
             <DialogHeader>
               <div className="flex justify-between items-center">
                 <DialogTitle>Adjustment Details</DialogTitle>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="icon"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  <X className="h-4 w-4" />
+                  {/* <X className="h-4 w-4" /> */}
                 </Button>
               </div>
             </DialogHeader>
-            
+
             {isDetailsLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-8 w-full" />
@@ -349,11 +388,10 @@ export default function AdjustmentList() {
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Type</h3>
                     <p className="mt-1 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        adjustmentDetails.type === 'addition' 
-                          ? 'bg-green-100 text-green-800' 
+                      <span className={`px-2 py-1 rounded text-xs ${adjustmentDetails.type === 'addition'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {adjustmentDetails.type.charAt(0).toUpperCase() + adjustmentDetails.type.slice(1)}
                       </span>
                     </p>
@@ -394,11 +432,10 @@ export default function AdjustmentList() {
                             {/* <td className="p-3 text-sm">{item.pre_stock}</td> */}
                             <td className="p-3 text-sm">{item.quantity}</td>
                             <td className="p-3 text-sm">
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                item.type === 'addition' 
-                                  ? 'bg-green-100 text-green-800' 
+                              <span className={`px-2 py-1 rounded text-xs ${item.type === 'addition'
+                                  ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}>
+                                }`}>
                                 {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                               </span>
                             </td>
