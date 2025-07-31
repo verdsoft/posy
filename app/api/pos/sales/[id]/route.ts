@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
 import type { FieldPacket } from "mysql2"
 
+
 // GET single sale with items
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const conn = await getConnection()
   
   try {
@@ -48,8 +49,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // UPDATE sale
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const body = await req.json()
   const conn = await getConnection()
   

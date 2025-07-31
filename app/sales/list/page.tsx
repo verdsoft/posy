@@ -92,14 +92,14 @@ export default function SaleList() {
 
     // Prepare data for the table
     const tableData = filteredSales.map(sale => [
-      sale.date,
-      sale.reference,
-      sale.customer_name,
-      sale.status,
-      `$${Number(sale.total).toFixed(2)}`,
-      `$${Number(sale.paid).toFixed(2)}`,
-      `$${Number(sale.due).toFixed(2)}`,
-      sale.payment_status
+      sale.date ?? "",
+      sale.reference ?? "",
+      sale.customer_name ?? "",
+      sale.status ?? "",
+      `$${Number(sale.total ?? 0).toFixed(2)}`,
+      `$${Number(sale.paid ?? 0).toFixed(2)}`,
+      `$${Number(sale.due ?? 0).toFixed(2)}`,
+      sale.payment_status ?? ""
     ])
 
     // Add table
@@ -345,7 +345,7 @@ export default function SaleList() {
                       </tr>
                     </thead>
                     <TableBody>
-                      {selectedSale.items?.map((item) => (
+                      {selectedSale.items?.map((item:Sale) => (
                         <TableRow key={item.id}>
                           <TableCell className="p-3 text-sm">{item.product_name || item.product_id}</TableCell>
                           <TableCell className="p-3 text-sm">${Number(item.price).toFixed(2)}</TableCell>
