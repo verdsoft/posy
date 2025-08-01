@@ -20,7 +20,7 @@ export function DatabaseSetup() {
     mysql: {
       host: "localhost",
       port: 3306,
-      database: "verdsoft_bms",
+      database: "_bms",
       username: "root",
       password: "",
     },
@@ -125,7 +125,7 @@ export function DatabaseSetup() {
                   id="database"
                   value={config.mysql.database}
                   onChange={(e) => handleConfigChange("database", e.target.value)}
-                  placeholder="verdsoft_bms"
+                  placeholder="_bms"
                 />
               </div>
               <div>

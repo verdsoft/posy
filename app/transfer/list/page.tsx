@@ -146,8 +146,8 @@ export default function TransferListPage() {
                         <td className="p-4 font-medium">{transfer.reference}</td>
                         <td className="p-4">{transfer.fromWarehouse}</td>
                         <td className="p-4">{transfer.toWarehouse}</td>
-                        <td className="p-4">{transfer.items.toFixed(2)}</td>
-                        <td className="p-4">${transfer.total.toFixed(2)}</td>
+                        <td className="p-4">{transfer.items}</td>
+                        <td className="p-4">${transfer.total}</td>
                         <td className="p-4">{getStatusBadge(transfer.status)}</td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">

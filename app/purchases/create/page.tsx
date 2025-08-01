@@ -417,7 +417,7 @@ export default function CreatePurchase() {
                                 className="w-20"
                               />
                             </td>
-                            <td className="p-3 border">${Number(item.subtotal).toFixed(2)}</td>
+                            <td className="p-3 border">${Number(item.subtotal)}</td>
                             <td className="p-3 border">
                               <Button 
                                 variant="ghost" 
@@ -544,23 +544,23 @@ export default function CreatePurchase() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span>Subtotal</span>
-                        <span>${Number(subtotal).toFixed(2)}</span>
+                        <span>${Number(subtotal)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Order Tax</span>
-                        <span>${Number(tax_amount).toFixed(2)} ({tax_rate}%)</span>
+                        <span>${Number(tax_amount)} ({tax_rate}%)</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Discount</span>
-                        <span>${Number(discount).toFixed(2)}</span>
+                        <span>${Number(discount)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Shipping</span>
-                        <span>${Number(shipping).toFixed(2)}</span>
+                        <span>${Number(shipping)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg border-t pt-2">
                         <span>Grand Total</span>
-                        <span>${Number(total).toFixed(2)}</span>
+                        <span>${Number(total)}</span>
                       </div>
                     </div>
                   </div>

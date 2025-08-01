@@ -1,9 +1,9 @@
--- MySQL Database Schema for verdsoft Global BMS
+-- MySQL Database Schema for  Global BMS
 -- Run this script to create all necessary tables
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS verdsoft_bms;
-USE verdsoft_bms;
+CREATE DATABASE IF NOT EXISTS _bms;
+USE _bms;
 
 -- Users table
 CREATE TABLE users (
@@ -472,13 +472,93 @@ CREATE TABLE adjustment_items (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
+-- Sales returns table
+CREATE TABLE sales_returns (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    reference VARCHAR(100) UNIQUE NOT NULL,
+    sale_id VARCHAR(36) NOT NULL,
+    customer_id VARCHAR(36) NOT NULL,
+    warehouse_id VARCHAR(36) NOT NULL,
+    date DATE NOT NULL,
+    subtotal DECIMAL(10,2) DEFAULT 0,
+    tax_rate DECIMAL(5,2) DEFAULT 0,
+    tax_amount DECIMAL(10,2) DEFAULT 0,
+    discount DECIMAL(10,2) DEFAULT 0,
+    shipping DECIMAL(10,2) DEFAULT 0,
+    total DECIMAL(10,2) NOT NULL,
+    status ENUM('pending', 'completed', 'cancelled') DEFAULT 'completed',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE
+);
+
+-- Sales return items table
+CREATE TABLE sales_return_items (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    return_id VARCHAR(36) NOT NULL,
+    product_id VARCHAR(36) NOT NULL,
+    sale_item_id VARCHAR(36),
+    quantity DECIMAL(10,2) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    discount DECIMAL(10,2) DEFAULT 0,
+    tax DECIMAL(10,2) DEFAULT 0,
+    subtotal DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (return_id) REFERENCES sales_returns(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (sale_item_id) REFERENCES sale_items(id) ON DELETE SET NULL
+);
+
+-- Purchase returns table
+CREATE TABLE purchase_returns (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    reference VARCHAR(100) UNIQUE NOT NULL,
+    purchase_id VARCHAR(36) NOT NULL,
+    supplier_id VARCHAR(36) NOT NULL,
+    warehouse_id VARCHAR(36) NOT NULL,
+    date DATE NOT NULL,
+    subtotal DECIMAL(10,2) DEFAULT 0,
+    tax_rate DECIMAL(5,2) DEFAULT 0,
+    tax_amount DECIMAL(10,2) DEFAULT 0,
+    discount DECIMAL(10,2) DEFAULT 0,
+    shipping DECIMAL(10,2) DEFAULT 0,
+    total DECIMAL(10,2) NOT NULL,
+    status ENUM('pending', 'completed', 'cancelled') DEFAULT 'completed',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+    FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE
+);
+
+-- Purchase return items table
+CREATE TABLE purchase_return_items (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    return_id VARCHAR(36) NOT NULL,
+    product_id VARCHAR(36) NOT NULL,
+    purchase_item_id VARCHAR(36),
+    quantity DECIMAL(10,2) NOT NULL,
+    unit_cost DECIMAL(10,2) NOT NULL,
+    discount DECIMAL(10,2) DEFAULT 0,
+    tax DECIMAL(10,2) DEFAULT 0,
+    subtotal DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (return_id) REFERENCES purchase_returns(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (purchase_item_id) REFERENCES purchase_items(id) ON DELETE SET NULL
+);
+
 -- Insert default data
 INSERT INTO companies (name, email, phone, address, city, country) VALUES
-('verdsoft Global', 'info@verdsoft.com', '+1234567890', '123 Business Street', 'New York', 'USA');
+(' Global', 'info@.com', '+1234567890', '123 Business Street', 'New York', 'USA');
 
 INSERT INTO warehouses (name, phone, email, address, city, country) VALUES
-('Main Warehouse', '+1234567890', 'warehouse@verdsoft.com', '456 Storage Ave', 'New York', 'USA'),
-('Default Warehouse', '+1234567891', 'default@verdsoft.com', '789 Default St', 'New York', 'USA');
+('Main Warehouse', '+1234567890', 'warehouse@.com', '456 Storage Ave', 'New York', 'USA'),
+('Default Warehouse', '+1234567891', 'default@.com', '789 Default St', 'New York', 'USA');
 
 INSERT INTO categories (code, name) VALUES
 ('ELEC', 'Electronics'),
@@ -487,7 +567,7 @@ INSERT INTO categories (code, name) VALUES
 ('SERV', 'Services');
 
 INSERT INTO brands (name, description) VALUES
-('verdsoft Global', 'Our main brand'),
+(' Global', 'Our main brand'),
 ('Generic', 'Generic products');
 
 INSERT INTO units (name, short_name) VALUES

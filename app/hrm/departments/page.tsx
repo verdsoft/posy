@@ -14,31 +14,31 @@ const departments = [
     id: 1,
     department: "Business Development Unit",
     departmentHead: "",
-    company: "verdsoft Global",
+    company: " Global",
   },
   {
     id: 2,
     department: "Customer Support and Reception",
     departmentHead: "",
-    company: "verdsoft Global",
+    company: " Global",
   },
   {
     id: 3,
     department: "Internal Administration",
     departmentHead: "",
-    company: "verdsoft Global",
+    company: " Global",
   },
   {
     id: 4,
     department: "Sales and Marketing",
     departmentHead: "",
-    company: "verdsoft Global",
+    company: " Global",
   },
   {
     id: 5,
     department: "Product Development",
     departmentHead: "",
-    company: "verdsoft Global",
+    company: " Global",
   },
 ]
 
@@ -97,7 +97,7 @@ export default function Departments() {
                           <SelectValue placeholder="Choose Company" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="verdsoft">verdsoft Global</SelectItem>
+                          <SelectItem value=""> Global</SelectItem>
                           <SelectItem value="learnedz">LEARNedz Private Limited</SelectItem>
                         </SelectContent>
                       </Select>

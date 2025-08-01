@@ -82,8 +82,8 @@ async function generatePDF(products: any[]) {
       product.name,
       product.code,
       product.category_name || product.category_id,
-      `$${Number(product.price).toFixed(2)}`,
-      Number(product.stock).toFixed(2),
+      `$${Number(product.price)}`,
+      Number(product.stock),
     ]
     
     row.forEach((text, i) => {
@@ -153,9 +153,9 @@ async function generateExcel(products: any[]) {
       code: product.code,
       category: product.category_name || product.category_id,
       brand: product.brand_name || product.brand_id,
-      price: Number(product.price).toFixed(2),
-      cost: Number(product.cost).toFixed(2),
-      stock: Number(product.stock).toFixed(2),
+      price: Number(product.price),
+      cost: Number(product.cost),
+      stock: Number(product.stock),
       status: product.status,
     })
   })

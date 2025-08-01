@@ -13,7 +13,7 @@ const shifts = [
   {
     id: 1,
     name: "Day",
-    company: "verdsoft Global",
+    company: " Global",
   },
 ]
 
@@ -68,7 +68,7 @@ export default function OfficeShift() {
                           <SelectValue placeholder="Choose Company" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="verdsoft">verdsoft Global</SelectItem>
+                          <SelectItem value=""> Global</SelectItem>
                           <SelectItem value="learnedz">LEARNedz Private Limited</SelectItem>
                         </SelectContent>
                       </Select>

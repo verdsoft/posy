@@ -86,9 +86,9 @@ export default function ProductList() {
       product.code || '',
       product.category_name || '',
       product.brand_name || '',
-      Number(product.price).toFixed(2),
+      Number(product.price),
       product.unit_name || '',
-      Number(product.stock ?? 0).toFixed(2)
+      Number(product.stock ?? 0)
     ])
     
     // Add table
@@ -111,9 +111,9 @@ export default function ProductList() {
         Code: product.code,
         Category: product.category_name,
         Brand: product.brand_name,
-        Price: Number(product.price).toFixed(2),
+        Price: Number(product.price),
         Unit: product.unit_name,
-        Quantity: Number(product.stock ?? 0).toFixed(2)
+        Quantity: Number(product.stock ?? 0)
       }))
     )
     
@@ -225,9 +225,9 @@ export default function ProductList() {
                         <td className="p-3">{product.code}</td>
                         <td className="p-3">{product.category_name}</td>
                         <td className="p-3">{product.brand_name}</td>
-                        <td className="p-3">{Number(product.price).toFixed(2)}</td>
+                        <td className="p-3">{Number(product.price)}</td>
                         <td className="p-3">{product.unit_name}</td>
-                        <td className="p-3">{Number(product.stock ?? 0).toFixed(2)}</td>
+                        <td className="p-3">{Number(product.stock ?? 0)}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
                             <Button

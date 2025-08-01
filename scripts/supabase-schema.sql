@@ -1,4 +1,4 @@
--- Supabase Database Schema for verdsoft Global BMS
+-- Supabase Database Schema for  Global BMS
 -- Run this script in Supabase SQL Editor
 
 -- Enable UUID extension
@@ -496,9 +496,9 @@ CREATE POLICY "Users can view all adjustment_items" ON public.adjustment_items F
 
 -- Insert default data
 INSERT INTO public.companies (name, email, phone, address, city, country) VALUES
-('verdsoft Global', 'info@verdsoft.com', '+1234567890', '123 Business Street', 'New York', 'USA');
+(' Global', 'info@.com', '+1234567890', '123 Business Street', 'New York', 'USA');
 
 INSERT INTO public.warehouses (name, phone, email, address, city, country) VALUES
-('Main Warehouse', '+1234567890', 'warehouse@verdsoft.com', '456 Storage Ave', 'New York', 'USA'),
-('Default Warehouse', '+1234567891', 'default@verdsoft.com', '789 Default St', 'New York', 'USA'),
-('Karigamombe', '+1234567892', 'karigamombe@verdsoft.com', '321 Karigamombe Rd',
+('Main Warehouse', '+1234567890', 'warehouse@.com', '456 Storage Ave', 'New York', 'USA'),
+('Default Warehouse', '+1234567891', 'default@.com', '789 Default St', 'New York', 'USA'),
+('Karigamombe', '+1234567892', 'karigamombe@.com', '321 Karigamombe Rd',

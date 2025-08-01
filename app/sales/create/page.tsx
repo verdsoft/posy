@@ -518,7 +518,7 @@ export default function CreateSale() {
                   </div>
                   <div className="flex justify-between">
                     <span>Order Tax</span>
-                    <span>${Number(taxAmount).toFixed(2)} = ${taxAmount} ({taxRate}%)</span>
+                    <span>${Number(taxAmount)} = ${taxAmount} ({taxRate}%)</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Discount</span>

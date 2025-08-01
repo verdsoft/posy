@@ -66,7 +66,7 @@ const payments = [
     date: "2022-06-09",
     reference: "INV/PR_1112",
     purchase: "PR_1123",
-    supplier: "verdsoft Global",
+    supplier: " Global",
     paidBy: "Cash",
     amount: 15.0,
   },
@@ -137,7 +137,7 @@ export default function PurchasesPayments() {
                     <td className="p-3">{payment.purchase}</td>
                     <td className="p-3">{payment.supplier}</td>
                     <td className="p-3">{payment.paidBy}</td>
-                    <td className="p-3">{payment.amount.toFixed(2)}</td>
+                    <td className="p-3">{payment.amount}</td>
                   </tr>
                 ))}
               </tbody>

@@ -98,7 +98,7 @@ export default function SalesReturnList() {
       ret.customer_name,
       ret.warehouse_name,
       ret.status,
-      `$${Number(ret.total).toFixed(2)}`
+      `$${Number(ret.total)}`
     ])
     
     autoTable(doc, {
@@ -121,7 +121,7 @@ export default function SalesReturnList() {
         Customer: ret.customer_name,
         Warehouse: ret.warehouse_name,
         Status: ret.status,
-        Total: Number(ret.total).toFixed(2),
+        Total: Number(ret.total),
         'Sale Reference': ret.sale_reference
       }))
     )
@@ -177,7 +177,7 @@ export default function SalesReturnList() {
               </Button>
               <Button 
                 className="bg-[#1a237e] hover:bg-purple-700"
-                onClick={() => router.push('/sales-returns/create')}
+                onClick={() => router.push('/sales-return/create')}
               >
                 Create
               </Button>
@@ -226,7 +226,7 @@ export default function SalesReturnList() {
                           {ret.status}
                         </span>
                       </td>
-                      <td className="p-3">${Number(ret.total).toFixed(2)}</td>
+                      <td className="p-3">${Number(ret.total)}</td>
                       <td className="p-3">
                         <div className="flex gap-2">
                           <Button
@@ -342,7 +342,7 @@ export default function SalesReturnList() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Total</h3>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.total).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.total)}</p>
                 </div>
               </div>
 
@@ -371,9 +371,9 @@ export default function SalesReturnList() {
                       {selectedReturn.items?.map((item: any) => (
                         <TableRow key={item.id}>
                           <TableCell className="p-3 text-sm">{item.product_name || item.product_id}</TableCell>
-                          <TableCell className="p-3 text-sm">${Number(item.unit_price).toFixed(2)}</TableCell>
+                          <TableCell className="p-3 text-sm">${Number(item.unit_price)}</TableCell>
                           <TableCell className="p-3 text-sm">{item.quantity}</TableCell>
-                          <TableCell className="p-3 text-sm">${Number(item.subtotal).toFixed(2)}</TableCell>
+                          <TableCell className="p-3 text-sm">${Number(item.subtotal)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

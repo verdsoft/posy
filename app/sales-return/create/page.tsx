@@ -68,9 +68,14 @@ export default function CreateSalesReturn() {
         setWarehouses(warehousesData)
         
         // Fetch recent sales
-        const salesRes = await fetch('/api/pos/sales?limit=50')
+        const salesRes = await fetch('/api/pos/sales')
         const salesData = await salesRes.json()
-        setSales(salesData.data || [])
+        console.log('Sales data:', salesData) // Debug log
+        setSales(salesData || [])
+        
+        if (!salesData || salesData.length === 0) {
+          toast.error("No sales found. Please create some sales first.")
+        }
         
       } catch (error) {
         toast.error("Failed to load initial data")
@@ -90,7 +95,13 @@ export default function CreateSalesReturn() {
       
       try {
         const res = await fetch(`/api/pos/sales/${selectedSale}`)
-        if (!res.ok) throw new Error("Failed to fetch sale items")
+        if (!res.ok) {
+          if (res.status === 404) {
+            toast.error("Sale not found")
+            return
+          }
+          throw new Error("Failed to fetch sale items")
+        }
         const data = await res.json()
         setSaleItems(data.items || [])
         
@@ -265,7 +276,7 @@ export default function CreateSalesReturn() {
       }
 
       toast.success("Sales return created successfully")
-      router.push('/sales-returns/list')
+      router.push('/sales-return/list')
     } catch (error) {
       toast.error("Failed to create sales return")
       console.error(error)
@@ -301,9 +312,10 @@ export default function CreateSalesReturn() {
               <Select 
                 value={selectedSale}
                 onValueChange={setSelectedSale}
+                disabled={sales.length === 0}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Sale" />
+                  <SelectValue placeholder={sales.length === 0 ? "No sales available" : "Select Sale"} />
                 </SelectTrigger>
                 <SelectContent>
                   {sales.map(sale => (
@@ -313,6 +325,11 @@ export default function CreateSalesReturn() {
                   ))}
                 </SelectContent>
               </Select>
+              {sales.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">
+                  No sales found. Please create some sales first to create sales returns.
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium">Customer *</label>
@@ -456,7 +473,7 @@ export default function CreateSalesReturn() {
                             </Button>
                           </div>
                         </td>
-                        <td className="p-3 border">${item.subtotal.toFixed(2)}</td>
+                        <td className="p-3 border">${item.subtotal}</td>
                         <td className="p-3 border">
                           <Button 
                             variant="ghost" 
@@ -562,23 +579,23 @@ export default function CreateSalesReturn() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>${subtotal}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Order Tax</span>
-                    <span>${taxAmount.toFixed(2)} = (${taxRate}%)</span>
+                    <span>${taxAmount} = (${taxRate}%)</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Discount</span>
-                    <span>${discount.toFixed(2)}</span>
+                    <span>${discount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>${shipping.toFixed(2)}</span>
+                    <span>${shipping}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Grand Total</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>${total}</span>
                   </div>
                 </div>
               </div>

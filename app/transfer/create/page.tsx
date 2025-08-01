@@ -224,7 +224,7 @@ export default function CreateTransferPage() {
                         <tr key={item.id}>
                           <td className="border border-gray-200 p-2">{index + 1}</td>
                           <td className="border border-gray-200 p-2">{item.productName}</td>
-                          <td className="border border-gray-200 p-2">${item.netUnitCost.toFixed(2)}</td>
+                          <td className="border border-gray-200 p-2">${item.netUnitCost}</td>
                           <td className="border border-gray-200 p-2">{item.stock}</td>
                           <td className="border border-gray-200 p-2">
                             <Input
@@ -255,7 +255,7 @@ export default function CreateTransferPage() {
                               step="0.01"
                             />
                           </td>
-                          <td className="border border-gray-200 p-2">${item.subtotal.toFixed(2)}</td>
+                          <td className="border border-gray-200 p-2">${item.subtotal}</td>
                           <td className="border border-gray-200 p-2">
                             <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(item.id)}>
                               <Trash2 className="h-4 w-4" />
@@ -359,21 +359,21 @@ export default function CreateTransferPage() {
                     <div className="flex justify-between">
                       <span>Order Tax</span>
                       <span>
-                        ${formData.orderTax.toFixed(2)} ({((formData.orderTax / 100) * subtotal).toFixed(2)} %)
+                        ${formData.orderTax} ({((formData.orderTax / 100) * subtotal)} %)
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Discount</span>
-                      <span>$ {formData.discount.toFixed(2)}</span>
+                      <span>$ {formData.discount}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Shipping</span>
-                      <span>$ {formData.shipping.toFixed(2)}</span>
+                      <span>$ {formData.shipping}</span>
                     </div>
                     <hr />
                     <div className="flex justify-between font-bold text-lg">
                       <span>Grand Total</span>
-                      <span>$ {total.toFixed(2)}</span>
+                      <span>$ {total}</span>
                     </div>
                   </div>
                 </div>

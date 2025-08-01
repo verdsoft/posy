@@ -140,8 +140,8 @@ export default function POSSystem() {
   }
 
   const handlePayNow = () => {
-    setReceivedAmount(grandTotal.toFixed(2))
-    setPayingAmount(grandTotal.toFixed(2))
+    setReceivedAmount(grandTotal)
+    setPayingAmount(grandTotal)
     setShowPaymentModal(true)
   }
 
@@ -157,7 +157,7 @@ export default function POSSystem() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Receipt - verdsoft Global</title>
+          <title>Receipt -  Global</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
             .header { text-align: center; margin-bottom: 20px; }
@@ -174,11 +174,11 @@ export default function POSSystem() {
         </head>
         <body>
           <div class="header">
-            <div class="company-name">verdsoft Global</div>
+            <div class="company-name"> Global</div>
             <div class="company-info">
               Date : 2025-06-30<br>
               Address : 53 Karigamombe Centre, Harare<br>
-              Email : Admin@verdsoft.Com<br>
+              Email : Admin@.Com<br>
               Phone : 0774882645<br>
               Customer : Walk-In-Customer
             </div>
@@ -318,7 +318,7 @@ export default function POSSystem() {
                   Safe Space - Community Hub
                 </div>
               </div>
-              <div className="text-sm">$ {item.price.toFixed(2)}</div>
+              <div className="text-sm">$ {item.price}</div>
               <div className="flex items-center gap-1">
                 <Button
                   size="sm"
@@ -339,7 +339,7 @@ export default function POSSystem() {
                 </Button>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm">$ {(item.price * item.quantity).toFixed(2)}</span>
+                <span className="text-sm">$ {(item.price * item.quantity)}</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -355,7 +355,7 @@ export default function POSSystem() {
 
         {/* Grand Total */}
         <div className="px-4 py-3 bg-teal-400 text-white font-bold text-lg">
-          Grand Total : $ {grandTotal.toFixed(2)}
+          Grand Total : $ {grandTotal}
         </div>
 
         {/* Tax, Discount, Shipping */}
@@ -472,13 +472,13 @@ export default function POSSystem() {
                       className="w-full h-24 object-cover rounded bg-gray-100"
                     />
                     <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                      {product.price.toFixed(2)} Pcs
+                      {product.price} Pcs
                     </div>
                   </div>
                   <h3 className="font-medium text-sm mb-1 truncate">{product.name}</h3>
                   <p className="text-xs text-gray-500 mb-2">{product.code}</p>
                   <div className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded inline-block">
-                    $ {product.price.toFixed(2)}
+                    $ {product.price}
                   </div>
                 </CardContent>
               </Card>
@@ -581,7 +581,7 @@ export default function POSSystem() {
               </div>
               <div>
                 <label className="text-sm font-medium">Change :</label>
-                <div className="mt-1 p-2 bg-gray-100 rounded">{change.toFixed(2)}</div>
+                <div className="mt-1 p-2 bg-gray-100 rounded">{change}</div>
               </div>
               <div>
                 <label className="text-sm font-medium">Payment choice *</label>
@@ -619,20 +619,20 @@ export default function POSSystem() {
               <div className="flex justify-between">
                 <span>Order Tax</span>
                 <span>
-                  $ {tax.toFixed(2)} ({((tax / subtotal) * 100).toFixed(0)} %)
+                  $ {tax} ({((tax / subtotal) * 100).toFixed(0)} %)
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Discount</span>
-                <span>$ {discount.toFixed(2)}</span>
+                <span>$ {discount}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>$ {shipping.toFixed(2)}</span>
+                <span>$ {shipping}</span>
               </div>
               <div className="flex justify-between font-bold text-lg">
                 <span>Grand Total</span>
-                <span>$ {grandTotal.toFixed(2)}</span>
+                <span>$ {grandTotal}</span>
               </div>
             </div>
           </div>
@@ -647,11 +647,11 @@ export default function POSSystem() {
           </DialogHeader>
           <div className="p-4 space-y-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold">verdsoft Global</h2>
+              <h2 className="text-xl font-bold"> Global</h2>
               <div className="text-sm text-gray-600 mt-2">
                 <p>Date : 2025-06-30</p>
                 <p>Address : 53 Karigamombe Centre, Harare</p>
-                <p>Email : Admin@verdsoft.Com</p>
+                <p>Email : Admin@.Com</p>
                 <p>Phone : 0774882645</p>
                 <p>Customer : Walk-In-Customer</p>
               </div>

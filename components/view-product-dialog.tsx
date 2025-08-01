@@ -53,7 +53,7 @@ export function ViewProductDialog({
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Price</TableCell>
-                  <TableCell>${Number(product.price).toFixed(2)}</TableCell>
+                  <TableCell>${Number(product.price)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -64,11 +64,11 @@ export function ViewProductDialog({
               <TableBody>
                 <TableRow>
                   <TableCell className="font-medium w-[40%]">Cost</TableCell>
-                  <TableCell>${Number(product.cost).toFixed(2)}</TableCell>
+                  <TableCell>${Number(product.cost)}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Stock</TableCell>
-                  <TableCell>{Number(product.stock).toFixed(2)}</TableCell>
+                  <TableCell>{Number(product.stock)}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Unit</TableCell>

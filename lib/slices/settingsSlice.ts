@@ -19,8 +19,8 @@ interface SettingsState {
 
 const initialState: SettingsState = {
   settings: {
-    companyName: "Verdsoft  BMS",
-    companyEmail: "info@verdsoft.com",
+    companyName: "  BMS",
+    companyEmail: "info@.com",
     companyPhone: "+1234567890",
     companyAddress: "123 Business Street",
     currency: "USD",

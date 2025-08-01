@@ -61,8 +61,8 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
                       <div className="text-sm text-gray-500">{item.product_code}</div>
                     </TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{Number(item.unit_cost).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{Number(item.subtotal).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{Number(item.unit_cost)}</TableCell>
+                    <TableCell className="text-right">{Number(item.subtotal)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -82,23 +82,23 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
               <div className="space-y-2 p-3 bg-gray-50 rounded-md">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>{Number(purchase.subtotal).toFixed(2)}</span>
+                  <span>{Number(purchase.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax ({purchase.tax_rate}%):</span>
-                  <span>{Number(purchase.tax_amount).toFixed(2)}</span>
+                  <span>{Number(purchase.tax_amount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Discount:</span>
-                  <span>{Number(purchase.discount).toFixed(2)}</span>
+                  <span>{Number(purchase.discount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping:</span>
-                  <span>{Number(purchase.shipping).toFixed(2)}</span>
+                  <span>{Number(purchase.shipping)}</span>
                 </div>
                 <div className="flex justify-between font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span>{Number(purchase.total).toFixed(2)}</span>
+                  <span>{Number(purchase.total)}</span>
                 </div>
               </div>
             </div>

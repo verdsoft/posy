@@ -9,8 +9,6 @@ export async function POST(req: NextRequest) {
   const conn = await getConnection()
   
   try {
-    
-    
     const returnId = uuidv4()
     const reference = body.reference || `SR-${Date.now()}`
     
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
             uuidv4(),
             returnId,
             item.product_id,
-            item.sale_item_id,
+            item.sale_item_id || null,
             item.quantity,
             item.unit_price,
             item.discount || 0,
@@ -63,20 +61,19 @@ export async function POST(req: NextRequest) {
         // Update product stock
         await conn.execute(
           `UPDATE products 
-           SET quantity = quantity + ? 
+           SET stock = stock + ? 
            WHERE id = ?`,
           [item.quantity, item.product_id]
         )
       }
     }
     
-    await conn.commit()
     return NextResponse.json({ success: true, returnId, reference })
   } catch (error: unknown) {
-    
+    console.error('Sales return creation error:', error)
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
-  } 
+  }
 }
 
 // READ ALL (GET)
@@ -108,7 +105,7 @@ export async function GET(req: NextRequest) {
     )
 
     // Get total count for pagination
-    const [totalRows]: any[] = await conn.query(
+    const [totalRows]: [any[], FieldPacket[]] = await conn.query(
       `SELECT COUNT(*) as total 
        FROM sales_returns sr
        LEFT JOIN customers c ON sr.customer_id = c.id

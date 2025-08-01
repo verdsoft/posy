@@ -239,22 +239,22 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
         valid_until: validUntil || null,
         customer_id: customerId,
         warehouse_id: warehouseId,
-        subtotal: Number(Number(subtotal).toFixed(2)),
-        tax_rate:Number( Number(orderTax).toFixed(2)) ,
-        tax_amount: Number(Number(taxAmount).toFixed(2)),
-        discount: Number(Number(discount).toFixed(2)),
-        shipping: Number(Number(shipping).toFixed(2)),
-        total: Number(Number(grandTotal).toFixed(2)),
+        subtotal: Number(Number(subtotal)),
+        tax_rate:Number( Number(orderTax)) ,
+        tax_amount: Number(Number(taxAmount)),
+        discount: Number(Number(discount)),
+        shipping: Number(Number(shipping)),
+        total: Number(Number(grandTotal)),
         status,
         notes: note || null,
         items: items.map(item => ({
           product_id: item.id,
-          quantity: Number(Number(item.quantity).toFixed(2)),
-          unit_price: Number(Number(item.price).toFixed(2)),
-          discount: Number(Number(item.discount).toFixed(2)),
-          tax: Number(Number(item.tax).toFixed(2)),
+          quantity: Number(Number(item.quantity)),
+          unit_price: Number(Number(item.price)),
+          discount: Number(Number(item.discount)),
+          tax: Number(Number(item.tax)),
           subtotal: Number(
-            (Number(item.price) * Number(item.quantity) - Number(item.discount) + Number(item.tax)).toFixed(2)
+            (Number(item.price) * Number(item.quantity) - Number(item.discount) + Number(item.tax))
           )
         }))
       }
@@ -430,7 +430,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
                       <tr key={item.id}>
                         <td className="p-3 border">{idx + 1}</td>
                         <td className="p-3 border">{item.name}</td>
-                        <td className="p-3 border">${Number(item.price || 0).toFixed(2)}</td>
+                        <td className="p-3 border">${Number(item.price || 0)}</td>
                         <td className="p-3 border">{item.stock}</td>
                         <td className="p-3 border">
                           <div className="flex items-center gap-1">
@@ -476,7 +476,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
                                   (Number(item.price || 0) * Number(item.quantity || 0)) - 
                                   Number(item.discount || 0) + 
                                   Number(item.tax || 0)
-                                ).toFixed(2)}
+                                )}
                               </td>
                         <td className="p-3 border">
                           <Button

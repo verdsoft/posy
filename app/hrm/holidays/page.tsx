@@ -52,7 +52,7 @@ export default function Holidays() {
                           <SelectValue placeholder="Choose Company" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="verdsoft">verdsoft Global</SelectItem>
+                          <SelectItem value=""> Global</SelectItem>
                           <SelectItem value="learnedz">LEARNedz Private Limited</SelectItem>
                         </SelectContent>
                       </Select>

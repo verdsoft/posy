@@ -193,15 +193,15 @@ const handleSubmit = async () => {
     // Ensure all calculations use proper decimal formatting
     const subtotal = parseFloat(
   items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
-    .toFixed(2)
+    
 );
 
 const tax_amount = parseFloat(
-  (subtotal * (Number(orderTax) / 100)).toFixed(2)
+  (subtotal * (Number(orderTax) / 100))
 );
 
 const total = parseFloat(
-  (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
+  (subtotal + tax_amount - Number(discount) + Number(shipping))
 );
 
     console.log("4 - Before fetch", {
@@ -218,26 +218,26 @@ const total = parseFloat(
       valid_until: validUntil || null,
       customer_id: customerId,
       warehouse_id: warehouseId,
-      subtotal: Number(subtotal.toFixed(2)),
-      tax_rate: Number(Number(orderTax).toFixed(2)),
-      tax_amount: Number(tax_amount.toFixed(2)),
-      discount: Number(Number(discount).toFixed(2)),
-      shipping: Number(Number(shipping).toFixed(2)),
-      total: Number(total.toFixed(2)),
+      subtotal: Number(subtotal),
+      tax_rate: Number(Number(orderTax)),
+      tax_amount: Number(tax_amount),
+      discount: Number(Number(discount)),
+      shipping: Number(Number(shipping)),
+      total: Number(total),
       status,
       notes: note || null,
       created_by: user_id,
       items: items.map(item => ({
         product_id: item.id,
-        quantity: Number(Number(item.quantity).toFixed(2)),
-        unit_price: Number(Number(item.price).toFixed(2)),
-        discount: Number(Number(item.discount || 0).toFixed(2)),
-        tax: Number(Number(item.tax || 0).toFixed(2)),
+        quantity: Number(Number(item.quantity)),
+        unit_price: Number(Number(item.price)),
+        discount: Number(Number(item.discount || 0)),
+        tax: Number(Number(item.tax || 0)),
         subtotal: Number((
           Number(item.price) * Number(item.quantity) - 
           Number(item.discount || 0) + 
           Number(item.tax || 0)
-        ).toFixed(2))
+        ))
       }))
     };
 
@@ -461,7 +461,7 @@ const total = parseFloat(
                           />
                         </td>
                         <td className="p-3 border">
-                          ${((item.price * item.quantity) - (item.discount || 0) + (item.tax || 0)).toFixed(2)}
+                          ${((item.price * item.quantity) - (item.discount || 0) + (item.tax || 0))}
                         </td>
                         <td className="p-3 border">
                           <Button
@@ -556,16 +556,16 @@ const total = parseFloat(
                   <div className="flex justify-between">
                     <span>Order Tax</span>
                     <span>
-                      ${taxAmount.toFixed(2)} ({orderTax.toFixed(2)} %)
+                      ${taxAmount} ({orderTax} %)
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Discount</span>
-                    <span>${discount.toFixed(2)}</span>
+                    <span>${discount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>${shipping.toFixed(2)}</span>
+                    <span>${shipping}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Grand Total</span>

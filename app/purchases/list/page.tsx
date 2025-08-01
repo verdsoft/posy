@@ -58,9 +58,9 @@ export default function PurchaseList() {
       purchase.supplier_name,
       purchase.warehouse_name,
       purchase.status,
-      Number(purchase.total).toFixed(2),
-      Number(purchase.paid).toFixed(2),
-      Number(purchase.due).toFixed(2),
+      Number(purchase.total),
+      Number(purchase.paid),
+      Number(purchase.due),
       purchase.payment_status
     ])
 
@@ -85,9 +85,9 @@ export default function PurchaseList() {
         Supplier: purchase.supplier_name,
         Warehouse: purchase.warehouse_name,
         Status: purchase.status,
-        Total: Number(purchase.total).toFixed(2),
-        Paid: Number(purchase.paid).toFixed(2),
-        Due: Number(purchase.due).toFixed(2),
+        Total: Number(purchase.total),
+        Paid: Number(purchase.paid),
+        Due: Number(purchase.due),
         'Payment Status': purchase.payment_status
       }))
     )
@@ -323,9 +323,9 @@ export default function PurchaseList() {
                             {purchase.status}
                           </span>
                         </td>
-                        <td className="p-3">{Number(purchase.total).toFixed(2)}</td>
-                        <td className="p-3">{Number(purchase.paid).toFixed(2)}</td>
-                        <td className="p-3">{Number(purchase.due).toFixed(2)}</td>
+                        <td className="p-3">{Number(purchase.total)}</td>
+                        <td className="p-3">{Number(purchase.paid)}</td>
+                        <td className="p-3">{Number(purchase.due)}</td>
                         <td className="p-3">
                           <span className={`${getPaymentStatusBadge(purchase.payment_status)} px-2 py-1 rounded text-xs`}>
                             {purchase.payment_status}

@@ -514,7 +514,7 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
               <div className="w-6 h-6  rounded flex items-center justify-center">
                <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
               </div>
-              <span>© 2025 Developed by Verdsoft </span>
+              <span>© 2025 Developed by  </span>
               <span className="ml-auto">All rights reserved</span>
             </div>
           </footer>

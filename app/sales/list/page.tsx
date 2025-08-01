@@ -96,9 +96,9 @@ export default function SaleList() {
       sale.reference ?? "",
       sale.customer_name ?? "",
       sale.status ?? "",
-      `$${Number(sale.total ?? 0).toFixed(2)}`,
-      `$${Number(sale.paid ?? 0).toFixed(2)}`,
-      `$${Number(sale.due ?? 0).toFixed(2)}`,
+      `$${Number(sale.total ?? 0)}`,
+      `$${Number(sale.paid ?? 0)}`,
+      `$${Number(sale.due ?? 0)}`,
       sale.payment_status ?? ""
     ])
 
@@ -122,9 +122,9 @@ export default function SaleList() {
         Reference: sale.reference,
         Customer: sale.customer_name,
         Status: sale.status,
-        Total: Number(sale.total).toFixed(2),
-        Paid: Number(sale.paid).toFixed(2),
-        Due: Number(sale.due).toFixed(2),
+        Total: Number(sale.total),
+        Paid: Number(sale.paid),
+        Due: Number(sale.due),
         'Payment Status': sale.payment_status
       }))
     )
@@ -225,9 +225,9 @@ export default function SaleList() {
                           {sale.status}
                         </span>
                       </td>
-                      <td className="p-3">${Number(sale.total).toFixed(2)}</td>
-                      <td className="p-3">${Number(sale.paid).toFixed(2)}</td>
-                      <td className="p-3">${Number(sale.due).toFixed(2)}</td>
+                      <td className="p-3">${Number(sale.total)}</td>
+                      <td className="p-3">${Number(sale.paid)}</td>
+                      <td className="p-3">${Number(sale.due)}</td>
                       <td className="p-3">
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
                           {sale.payment_status}
@@ -315,11 +315,11 @@ export default function SaleList() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Total</h3>
-                  <p className="mt-1 text-sm">${Number(selectedSale.total).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.total)}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Paid</h3>
-                  <p className="mt-1 text-sm">${Number(selectedSale.paid).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.paid)}</p>
                 </div>
               </div>
 
@@ -348,9 +348,9 @@ export default function SaleList() {
                       {selectedSale.items?.map((item:Sale) => (
                         <TableRow key={item.id}>
                           <TableCell className="p-3 text-sm">{item.product_name || item.product_id}</TableCell>
-                          <TableCell className="p-3 text-sm">${Number(item.price).toFixed(2)}</TableCell>
+                          <TableCell className="p-3 text-sm">${Number(item.price)}</TableCell>
                           <TableCell className="p-3 text-sm">{item.quantity}</TableCell>
-                          <TableCell className="p-3 text-sm">${Number(item.subtotal).toFixed(2)}</TableCell>
+                          <TableCell className="p-3 text-sm">${Number(item.subtotal)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

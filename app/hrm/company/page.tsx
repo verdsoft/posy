@@ -18,10 +18,10 @@ const companies = [
   },
   {
     id: 2,
-    name: "verdsoft Global",
+    name: " Global",
     phone: "0774882645",
     country: "Zimbabwe",
-    email: "admin@verdsoft.com",
+    email: "admin@.com",
   },
 ]
 
