@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         // Update product stock (subtract from warehouse)
         await conn.execute(
           `UPDATE products 
-           SET quantity = quantity - ? 
+           SET stock = stock - ? 
            WHERE id = ?`,
           [item.quantity, item.product_id]
         )

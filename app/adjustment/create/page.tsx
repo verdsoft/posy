@@ -1,20 +1,26 @@
 "use client"
-
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Minus, Plus, X } from "lucide-react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Search, Minus, Plus, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { fetchWarehouses, searchProducts, createAdjustment } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
-import type React from "react"
-import { Loader2 } from "lucide-react"
 import AuthGuard from "@/components/AuthGuard"
-
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { useCreateAdjustmentMutation } from "@/lib/slices/adjustmentsApi"
+import { useGetProductsQuery } from "@/lib/slices/productsApi"
 
 interface AdjustmentProduct {
   id: string
@@ -30,13 +36,29 @@ export default function CreateAdjustment() {
   const router = useRouter()
   const [warehouse_id, setWarehouseId] = useState<string | null>(null)
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0])
-  const [type, setType] = useState<'addition' | 'subtraction'>('addition')
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [products, setProducts] = useState<AdjustmentProduct[]>([])
   const [notes, setNotes] = useState<string>("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
+
+  // RTK Query hooks
+  const [createAdjustment, { isLoading: isCreating }] = useCreateAdjustmentMutation()
+  const [warehouses, setWarehouses] = useState<any[]>([])
+
+  // Fetch warehouses on component mount
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const response = await fetch('/api/settings/warehouses')
+        const data = await response.json()
+        setWarehouses(data)
+      } catch (error) {
+        console.error('Failed to fetch warehouses:', error)
+      }
+    }
+    fetchWarehouses()
+  }, [])
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -46,26 +68,21 @@ export default function CreateAdjustment() {
 
     setIsSearching(true)
     try {
-      const results = await searchProducts(searchQuery)
+      const response = await fetch(`/api/products/search?q=${encodeURIComponent(searchQuery)}`)
+      const results = await response.json()
       setSearchResults(results)
       if (results.length === 0) {
         toast.info("No products found matching your search")
       }
     } catch (error) {
       console.error("Search error:", error)
-      toast.error(error.message || "Failed to search products")
+      toast.error("Failed to search products")
     } finally {
       setIsSearching(false)
     }
   }
 
-  const { data: warehouses } = useQuery({
-    queryKey: ['warehouses'],
-    queryFn: fetchWarehouses,
-  })
-
-  const handleAddProduct = (product: ProductSearchResult) => {
-    // Check if product already exists in the list
+  const handleAddProduct = (product: any) => {
     if (products.some(p => p.product_id === product.id)) {
       toast.warning("Product already added to adjustment")
       return
@@ -78,13 +95,14 @@ export default function CreateAdjustment() {
       name: product.name,
       currentStock: product.stock,
       quantity: 1,
-      type: type // Use the global adjustment type
+      type: 'addition'
     }
 
     setProducts([...products, newProduct])
+    setSearchResults([])
+    setSearchQuery("")
     toast.success(`${product.name} added to adjustment`)
   }
-
 
   const updateQuantity = (id: string, change: number) => {
     setProducts(products.map(product =>
@@ -113,255 +131,242 @@ export default function CreateAdjustment() {
       toast.error("Please add at least one product")
       return
     }
-    setIsSubmitting(true)
+    
     try {
-      const { adjustment_id, reference } = await createAdjustment({
+      const result = await createAdjustment({
         warehouse_id,
         date,
-        type,
         items: products.map(p => ({
           product_id: p.product_id,
           quantity: p.quantity,
           type: p.type
         })),
         notes
-      })
-      console.log("warehouse_id being inserted:", warehouse_id)
-      toast.success(`Adjustment ${reference} created successfully`)
+      }).unwrap()
       
+      toast.success(`Adjustment ${result.reference} created successfully`)
+      router.push("/adjustment/list")
     } catch (error) {
       console.error('Error:', error)
       toast.error('Failed to create adjustment')
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
   return (
-
-<AuthGuard>
-    <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <span>Adjustment List</span>
-            <span>|</span>
-            <span>Create Adjustment</span>
-          </div>
-          <h1 className="text-2xl font-bold">Create Adjustment</h1>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <label className="text-sm font-medium">Warehouse *</label>
-              <Select
-                value={warehouse_id || ""}
-                onValueChange={setWarehouseId}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select warehouse" />
-                </SelectTrigger>
-                <SelectContent>
-                  {warehouses?.map(warehouse => (
-                    <SelectItem key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <AuthGuard>
+      <DashboardLayout>
+        <div className="p-4 md:p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <span>Adjustments</span>
+              <span>|</span>
+              <span>Create Adjustment</span>
             </div>
-            <div>
-              <label className="text-sm font-medium">Date *</label>
-              <Input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Adjustment Type *</label>
-              <Select
-                value={type}
-                onValueChange={(value: 'addition' | 'subtraction') => setType(value)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="addition">Addition</SelectItem>
-                  <SelectItem value="subtraction">Subtraction</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <h1 className="text-xl font-semibold">Create Adjustment</h1>
           </div>
 
-          <div className="mb-6">
-            <label className="text-sm font-medium">Product</label>
-            <div className="relative mt-1 flex gap-2">
-              <div className="relative">
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Card>
+            <CardHeader className="p-4 pb-0">
+              <CardTitle className="text-base">Adjustment Details</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="text-xs font-medium block mb-1">
+                    Warehouse <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={warehouse_id || ""}
+                    onValueChange={setWarehouseId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select warehouse" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses?.map(warehouse => (
+                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1">
+                    Date <span className="text-red-500">*</span>
+                  </label>
                   <Input
-                    placeholder="Scan/Search Product by Code Name"
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    disabled={isSearching}
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
                   />
-                  {isSearching && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                  )}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="text-xs font-medium block mb-1">Add Products</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by product code or name"
+                      className="pl-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      disabled={isSearching}
+                    />
+                    {isSearching && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
+                    )}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                  >
+                    Search
+                  </Button>
                 </div>
 
                 {searchResults.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border">
+                  <div className="mt-2 border rounded-md overflow-hidden">
                     {searchResults.map((product) => (
                       <div
                         key={product.id}
-                        className="p-2 hover:bg-gray-50 cursor-pointer border-b"
-                        onClick={() => {
-                          handleAddProduct(product)
-                          setSearchResults([])
-                          setSearchQuery("")
-                        }}
+                        className="p-3 hover:bg-muted cursor-pointer border-b flex justify-between items-center"
+                        onClick={() => handleAddProduct(product)}
                       >
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {product.code} • Stock: {product.stock} {product.unit_name || ''}
+                        <div>
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {product.code} • Stock: {product.stock} {product.unit_name || ''}
+                          </div>
                         </div>
+                        <Plus className="h-4 w-4 text-primary" />
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <Button type="button" variant="outline" onClick={handleSearch}>
-                Search
-              </Button>
-            </div>
-            {searchResults.length > 0 && (
-              <div className="bg-gray-50 border rounded mt-2 max-h-40 overflow-auto">
-                {searchResults.map(product => (
-                  <div
-                    key={product.id}
-                    className="px-4 py-2 hover:bg-purple-100 cursor-pointer flex justify-between items-center"
-                    onClick={() => handleAddProduct(product)}
-                  >
-                    <span>{product.code} - {product.name}</span>
-                    <span className="text-xs text-gray-500">{product.stock} in stock</span>
-                  </div>
-                ))}
+
+              <div className="mb-6">
+                <div className="text-xs font-medium mb-2">Selected Products</div>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">#</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Current Stock</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((item, index) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{item.code}</TableCell>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {item.currentStock} pcs
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => updateQuantity(item.id, -1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center">{item.quantity}</span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => updateQuantity(item.id, 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={item.type}
+                              onValueChange={(value: "addition" | "subtraction") => updateType(item.id, value)}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="addition">Addition</SelectItem>
+                                <SelectItem value="subtraction">Subtraction</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => removeProduct(item.id)}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {products.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                            No products added yet
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="overflow-x-auto mb-6">
-            <table className="w-full border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3 border">#</th>
-                  <th className="text-left p-3 border">Code Product</th>
-                  <th className="text-left p-3 border">Product</th>
-                  <th className="text-left p-3 border">Stock</th>
-                  <th className="text-left p-3 border">Qty</th>
-                  <th className="text-left p-3 border">Type</th>
-                  <th className="text-left p-3 border"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((item, index) => (
-                  <tr key={item.id}>
-                    <td className="p-3 border">{index + 1}</td>
-                    <td className="p-3 border">{item.code}</td>
-                    <td className="p-3 border">{item.name}</td>
-                    <td className="p-3 border">
-                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                        {item.currentStock} Pcs
-                      </span>
-                    </td>
-                    <td className="p-3 border">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 w-6 p-0 bg-purple-600 text-white"
-                          onClick={() => updateQuantity(item.id, -1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="mx-2 text-sm w-6 text-center">{item.quantity}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 w-6 p-0 bg-purple-600 text-white"
-                          onClick={() => updateQuantity(item.id, 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                    <td className="p-3 border">
-                      <Select
-                        value={item.type}
-                        onValueChange={(value: "addition" | "subtraction") => updateType(item.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="addition">Addition</SelectItem>
-                          <SelectItem value="subtraction">Subtraction</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="p-3 border">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500"
-                        onClick={() => removeProduct(item.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {products.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="p-4 text-center text-gray-500">
-                      No products added yet
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              <div className="mb-6">
+                <label className="text-xs font-medium block mb-1">Notes</label>
+                <Textarea
+                  placeholder="Add any notes about this adjustment..."
+                  className="min-h-[100px]"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
 
-          <div className="mb-6">
-            <label className="text-sm font-medium">Note</label>
-            <Textarea
-              placeholder="A few words ..."
-              className="mt-1"
-              rows={4}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          <Button
-            className="bg-[#1a237e] hover:bg-purple-700"
-            onClick={handleSubmit}
-            disabled={products.length === 0 || isSubmitting}
-          >
-            Submit
-          </Button>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/adjustment/list")}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={products.length === 0 || isCreating}
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : "Create Adjustment"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </DashboardLayout>
-</AuthGuard>
+      </DashboardLayout>
+    </AuthGuard>
   )
 }

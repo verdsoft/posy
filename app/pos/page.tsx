@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X,  Minus, Plus, RotateCcw, CreditCard, Settings, Maximize2, Minimize2 } from "lucide-react"
+import { Search, X,  Minus, Plus, RotateCcw, CreditCard, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import type React from "react"
-import { fetchCategories, fetchBrands, fetchWarehouses, searchProducts } from "@/lib/api"
 import { useAppDispatch } from "@/lib/hooks"
 import { useRouter } from "next/navigation"
 import { logout } from "@/lib/slices/authSlice"
+import { useGetCategoriesQuery, useGetBrandsQuery, useGetWarehousesQuery } from "@/lib/slices/settingsApi"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetProductsQuery } from "@/lib/slices/productsApi"
 
 
 interface CartItem {
@@ -28,8 +30,11 @@ interface Product {
   name: string
   code: string
   price: number
-  image: string
-  category: string
+  image?: string
+  category_id?: string
+  category_name?: string
+  brand_id?: string
+  brand_name?: string
 }
 
 interface Category {
@@ -44,6 +49,7 @@ export default function POSSystem() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedBrand, setSelectedBrand] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [tax, setTax] = useState(0)
   const [discount, setDiscount] = useState(0)
@@ -96,51 +102,50 @@ export default function POSSystem() {
     }
   };
 
-  // Fetch categories from reusable endpoint
-  useEffect(() => {
-    fetchCategories().then(data => {
-      setCategories([{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...data])
-    })
-  }, [])
+  // RTK Query hooks
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery()
+  const { data: brandsData, isLoading: brandsLoading } = useGetBrandsQuery()
+  const { data: warehousesData, isLoading: warehousesLoading } = useGetWarehousesQuery()
+  const { data: customersData, isLoading: customersLoading } = useGetCustomersQuery()
+  const { data: productsData, isLoading: productsLoading } = useGetProductsQuery()
 
-  // Fetch products from reusable endpoint
+  // Set data when loaded
   useEffect(() => {
-    // If searching, use searchProducts; else, fetch all products (you can add fetchProducts to lib/api.ts if needed)
-    if (searchTerm.trim()) {
-      searchProducts(searchTerm).then(data => setProducts(data))
-    } else {
-      // fallback: fetch all products (assuming /api/products returns all)
-      fetch("/api/products")
-        .then(res => res.json())
-        .then(data => setProducts(data))
+    if (categoriesData) {
+      setCategories([{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData])
     }
-  }, [searchTerm])
+  }, [categoriesData])
 
-  // Fetch customers from /api/customers
   useEffect(() => {
-    fetch("/api/customers")
-      .then(res => res.json())
-      .then(data => {
-        setCustomers([{ id: "walkin", name: "Walk-In-Customer" }, ...data])
-      })
-  }, [])
+    if (customersData) {
+      setCustomers([{ id: "walkin", name: "Walk-In-Customer" }, ...customersData])
+    }
+  }, [customersData])
 
-  // Fetch warehouses from reusable endpoint
   useEffect(() => {
-    fetchWarehouses().then(data => {
-      setWarehouses(data)
-      if (data.length > 0) setSelectedWarehouse(data[0].id)
-    })
-  }, [])
+    if (warehousesData) {
+      setWarehouses(warehousesData)
+      if (warehousesData.length > 0) setSelectedWarehouse(warehousesData[0].id)
+    }
+  }, [warehousesData])
 
-  // Fetch brands from reusable endpoint
   useEffect(() => {
-    fetchBrands().then(data => setBrands(data))
-  }, [])
+    if (brandsData) {
+      setBrands(brandsData)
+    }
+  }, [brandsData])
 
-  // Filter by category
+  useEffect(() => {
+    if (productsData) {
+      setProducts(productsData)
+    }
+  }, [productsData])
+
+  // Filter by category and brand
   const filteredProducts = products.filter((product) => {
-    return selectedCategory === "all" || product.category === selectedCategory
+    const categoryMatch = selectedCategory === "all" || product.category_id === selectedCategory
+    const brandMatch = selectedBrand === "all" || product.brand_id === selectedBrand
+    return categoryMatch && brandMatch
   })
 
   // Cart logic
@@ -180,8 +185,8 @@ export default function POSSystem() {
   }
 
   const handlePayNow = () => {
-    setReceivedAmount(grandTotal)
-    setPayingAmount(grandTotal)
+    setReceivedAmount(grandTotal.toString())
+    setPayingAmount(grandTotal.toString())
     setShowPaymentModal(true)
   }
 
@@ -205,7 +210,12 @@ export default function POSSystem() {
       payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
       notes: paymentNote,
       created_by: null, // Set user id if available
-      items: cartItems,
+      items: cartItems.map(item => ({
+        product_id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
       payment: {
         paymentChoice,
         paymentNote,
@@ -378,9 +388,10 @@ export default function POSSystem() {
             <Select
               value={selectedCustomer}
               onValueChange={setSelectedCustomer}
+              disabled={customersLoading}
             >
               <SelectTrigger className="w-full bg-gray-100">
-                <SelectValue placeholder="Select customer" />
+                <SelectValue placeholder={customersLoading ? "Loading customers..." : "Select customer"} />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer) => (
@@ -390,15 +401,12 @@ export default function POSSystem() {
                 ))}
               </SelectContent>
             </Select>
-            {/* <Button size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 bg-[#1a237e] hover:bg-[#23308c]">
-              <ChevronDown className="h-3 w-3" />
-            </Button> */}
           </div>
           {/* Warehouse Select */}
           <div className="relative">
-            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
+            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse} disabled={warehousesLoading}>
               <SelectTrigger className="w-full bg-gray-100">
-                <SelectValue placeholder="Select warehouse" />
+                <SelectValue placeholder={warehousesLoading ? "Loading warehouses..." : "Select warehouse"} />
               </SelectTrigger>
               <SelectContent>
                 {warehouses.map((warehouse) => (
@@ -549,11 +557,7 @@ export default function POSSystem() {
               >
                 Brand List
               </Button>
-              <div className="ml-auto">
-                <Button className="bg-[#1a237e] hover:bg-[#23308c] hover:bg-purple-700">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </div>
+
             </div>
 
             <div className="relative max-w-l">
@@ -569,31 +573,54 @@ export default function POSSystem() {
 
           {/* Product Grid */}
           <div className="grid grid-cols-5 gap-4 mb-6">
-            {filteredProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => addToCart(product)}
-              >
-                <CardContent className="p-3">
-                  <div className="relative mb-3">
-                    <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-full h-24 object-cover rounded bg-gray-100"
-                    />
-                    <div className="absolute top-1 left-1 bg-blue-800 text-white text-xs px-2 py-1 rounded">
-                      {product.price} Pcs
+            {productsLoading ? (
+              // Loading skeleton
+              Array.from({ length: 10 }).map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <CardContent className="p-3">
+                    <div className="relative mb-3">
+                      <div className="w-full h-24 bg-gray-200 rounded"></div>
+                      <div className="absolute top-1 left-1 bg-gray-300 text-gray-300 text-xs px-2 py-1 rounded">
+                        Loading...
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-medium text-sm mb-1 truncate">{product.name}</h3>
-                  <p className="text-xs text-gray-500 mb-2">{product.code}</p>
-                  <div className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded inline-block">
-                    $ {product.price}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : filteredProducts.length === 0 ? (
+              <div className="col-span-5 text-center py-8 text-gray-500">
+                No products found
+              </div>
+            ) : (
+              filteredProducts.map((product) => (
+                <Card
+                  key={product.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => addToCart(product)}
+                >
+                  <CardContent className="p-3">
+                    <div className="relative mb-3">
+                      <img
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-full h-24 object-cover rounded bg-gray-100"
+                      />
+                      <div className="absolute top-1 left-1 bg-blue-800 text-white text-xs px-2 py-1 rounded">
+                        {product.price} Pcs
+                      </div>
+                    </div>
+                    <h3 className="font-medium text-sm mb-1 truncate">{product.name}</h3>
+                    <p className="text-xs text-gray-500 mb-2">{product.code}</p>
+                    <div className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded inline-block">
+                      $ {product.price}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -637,11 +664,30 @@ export default function POSSystem() {
             <DialogTitle>Brand List</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 p-4">
+            <Card
+              key="all"
+              className={`cursor-pointer transition-all ${selectedBrand === "all" ? "ring-2 ring-purple-500" : ""}`}
+              onClick={() => {
+                setSelectedBrand("all")
+                setShowBrandList(false)
+              }}
+            >
+              <CardContent className="p-4 text-center">
+                <p className="text-sm font-medium">All Brands</p>
+              </CardContent>
+            </Card>
             {brands.length === 0 ? (
               <div className="text-center text-gray-500 py-8">No brands available</div>
             ) : (
               brands.map((brand) => (
-                <Card key={brand.id}>
+                <Card
+                  key={brand.id}
+                  className={`cursor-pointer transition-all ${selectedBrand === brand.id ? "ring-2 ring-purple-500" : ""}`}
+                  onClick={() => {
+                    setSelectedBrand(brand.id)
+                    setShowBrandList(false)
+                  }}
+                >
                   <CardContent className="p-4 text-center">
                     <p className="text-sm font-medium">{brand.name}</p>
                   </CardContent>

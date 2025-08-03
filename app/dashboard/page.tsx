@@ -21,6 +21,7 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { useGetSalesQuery } from '@/lib/slices/salesApi'
 
 const fetchDashboardStats = async () => {
   const res = await axios.get("/api/dashboard")
@@ -37,6 +38,8 @@ export default function Dashboard() {
     queryKey: ["dashboardStats"],
     queryFn: fetchDashboardStats,
   })
+
+  const { data: salesData = [], isLoading: isSalesLoading } = useGetSalesQuery()
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -76,18 +79,7 @@ export default function Dashboard() {
     { name: "Purchases", value: parseFloat(data?.total_purchases || 0) },
   ]
 
-  const topProducts = [
-    { name: "ULTRASONIC BRACKET", value: 400 },
-    { name: "Safe Space - Hub", value: 300 },
-    { name: "ULTRASOUND SENSOR", value: 300 },
-    { name: "ARDUINO MEGA", value: 200 },
-  ]
-
-  const productAlerts = [
-    { name: "5V HC_SR04 ULTRASONIC SENSOR", warehouse: "Main Store", quantity: 0, alert: 5 },
-    { name: "4x4 KEYPAD", warehouse: "Karigamombe", quantity: 2, alert: 5 },
-    { name: "HC05 BLUETOOTH MODULE", warehouse: "Centre Branch", quantity: 1, alert: 3 },
-  ]
+  // Remove all dummy arrays for topProducts and productAlerts
 
   return (
     <AuthGuard>
@@ -141,7 +133,7 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={topProducts}
+                    data={[]} // Placeholder for top selling products data
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -151,9 +143,11 @@ export default function Dashboard() {
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {topProducts.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
+                    {/* Placeholder for Pie chart cells */}
+                    <Cell key="cell-0" fill="#a78bfa" />
+                    <Cell key="cell-1" fill="#8b5cf6" />
+                    <Cell key="cell-2" fill="#c084fc" />
+                    <Cell key="cell-3" fill="#7c3aed" />
                   </Pie>
                   <Tooltip formatter={(value) => [`${value} units`, 'Sales']} />
                 </PieChart>
@@ -165,6 +159,7 @@ export default function Dashboard() {
 
       {/* Tables - Compact */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Low Stock Alerts Table */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Low Stock Alerts</CardTitle>
@@ -181,24 +176,18 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {productAlerts.map((product, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="p-2 text-gray-800">{product.name}</td>
-                      <td className="p-2 text-gray-500">{product.warehouse}</td>
-                      <td className="p-2 text-right font-medium">{product.quantity}</td>
-                      <td className="p-2 text-right">
-                        <span className="inline-block bg-red-50 text-red-600 px-2 py-0.5 rounded text-xs font-medium">
-                          {product.alert}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {/* TODO: Replace with real low stock data from API when available */}
+                  <tr>
+                    <td className="p-4 text-center text-gray-400 text-xs" colSpan={4}>
+                      No data available
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
-
+        {/* Top Sellers Table */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Top Sellers (July)</CardTitle>
@@ -214,20 +203,49 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {topProducts.length > 0 ? (
-                    topProducts.map((product, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="p-2 text-gray-800">{product.name}</td>
-                        <td className="p-2 text-right font-medium">{product.value}</td>
-                        <td className="p-2 text-right font-medium text-gray-800">${product.value.toLocaleString()}</td>
+                  {/* TODO: Replace with real top sellers data from API when available */}
+                  <tr>
+                    <td className="p-4 text-center text-gray-400 text-xs" colSpan={3}>
+                      No data available
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Recent Sales Table */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Recent Sales</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium text-gray-500">Date</th>
+                    <th className="text-left p-2 font-medium text-gray-500">Reference</th>
+                    <th className="text-left p-2 font-medium text-gray-500">Customer</th>
+                    <th className="text-right p-2 font-medium text-gray-500">Total</th>
+                    <th className="text-right p-2 font-medium text-gray-500">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isSalesLoading ? (
+                    <tr><td colSpan={5} className="p-4 text-center text-gray-400 text-xs">Loading...</td></tr>
+                  ) : salesData.length === 0 ? (
+                    <tr><td colSpan={5} className="p-4 text-center text-gray-400 text-xs">No sales data available</td></tr>
+                  ) : (
+                    salesData.slice(0, 5).map((sale) => (
+                      <tr key={sale.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2 text-gray-800">{new Date(sale.date).toLocaleDateString()}</td>
+                        <td className="p-2 text-gray-800">{sale.reference}</td>
+                        <td className="p-2 text-gray-800">{sale.customer_id || '-'}</td>
+                        <td className="p-2 text-right font-medium">${(Number(sale.total) || 0).toFixed(2)}</td>
+                        <td className="p-2 text-right font-medium">{sale.status}</td>
                       </tr>
                     ))
-                  ) : (
-                    <tr>
-                      <td className="p-4 text-center text-gray-400 text-xs" colSpan={3}>
-                        No sales data available for this period
-                      </td>
-                    </tr>
                   )}
                 </tbody>
               </table>

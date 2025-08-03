@@ -7,7 +7,7 @@ import type { FieldPacket} from "mysql2"
 // CREATE (POST)
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const conn = await getConnection()
+  const conn = getConnection()
   try {
     const saleId = uuidv4()
     const reference = body.reference || `SL-${Date.now()}`
@@ -44,12 +44,12 @@ export async function POST(req: NextRequest) {
           [
             uuidv4(),
             saleId,
-            item.id,
-            item.quantity,
-            item.price,
+            item.product_id || null,
+            item.quantity || 0,
+            item.price || 0,
             item.discount || 0,
             item.tax || 0,
-            (item.price * item.quantity) - (item.discount || 0) + (item.tax || 0)
+            ((item.price || 0) * (item.quantity || 0)) - (item.discount || 0) + (item.tax || 0)
           ]
         )
       }
@@ -163,14 +163,34 @@ export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
+  
   const conn = await getConnection()
   try {
-    await conn.execute(`DELETE FROM sales WHERE id = ?`, [id])
+    // Check if sale exists first
+    const [sale] = await conn.execute(
+      'SELECT id FROM sales WHERE id = ?',
+      [id]
+    )
+    
+    if (!sale || (sale as any[]).length === 0) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 })
+    }
+    
+    // Delete sale items first (foreign key constraint)
+    await conn.execute(`DELETE FROM sale_items WHERE sale_id = ?`, [id])
+    
+    // Then delete the sale
+    const [deleteResult] = await conn.execute(`DELETE FROM sales WHERE id = ?`, [id])
+    
+    // Check if the delete was successful
+    if ((deleteResult as any).affectedRows === 0) {
+      return NextResponse.json({ error: "Failed to delete sale" }, { status: 500 })
+    }
     
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    
-    const message = error instanceof Error ? error.message : "Unknown error"
+    console.error("Error deleting sale:", error)
+    const message = error instanceof Error ? error.message : "Unknown error occurred during sale deletion"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

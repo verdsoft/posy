@@ -5,84 +5,85 @@ import DashboardLayout from "../../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DateRangePicker } from "../../../../components/date-range-picker"
+import { Search, FileDown, Eye, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { useGetPurchasePaymentsQuery } from "@/lib/slices/paymentsApi"
+import { Payment } from "@/lib/slices/paymentsApi"
+import { DateRange } from "react-day-picker"
 
-const payments = [
-  {
-    id: 1,
-    date: "2023-11-17",
-    reference: "INV/PR_1118",
-    purchase: "PR_1282",
-    supplier: "Tawanda Photechix",
-    paidBy: "Cash",
-    amount: 1903.0,
-  },
-  {
-    id: 2,
-    date: "2023-11-17",
-    reference: "INV/PR_1117",
-    purchase: "PR_1283",
-    supplier: "Darren",
-    paidBy: "Cash",
-    amount: 500.0,
-  },
-  {
-    id: 3,
-    date: "2022-11-04",
-    reference: "INV/PR_1116",
-    purchase: "PR_1127",
-    supplier: "Netru Zim",
-    paidBy: "Cash",
-    amount: 20.0,
-  },
-  {
-    id: 4,
-    date: "2022-11-04",
-    reference: "INV/PR_1115",
-    purchase: "PR_1126",
-    supplier: "Netru Zim",
-    paidBy: "Cash",
-    amount: 56.8,
-  },
-  {
-    id: 5,
-    date: "2022-11-04",
-    reference: "INV/PR_1114",
-    purchase: "PR_1125",
-    supplier: "Darren",
-    paidBy: "Cash",
-    amount: 52.0,
-  },
-  {
-    id: 6,
-    date: "2022-07-06",
-    reference: "INV/PR_1113",
-    purchase: "PR_1124",
-    supplier: "Darren",
-    paidBy: "Cash",
-    amount: 387.0,
-  },
-  {
-    id: 7,
-    date: "2022-06-09",
-    reference: "INV/PR_1112",
-    purchase: "PR_1123",
-    supplier: " Global",
-    paidBy: "Cash",
-    amount: 15.0,
-  },
-  {
-    id: 8,
-    date: "2022-06-09",
-    reference: "INV/PR_1111",
-    purchase: "PR_1112",
-    supplier: "Tawanda Photechix",
-    paidBy: "Cash",
-    amount: 220.0,
-  },
-]
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 export default function PurchasesPayments() {
-  const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+  });
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  const { data, isLoading, isFetching } = useGetPurchasePaymentsQuery({
+    from: dateRange?.from?.toISOString().split('T')[0] || '',
+    to: dateRange?.to?.toISOString().split('T')[0] || '',
+    page,
+    limit,
+    searchTerm,
+  });
+
+  const payments = data?.data || [];
+  const pagination = data?.pagination;
+  
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  
+  const handleExportPDF = () => {
+    const doc = new jsPDF()
+    doc.text('Purchase Payments Report', 14, 16)
+    
+    const tableData = payments.map(payment => [
+      new Date(payment.date).toLocaleDateString(),
+      payment.reference,
+      payment.purchase_reference,
+      payment.supplier_name,
+      payment.payment_method,
+      `$${payment.amount.toFixed(2)}`
+    ])
+    
+    autoTable(doc, {
+      head: [['Date', 'Reference', 'Purchase', 'Supplier', 'Payment Method', 'Amount']],
+      body: tableData,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [26, 35, 126] }
+    })
+    
+    doc.save('purchase-payments.pdf')
+  }
+
+  const handleExportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      payments.map(payment => ({
+        Date: new Date(payment.date).toLocaleDateString(),
+        Reference: payment.reference,
+        Purchase: payment.purchase_reference,
+        Supplier: payment.supplier_name,
+        'Payment Method': payment.payment_method,
+        Amount: `$${payment.amount.toFixed(2)}`
+      }))
+    )
+    
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Purchase Payments")
+    XLSX.writeFile(workbook, "purchase-payments.xlsx")
+  }
 
   return (
     <DashboardLayout>
@@ -99,20 +100,33 @@ export default function PurchasesPayments() {
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              <DateRangePicker onDateChange={setDateRange} initialDateRange={dateRange}/>
               <div className="relative">
-                <Input placeholder="Search this table..." className="w-64" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input 
+                  placeholder="Search this table..." 
+                  className="w-64 pl-10" 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="text-blue-600 bg-transparent">
-                🔍 Filter
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                PDF
               </Button>
-              <Button variant="outline" className="text-green-600 bg-transparent">
-                📄 PDF
-              </Button>
-              <Button variant="outline" className="text-red-600 bg-transparent">
-                📊 EXCEL
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                EXCEL
               </Button>
             </div>
           </div>
@@ -127,28 +141,96 @@ export default function PurchasesPayments() {
                   <th className="text-left p-3">Supplier</th>
                   <th className="text-left p-3">Paid by</th>
                   <th className="text-left p-3">Amount</th>
+                  <th className="text-left p-3">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{payment.date}</td>
-                    <td className="p-3">{payment.reference}</td>
-                    <td className="p-3">{payment.purchase}</td>
-                    <td className="p-3">{payment.supplier}</td>
-                    <td className="p-3">{payment.paidBy}</td>
-                    <td className="p-3">{payment.amount}</td>
+                {(isLoading || isFetching) ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-6"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></td>
                   </tr>
-                ))}
+                ) : payments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-6">No payments found.</td>
+                  </tr>
+                ) : (
+                  payments.map((payment) => (
+                    <tr key={payment.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3">{new Date(payment.date).toLocaleDateString()}</td>
+                        <td className="p-3">{payment.reference}</td>
+                        <td className="p-3">{payment.purchase_reference}</td>
+                        <td className="p-3">{payment.supplier_name}</td>
+                        <td className="p-3">
+                            <span className={`px-2 py-1 rounded text-xs bg-green-100 text-green-800`}>
+                            {payment.payment_method}
+                            </span>
+                        </td>
+                        <td className="p-3">${payment.amount.toFixed(2)}</td>
+                        <td className="p-3">
+                            <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {setSelectedPayment(payment); setShowViewModal(true);}}
+                            >
+                                <Eye className="h-4 w-4 text-blue-600" />
+                            </Button>
+                            </div>
+                        </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="text-sm text-gray-600">1 - 8 of 8 | prev next</div>
+            <div className="text-sm text-gray-600">Rows per page: {limit}</div>
+            <div className="text-sm text-gray-600">
+                {pagination ? `Page ${pagination.page} of ${pagination.totalPages}` : 'Page 1 of 1'}
+            </div>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={!pagination?.prevPage}>Previous</Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={!pagination?.nextPage}>Next</Button>
+            </div>
           </div>
         </div>
+        
+        {selectedPayment && (
+          <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Payment Details</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 p-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Reference</label>
+                  <p className="mt-1 text-sm">{selectedPayment.reference}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Date</label>
+                  <p className="mt-1 text-sm">{new Date(selectedPayment.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Purchase Reference</label>
+                  <p className="mt-1 text-sm">{selectedPayment.purchase_reference}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Supplier</label>
+                  <p className="mt-1 text-sm">{selectedPayment.supplier_name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Method</label>
+                  <p className="mt-1 text-sm">{selectedPayment.payment_method}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Amount</label>
+                  <p className="mt-1 text-sm">${selectedPayment.amount.toFixed(2)}</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </DashboardLayout>
   )

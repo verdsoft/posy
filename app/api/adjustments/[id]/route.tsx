@@ -70,6 +70,7 @@ export async function GET(
 
     return NextResponse.json({
       ...adjustments[0],
+      item_count: items.length,
       items
     })
   } catch (error) {

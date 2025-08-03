@@ -1,32 +1,66 @@
 import { configureStore } from "@reduxjs/toolkit"
 import authSlice from "./slices/authSlice"
 import databaseSlice from "./slices/databaseSlice"
-import productsSlice from "./slices/productsSlice"
 import customersSlice from "./slices/customersSlice"
 import suppliersSlice from "./slices/suppliersSlice"
-import salesSlice from "./slices/salesSlice"
-import purchasesSlice from "./slices/purchasesSlice"
 import expensesSlice from "./slices/expensesSlice"
 import transfersSlice from "./slices/transfersSlice"
 import hrmSlice from "./slices/hrmSlice"
 import reportsSlice from "./slices/reportsSlice"
 import settingsSlice from "./slices/settingsSlice"
 
+import { productsApi } from "./slices/productsApi"
+import { adjustmentsApi } from "./slices/adjustmentsApi"
+import { quotationsApi } from "./slices/quotationsApi"
+import { purchasesApi } from "./slices/purchasesApi"
+import { salesApi } from "./slices/salesApi"
+import { customersApi } from "./slices/customersApi"
+import { settingsApi } from "./slices/settingsApi"
+import { expensesApi } from "./slices/expensesApi"
+import { returnsApi } from "./slices/returnsApi"
+import { suppliersApi } from "./slices/suppliersApi"
+import { reportsApi } from "./slices/reportsApi" // Import the new reportsApi
+import { paymentsApi } from "./slices/paymentsApi"
+
 export const store = configureStore({
   reducer: {
     auth: authSlice,
     database: databaseSlice,
-    products: productsSlice,
     customers: customersSlice,
     suppliers: suppliersSlice,
-    sales: salesSlice,
-    purchases: purchasesSlice,
     expenses: expensesSlice,
     transfers: transfersSlice,
     hrm: hrmSlice,
     reports: reportsSlice,
     settings: settingsSlice,
+    [productsApi.reducerPath]: productsApi.reducer,
+    [adjustmentsApi.reducerPath]: adjustmentsApi.reducer,
+    [quotationsApi.reducerPath]: quotationsApi.reducer,
+    [purchasesApi.reducerPath]: purchasesApi.reducer,
+    [salesApi.reducerPath]: salesApi.reducer,
+    [customersApi.reducerPath]: customersApi.reducer,
+    [settingsApi.reducerPath]: settingsApi.reducer,
+    [expensesApi.reducerPath]: expensesApi.reducer,
+    [returnsApi.reducerPath]: returnsApi.reducer,
+    [suppliersApi.reducerPath]: suppliersApi.reducer,
+    [reportsApi.reducerPath]: reportsApi.reducer, // Add the new reducer
+    [paymentsApi.reducerPath]: paymentsApi.reducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(
+      productsApi.middleware,
+      adjustmentsApi.middleware,
+      quotationsApi.middleware,
+      purchasesApi.middleware,
+      salesApi.middleware,
+      customersApi.middleware,
+      settingsApi.middleware,
+      expensesApi.middleware,
+      returnsApi.middleware,
+      suppliersApi.middleware,
+      reportsApi.middleware, // Add the new middleware
+      paymentsApi.middleware
+    ),
 })
 
 export type RootState = ReturnType<typeof store.getState>

@@ -263,9 +263,9 @@ export default function PurchaseReport() {
                           {purchase.status}
                         </span>
                       </td>
-                      <td className="p-3">${purchase.total || "0.00"}</td>
-                      <td className="p-3">${purchase.paid || "0.00"}</td>
-                      <td className="p-3">${purchase.due || "0.00"}</td>
+                      <td className="p-3">${Number(purchase.total || 0).toFixed(2)}</td>
+                      <td className="p-3">${Number(purchase.paid || 0).toFixed(2)}</td>
+                      <td className="p-3">${Number(purchase.due || 0).toFixed(2)}</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded text-xs ${
                           purchase.payment_status === "paid" ? "bg-green-100 text-green-800" : 
@@ -351,31 +351,31 @@ export default function PurchaseReport() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Subtotal</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.subtotal || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.subtotal || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Tax Amount</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.tax_amount || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.tax_amount || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Discount</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.discount || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.discount || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Shipping</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.shipping || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.shipping || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.total || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.total || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.paid || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.paid || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Due</label>
-                  <p className="mt-1 text-sm">${selectedPurchase.due || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedPurchase.due || 0).toFixed(2)}</p>
                 </div>
                 {selectedPurchase.notes && (
                   <div className="col-span-2">

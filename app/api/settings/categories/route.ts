@@ -4,7 +4,7 @@ import { getConnection } from "@/lib/mysql"
 // GET: List all categories
 export async function GET() {
   try {
-    const conn = await getConnection()
+    const conn = getConnection()
     const [rows]: any = await conn.query("SELECT * FROM categories")
     
     return NextResponse.json(rows)
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (!code || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
-    const conn = await getConnection()
+    const conn = getConnection()
     const [result]: any = await conn.execute(
       "INSERT INTO categories (code, name) VALUES (?, ?)",
       [code, name]
@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest) {
   try {
     const { id, code, name } = await req.json()
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
-    const conn = await getConnection()
+    const conn = getConnection()
     await conn.execute(
       "UPDATE categories SET code=?, name=? WHERE id=?",
       [code, name, id]
@@ -56,7 +56,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const { id } = await req.json()
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
-    const conn = await getConnection()
+    const conn = getConnection()
     await conn.execute("DELETE FROM categories WHERE id = ?", [id])
     
     return NextResponse.json({ success: true })

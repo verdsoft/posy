@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   BarChart3,
@@ -15,7 +15,7 @@ import {
   RotateCcw,
   Menu,
   Bell,
- Maximize2, Minimize2,
+  Maximize2, Minimize2,
   ChevronRight,
   ChevronDown,
 } from "lucide-react"
@@ -24,6 +24,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useAppDispatch } from "@/lib/hooks"
 import { logout } from "@/lib/slices/authSlice"
 import AuthGuard from "./AuthGuard"
+import { useGetSystemSettingsQuery } from "@/lib/slices/settingsApi"
 
 type IconType =| typeof BarChart3 | typeof Package | typeof Settings | typeof FileText | typeof ShoppingCart | typeof Users | typeof ArrowLeftRight | typeof DollarSign | typeof RotateCcw | typeof Menu | typeof Bell | typeof Maximize2 | typeof Minimize2 | typeof ChevronRight | typeof ChevronDown;  
 type UserRole = 'admin' | 'user';
@@ -94,38 +95,6 @@ const menuItems = [
     href: "/pos",
     roles: ['admin', 'user']
   },
-  // {
-  //   id: "hrm",
-  //   label: "HRM",
-  //   icon: Users,
-  //   roles: ['admin'],
-  //   submenu: [
-  //     { label: "Company", href: "/hrm/company" },
-  //     { label: "Departments", href: "/hrm/departments" },
-  //     { label: "Office Shift", href: "/hrm/shifts" },
-  //     { label: "Employees", href: "/hrm/employees" },
-  //     { label: "Attendance", href: "/hrm/attendance" },
-  //     {
-  //       label: "Leave Request",
-  //       href: "#",
-  //       submenu: [
-  //         { label: "Leave Request", href: "/hrm/leave-request" },
-  //         { label: "Leave Type", href: "/hrm/leave-type" },
-  //       ],
-  //     },
-  //     { label: "Holidays", href: "/hrm/holidays" },
-  //   ],
-  // },
-  // {
-  //   id: "transfer",
-  //   label: "Transfer",
-  //   icon: ArrowLeftRight,
-  //   roles: ['admin'],
-  //   submenu: [
-  //     { label: "Create Transfer", href: "/transfer/create" },
-  //     { label: "Transfer List", href: "/transfer/list" },
-  //   ],
-  // },
   {
     id: "expenses",
     label: "Expenses",
@@ -225,19 +194,10 @@ const menuItems = [
   },
 ]
 
-// interface MenuItem {
-
-//   label: string;
-//   href?: string; // Adjust based on your URL type
-//   icon?: IconType | React.ComponentType; // Adjust based on your icon type
-//   roles: UserRole[]; // Adjust based on your user role type
-//   submenu?: SubMenuItem[];
-// }
-
 interface SubMenuItem {
   label: string;
   href?: string; 
-   roles: UserRole[];
+   roles?: UserRole[];
     submenu?: SubMenuItem[];// Adjust based on your URL type
  
 }
@@ -250,6 +210,8 @@ interface DashboardLayoutProps {
 
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { data: systemSettings } = useGetSystemSettingsQuery();
+
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -295,7 +257,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item => {
     if (!item.roles) return true
-    return item.roles.includes(userRole)
+    return item.roles.includes(userRole as UserRole)
   })
 
   // Filter submenu items based on role
@@ -323,12 +285,12 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
           >
             <Link href="/dashboard">
               <div className="w-10 h-10  rounded-lg flex items-center justify-center cursor-pointer">
-                <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
+                <img src={systemSettings?.system_logo || "/PosyLogo.png"} alt="POSy Logo" width={64} height={64} className="w-full h-full object-contain" />
               </div>
             </Link>
             {sidebarOpen && (
               <span className="font-semibold text-xl text-[#1a237e]" style={{ letterSpacing: "0.02em" }}>
-                POSy
+                {systemSettings?.system_title || "POSy"}
               </span>
             )}
           </div>
@@ -409,7 +371,7 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
                                 {filterSubmenu(subItem.submenu || []).map((subSubItem, subIndex) => {
                                   const subSubActive = isActive(subSubItem.href)
                                   return (
-                                    <Link href={subSubItem.href} key={subIndex}>
+                                    <Link href={subSubItem.href || '#'} key={subIndex}>
                                       <div
                                         className={`flex items-center gap-3 px-12 py-1 text-xs text-gray-700 hover:bg-gray-200 cursor-pointer
                                           ${subSubActive ? "bg-purple-100 text-purple-900 font-semibold" : ""}`}
@@ -512,9 +474,9 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
           <footer className="bg-gray-100 px-6 py-3 border-t">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-6 h-6  rounded flex items-center justify-center">
-               <img src="/PosyLogo.png" alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
+               <img src={systemSettings?.system_logo || "/PosyLogo.png"} alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
               </div>
-              <span>© 2025 Developed by  </span>
+              <span>© 2025 Developed by Verdsoft </span>
               <span className="ml-auto">All rights reserved</span>
             </div>
           </footer>

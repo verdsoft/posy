@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, X } from "lucide-react"
 
 import { useState, useEffect } from "react"
@@ -254,186 +255,200 @@ export default function CreatePurchase() {
   }
 
   return (
-
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-              <span>Purchase List</span>
-              <span>|</span>
-              <span>Create Purchase</span>
-            </div>
-            <h1 className="text-2xl font-bold">Create Purchase</h1>
+    <DashboardLayout>
+      <div className="p-4 md:p-6">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span>Purchases</span>
+            <span>|</span>
+            <span>Create Purchase</span>
           </div>
+          <h1 className="text-xl font-semibold">Create Purchase</h1>
+        </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div>
-                  <label className="text-sm font-medium">Date *</label>
-                  <Input 
-                    type="date" 
-                    className="mt-1" 
-                    {...register("date", { required: "Date is required" })}
-                  />
-                  {errors.date && <span className="text-red-500 text-xs">{errors.date.message}</span>}
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Supplier *</label>
-                  <Controller
-                    name="supplier_id"
-                    control={control}
-                    rules={{ required: "Supplier is required" }}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Choose Supplier" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {suppliers.map(supplier => (
-                            <SelectItem key={supplier.id} value={supplier.id}>
-                              {supplier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.supplier_id && (
-                    <span className="text-red-500 text-xs">{errors.supplier_id.message}</span>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Warehouse *</label>
-                  <Controller
-                    name="warehouse_id"
-                    control={control}
-                    rules={{ required: "Warehouse is required" }}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Choose Warehouse" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {warehouses.map(warehouse => (
-                            <SelectItem key={warehouse.id} value={warehouse.id}>
-                              {warehouse.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.warehouse_id && (
-                    <span className="text-red-500 text-xs">{errors.warehouse_id.message}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-6 relative">
-                <label className="text-sm font-medium">Product</label>
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Scan/Search Product by Code Name" 
-                    className="pl-10" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                
-                {/* Search results dropdown */}
-                {filteredProducts.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                    {filteredProducts.map(product => (
-                      <div 
-                        key={product.id}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                        onClick={() => addProduct(product)}
-                      >
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">{product.code}</div>
-                        </div>
-                        <div className="text-sm">
-                          ${product.cost}
-                          <span className="ml-2 text-gray-500">Stock: {product.quantity}</span>
-                        </div>
-                      </div>
-                    ))}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4">
+                          <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Purchase Information</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs font-medium">Date *</label>
+                    <Input 
+                      type="date" 
+                      className="mt-1 h-9 text-sm" 
+                      {...register("date", { required: "Date is required" })}
+                    />
+                    {errors.date && <span className="text-red-500 text-xs">{errors.date.message}</span>}
                   </div>
-                )}
-              </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium">Supplier *</label>
+                    <Controller
+                      name="supplier_id"
+                      control={control}
+                      rules={{ required: "Supplier is required" }}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="mt-1 h-9 text-sm">
+                            <SelectValue placeholder="Choose Supplier" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {suppliers.map(supplier => (
+                              <SelectItem key={supplier.id} value={supplier.id}>
+                                {supplier.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.supplier_id && (
+                      <span className="text-red-500 text-xs">{errors.supplier_id.message}</span>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium">Warehouse *</label>
+                    <Controller
+                      name="warehouse_id"
+                      control={control}
+                      rules={{ required: "Warehouse is required" }}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="mt-1 h-9 text-sm">
+                            <SelectValue placeholder="Choose Warehouse" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map(warehouse => (
+                              <SelectItem key={warehouse.id} value={warehouse.id}>
+                                {warehouse.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.warehouse_id && (
+                      <span className="text-red-500 text-xs">{errors.warehouse_id.message}</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              <div className="mb-6">
-                <h3 className="text-sm font-medium mb-3">Order Items *</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left p-3 border">#</th>
-                        <th className="text-left p-3 border">Product</th>
-                        <th className="text-left p-3 border">Net Unit Cost</th>
-                        
-                        <th className="text-left p-3 border">Qty</th>
-                        <th className="text-left p-3 border">Subtotal</th>
-                        <th className="text-left p-3 border">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedProducts.length === 0 ? (
+              <Card>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Product Search</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Scan/Search Product by Code Name" 
+                      className="pl-10 h-9 text-sm" 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Search results dropdown */}
+                  {filteredProducts.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {filteredProducts.map(product => (
+                        <div 
+                          key={product.id}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                          onClick={() => addProduct(product)}
+                        >
+                          <div>
+                            <div className="font-medium text-sm">{product.name}</div>
+                            <div className="text-xs text-muted-foreground">{product.code}</div>
+                          </div>
+                          <div className="text-sm">
+                            ${product.cost}
+                            <span className="ml-2 text-gray-500">Stock: {product.quantity}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Order Items *</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border">
+                      <thead className="bg-gray-50">
                         <tr>
-                          <td colSpan={7} className="text-center py-8 text-gray-500 border">
-                            No items added
-                          </td>
+                          <th className="text-left p-3 border text-xs font-medium">#</th>
+                          <th className="text-left p-3 border text-xs font-medium">Product</th>
+                          <th className="text-left p-3 border text-xs font-medium">Net Unit Cost</th>
+                          <th className="text-left p-3 border text-xs font-medium">Qty</th>
+                          <th className="text-left p-3 border text-xs font-medium">Subtotal</th>
+                          <th className="text-left p-3 border text-xs font-medium">Action</th>
                         </tr>
-                      ) : (
-                        selectedProducts.map((item, index) => (
-                          <tr key={item.id} className="border-b">
-                            <td className="p-3 border">{index + 1}</td>
-                            <td className="p-3 border">
-                              <div className="font-medium">{item.product_name}</div>
-                              <div className="text-sm text-gray-500">{item.product_code}</div>
-                            </td>
-                            <td className="p-3 border">
-                              <Input 
-                                type="number" 
-                                min="0"
-                                step="0.01"
-                                value={item.unit_cost}
-                                onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
-                                className="w-24"
-                              />
-                            </td>
-                          
-                            <td className="p-3 border">
-                              <Input 
-                                type="number" 
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value))}
-                                className="w-20"
-                              />
-                            </td>
-                            <td className="p-3 border">${Number(item.subtotal)}</td>
-                            <td className="p-3 border">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => removeItem(item.id)}
-                              >
-                                <X className="h-4 w-4 text-red-500" />
-                              </Button>
+                      </thead>
+                      <tbody>
+                        {selectedProducts.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="text-center py-8 text-muted-foreground border">
+                              No items added
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                        ) : (
+                          selectedProducts.map((item, index) => (
+                            <tr key={item.id} className="border-b">
+                              <td className="p-3 border text-sm">{index + 1}</td>
+                              <td className="p-3 border">
+                                <div className="font-medium text-sm">{item.product_name}</div>
+                                <div className="text-xs text-muted-foreground">{item.product_code}</div>
+                              </td>
+                              <td className="p-3 border">
+                                <Input 
+                                  type="number" 
+                                  min="0"
+                                  step="0.01"
+                                  value={item.unit_cost}
+                                  onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
+                                  className="w-24 h-8 text-sm"
+                                />
+                              </td>
+                            
+                              <td className="p-3 border">
+                                <Input 
+                                  type="number" 
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value))}
+                                  className="w-20 h-8 text-sm"
+                                />
+                              </td>
+                              <td className="p-3 border text-sm">${Number(item.subtotal)}</td>
+                              <td className="p-3 border">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => removeItem(item.id)}
+                                  className="text-destructive hover:text-destructive/80"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">

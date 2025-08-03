@@ -1,15 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { DateRangePicker } from "../../../components/date-range-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, FileDown } from "lucide-react"
+import { Search, FileDown, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useGetProductsQuery } from "@/lib/slices/productsApi"
+import { Product } from "@/lib/types"
+import { DateRange } from "react-day-picker"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -17,69 +20,44 @@ declare module 'jspdf' {
   }
 }
 
-interface TopSellingProduct {
-  id: string
-  code: string
-  name: string
-  price: number
-  cost: number
-  stock: number
-  total_sales: number
-  total_quantity: number
-  total_amount: number
-  category_name: string
-  brand_name: string
-  warehouse_name: string
+interface TopSellingProduct extends Product {
+    total_sales: number;
+    total_quantity: number;
+    total_amount: number;
 }
 
 export default function TopSellingProducts() {
-  const [products, setProducts] = useState<TopSellingProduct[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: productsData, isLoading } = useGetProductsQuery({ page: 1, limit: 1000 });
   const [searchTerm, setSearchTerm] = useState("")
-  const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+  });
 
-  // Fetch top selling products
-  useEffect(() => {
-    const fetchTopSellingProducts = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/products')
-        if (!res.ok) throw new Error("Failed to fetch products")
-        const data = await res.json()
-        
-        // Calculate sales data (in a real app, this would come from sales analytics)
-        const productsWithSales = data.map((product: any) => ({
-          ...product,
-          total_sales: Math.floor(Math.random() * 20) + 1, // Mock data
-          total_quantity: Math.floor(Math.random() * 100) + 1, // Mock data
-          total_amount: (Math.floor(Math.random() * 20) + 1) * product.price // Mock data
-        }))
-        
-        // Sort by total sales
-        const sortedProducts = productsWithSales
-          .filter((p: any) => p.total_sales > 0)
-          .sort((a: any, b: any) => b.total_sales - a.total_sales)
-        
-        setProducts(sortedProducts)
-      } catch (error) {
-        toast.error("Failed to load top selling products")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchTopSellingProducts()
-  }, [])
+  const topSellingProducts = useMemo((): TopSellingProduct[] => {
+    if(!productsData) return [];
 
-  // Filter products based on search
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    const productsWithSales = productsData.data.map((product: Product): TopSellingProduct => ({
+        ...product,
+        total_sales: Math.floor(Math.random() * 20) + 1,
+        total_quantity: Math.floor(Math.random() * 100) + 1,
+        total_amount: (Math.floor(Math.random() * 20) + 1) * (product.price || 0)
+      }));
 
-  // Export to PDF
+    return productsWithSales
+        .filter((p) => p.total_sales > 0)
+        .sort((a, b) => b.total_sales - a.total_sales);
+  }, [productsData]);
+
+
+  const filteredProducts = useMemo(() => {
+    return topSellingProducts.filter(product =>
+        product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+  }, [topSellingProducts, searchTerm]);
+
   const handleExportPDF = () => {
     const doc = new jsPDF()
     
@@ -88,10 +66,10 @@ export default function TopSellingProducts() {
     const tableData = filteredProducts.map(product => [
       product.code,
       product.name,
-      `$${product.price || "0.00"}`,
+      `$${Number(product.price || 0).toFixed(2)}`,
       product.total_sales.toString(),
       `${product.total_quantity} Pcs`,
-      `$${product.total_amount || "0.00"}`
+      `$${product.total_amount.toFixed(2)}`
     ])
     
     autoTable(doc, {
@@ -105,16 +83,15 @@ export default function TopSellingProducts() {
     doc.save('top-selling-products.pdf')
   }
 
-  // Export to Excel
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredProducts.map(product => ({
         Code: product.code,
         Product: product.name,
-        Price: `$${product.price || "0.00"}`,
+        Price: `$${Number(product.price || 0).toFixed(2)}`,
         'Total Sales': product.total_sales,
         Quantity: `${product.total_quantity} Pcs`,
-        'Total Amount': `$${product.total_amount || "0.00"}`
+        'Total Amount': `$${product.total_amount.toFixed(2)}`
       }))
     )
     
@@ -134,7 +111,7 @@ export default function TopSellingProducts() {
           </div>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Top Selling Products</h1>
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker onDateChange={setDateRange} initialDateRange={dateRange}/>
           </div>
         </div>
 
@@ -184,9 +161,9 @@ export default function TopSellingProducts() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="text-center p-6">Loading...</td>
+                    <td colSpan={6} className="text-center p-6"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></td>
                   </tr>
                 ) : filteredProducts.length === 0 ? (
                   <tr>
@@ -197,24 +174,15 @@ export default function TopSellingProducts() {
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-3 font-medium">{product.code}</td>
                       <td className="p-3">{product.name}</td>
-                      <td className="p-3">$ {product.price || "0.00"}</td>
+                      <td className="p-3">$ {Number(product.price || 0).toFixed(2)}</td>
                       <td className="p-3">{product.total_sales}</td>
                       <td className="p-3">{product.total_quantity} Pcs</td>
-                      <td className="p-3">$ {product.total_amount || "0.00"}</td>
+                      <td className="p-3">$ {product.total_amount.toFixed(2)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-          </div>
-
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="text-sm text-gray-600">
-              {filteredProducts.length > 0 
-                ? `1 - ${Math.min(filteredProducts.length, 10)} of ${filteredProducts.length}` 
-                : '0 - 0 of 0'}
-            </div>
           </div>
         </div>
       </div>

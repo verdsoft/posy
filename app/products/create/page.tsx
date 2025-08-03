@@ -1,112 +1,140 @@
 "use client"
-import type React from "react"
-import { useState, useEffect, useRef } from "react"
-import DashboardLayout from "../../../components/dashboard-layout"
+
+import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { fetchCategories, fetchBrands, fetchUnits, fetchWarehouses } from "@/lib/api"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Upload, X, Loader2 } from "lucide-react"
 import AuthGuard from "@/components/AuthGuard"
+import { useCreateProductMutation } from '@/lib/slices/productsApi'
+import { toast } from "sonner"
 
+interface FormData {
+  name: string
+  code: string
+  barcode: string
+  category_id: string
+  brand_id: string
+  unit_id: string
+  warehouse_id: string
+  cost: string
+  price: string
+  stock: string
+  alert_quantity: string
+  description: string
+  status: string
+}
 
-const initialForm = {
-  name: "",
-  code: "",
-  barcode: "",
-  category_id: "",
-  brand_id: "",
-  unit_id: "",
-  warehouse_id: "",
-  cost: "",
-  price: "",
-  stock: "",
-  alert_quantity: "",
-  description: "",
-  status: "active",
+interface Option {
+  value: string
+  label: string
 }
 
 export default function CreateProduct() {
-  const [form, setForm] = useState(initialForm)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Dynamic options
-  const [categories, setCategories] = useState<{ value: string; label: string }[]>([])
-  const [brands, setBrands] = useState<{ value: string; label: string }[]>([])
-  const [units, setUnits] = useState<{ value: string; label: string }[]>([])
-  const [warehouses, setWarehouses] = useState<{ value: string; label: string }[]>([])
-  const [images, setImages] = useState<File[]>([])
-  const [dragActive, setDragActive] = useState(false)
+  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [form, setForm] = useState<FormData>({
+    name: "",
+    code: "",
+    barcode: "",
+    category_id: "",
+    brand_id: "",
+    unit_id: "",
+    warehouse_id: "",
+    cost: "",
+    price: "",
+    stock: "",
+    alert_quantity: "",
+    description: "",
+    status: "active",
+  })
+  const [images, setImages] = useState<File[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [categories, setCategories] = useState<Option[]>([])
+  const [brands, setBrands] = useState<Option[]>([])
+  const [units, setUnits] = useState<Option[]>([])
+  const [warehouses, setWarehouses] = useState<Option[]>([])
 
-  // Fetch all select options from backend
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      const [cats, brs, unts, whs] = await Promise.all([
-        fetchCategories(),
-        fetchBrands(),
-        fetchUnits(),
-        fetchWarehouses()
-      ])
+  // RTK Query hook
+  const [createProduct, { isLoading: isCreating }] = useCreateProductMutation()
 
-      setCategories(cats.map(c => ({ value: c.id, label: c.name })))
-      setBrands(brs.map(b => ({ value: b.id, label: b.name })))
-      setUnits(unts.map(u => ({ value: u.id, label: u.name })))
-      setWarehouses(whs.map(w => ({ value: w.id, label: w.name })))
-    } catch (error) {
-      console.error("Failed to load settings:", error)
-      // Set empty arrays or handle error as needed
-      setCategories([])
-      setBrands([])
-      setUnits([])
-      setWarehouses([])
-    }
+  const initialForm = {
+    name: "",
+    code: "",
+    barcode: "",
+    category_id: "",
+    brand_id: "",
+    unit_id: "",
+    warehouse_id: "",
+    cost: "",
+    price: "",
+    stock: "",
+    alert_quantity: "",
+    description: "",
+    status: "active",
   }
 
-  loadData()
-}, [])
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [categoriesRes, brandsRes, unitsRes, warehousesRes] = await Promise.all([
+          fetch("/api/settings/categories"),
+          fetch("/api/settings/brands"),
+          fetch("/api/settings/units"),
+          fetch("/api/settings/warehouses"),
+        ])
 
+        const [categoriesData, brandsData, unitsData, warehousesData] = await Promise.all([
+          categoriesRes.json(),
+          brandsRes.json(),
+          unitsRes.json(),
+          warehousesRes.json(),
+        ])
+
+        setCategories(categoriesData.map((c: any) => ({ value: c.id, label: c.name })))
+        setBrands(brandsData.map((b: any) => ({ value: b.id, label: b.name })))
+        setUnits(unitsData.map((u: any) => ({ value: u.id, label: u.name })))
+        setWarehouses(warehousesData.map((w: any) => ({ value: w.id, label: w.name })))
+      } catch (error) {
+        console.error("Error loading data:", error)
+        toast.error("Failed to load form data")
+      }
+    }
+
+    loadData()
+  }, [])
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target
-    setForm((prev) => ({
-      ...prev,
-      [id]: value,
-    }))
+    setForm({ ...form, [e.target.id]: e.target.value })
   }
 
   const handleSelect = (field: string, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    setForm({ ...form, [field]: value })
   }
 
-  // Image upload handlers
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files) {
       setImages(Array.from(e.target.files))
     }
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
-    setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files) {
       setImages(Array.from(e.dataTransfer.files))
     }
   }
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
-    setDragActive(true)
   }
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
-    setDragActive(false)
   }
 
   const handleBrowseClick = () => {
@@ -127,9 +155,10 @@ useEffect(() => {
       !safeTrim(form.price)
     ) {
       setError("Please fill all required fields.")
+      toast.error("Please fill all required fields.")
       return
     }
-    setSubmitting(true)
+    
     try {
       const formData = new FormData()
       Object.entries(form).forEach(([key, value]) => {
@@ -138,193 +167,343 @@ useEffect(() => {
       if (images.length > 0) {
         formData.append("image", images[0])
       }
-      const res = await fetch("/api/products", {
-        method: "POST",
-        body: formData,
-      })
-      if (res.ok) {
-        setForm(initialForm)
-        setImages([])
-        alert("Product created!")
-      } else {
-        setError("Failed to create product")
-        console.log(res)
-      }
+      
+      // Use mutation
+      await createProduct(formData).unwrap()
+      setForm(initialForm)
+      setImages([])
+      toast.success("Product created successfully!")
+      router.push("/products/list")
     } catch (err) {
-      setError("Failed to create product-----")
+      setError("Failed to create product")
+      toast.error("Failed to create product")
       console.log("Error creating product:", err)
     }
-    setSubmitting(false)
   }
 
-  return (
-     <AuthGuard>
-    <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <span>Products</span>
-            <span>|</span>
-            <span>Create product</span>
-          </div>
-          <h1 className="text-2xl font-bold">Create product</h1>
-        </div>
 
-        <form className="bg-white rounded-lg shadow p-6" onSubmit={handleSubmit} encType="multipart/form-data">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Name *</label>
-                  <Input id="name" value={form.name} onChange={handleInput} placeholder="Enter Name Product" className="mt-1" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Code *</label>
-                  <Input id="code" value={form.code} onChange={handleInput} className="mt-1" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Barcode</label>
-                  <Input id="barcode" value={form.barcode} onChange={handleInput} className="mt-1" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Category *</label>
-                  <Select value={form.category_id} onValueChange={v => handleSelect("category_id", v)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Choose Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Brand</label>
-                  <Select value={form.brand_id} onValueChange={v => handleSelect("brand_id", v)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Choose Brand" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {brands.map((b) => (
-                        <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Unit *</label>
-                  <Select value={form.unit_id} onValueChange={v => handleSelect("unit_id", v)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Choose Unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map((u) => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Warehouse</label>
-                  <Select value={form.warehouse_id} onValueChange={v => handleSelect("warehouse_id", v)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Choose Warehouse" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouses.map((w) => (
-                        <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Cost *</label>
-                  <Input id="cost" value={form.cost} onChange={handleInput} placeholder="0.00" className="mt-1" type="number" min="0" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Price *</label>
-                  <Input id="price" value={form.price} onChange={handleInput} placeholder="0.00" className="mt-1" type="number" min="0" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Stock</label>
-                  <Input id="stock" value={form.stock} onChange={handleInput} placeholder="0.00" className="mt-1" type="number" min="0" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Alert Quantity</label>
-                  <Input id="alert_quantity" value={form.alert_quantity} onChange={handleInput} placeholder="0.00" className="mt-1" type="number" min="0" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Status</label>
-                  <Select value={form.status} onValueChange={v => handleSelect("status", v)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="active" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Description</label>
-                <Textarea id="description" value={form.description} onChange={handleInput} placeholder="A few words ..." className="mt-1" rows={4} />
-              </div>
-              {error && <div className="text-red-600 text-sm">{error}</div>}
-              <Button className="bg-[#1a237e] hover:bg-purple-700" type="submit" disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit"}
-              </Button>
+  return (
+    <AuthGuard>
+      <DashboardLayout>
+        <div className="p-4 md:p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <span>Products</span>
+              <span>|</span>
+              <span>Create product</span>
             </div>
-            <div className="lg:col-span-1">
-              <div
-                className={`border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors ${dragActive ? "border-purple-500 bg-purple-50" : ""}`}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={handleBrowseClick}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="mb-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg mx-auto flex items-center justify-center">👆</div>
+            <h1 className="text-xl font-semibold">Create product</h1>
+          </div>
+
+          <form onSubmit={handleSubmit} encType="multipart/form-data">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Main Form Section */}
+              <div className="lg:col-span-2 space-y-4">
+                <Card className="text-sm">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Product Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium block mb-1">
+                          Name <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          id="name" 
+                          value={form.name} 
+                          onChange={handleInput} 
+                          placeholder="Product name" 
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium block mb-1">
+                          Code <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          id="code" 
+                          value={form.code} 
+                          onChange={handleInput} 
+                          placeholder="Product code"
+                          className="h-9 text-sm" 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Barcode</label>
+                        <Input 
+                          id="barcode" 
+                          value={form.barcode} 
+                          onChange={handleInput} 
+                          placeholder="Optional barcode"
+                          className="h-9 text-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium block mb-1">
+                          Category <span className="text-red-500">*</span>
+                        </label>
+                        <Select value={form.category_id} onValueChange={v => handleSelect("category_id", v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => (
+                              <SelectItem key={c.value} value={c.value} className="text-sm">{c.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Brand</label>
+                        <Select value={form.brand_id} onValueChange={v => handleSelect("brand_id", v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Select brand" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {brands.map((b) => (
+                              <SelectItem key={b.value} value={b.value} className="text-sm">{b.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium block mb-1">
+                          Unit <span className="text-red-500">*</span>
+                        </label>
+                        <Select value={form.unit_id} onValueChange={v => handleSelect("unit_id", v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {units.map((u) => (
+                              <SelectItem key={u.value} value={u.value} className="text-sm">{u.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="text-sm">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Inventory & Pricing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Warehouse</label>
+                        <Select value={form.warehouse_id} onValueChange={v => handleSelect("warehouse_id", v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Select warehouse" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map((w) => (
+                              <SelectItem key={w.value} value={w.value} className="text-sm">{w.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium block mb-1">
+                          Cost <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 text-muted-foreground text-xs">$</span>
+                          <Input 
+                            id="cost" 
+                            value={form.cost} 
+                            onChange={handleInput} 
+                            placeholder="0.00" 
+                            className="h-9 text-sm pl-7"
+                            type="number" 
+                            min="0" 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium block mb-1">
+                          Price <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 text-muted-foreground text-xs">$</span>
+                          <Input 
+                            id="price" 
+                            value={form.price} 
+                            onChange={handleInput} 
+                            placeholder="0.00" 
+                            className="h-9 text-sm pl-7"
+                            type="number" 
+                            min="0" 
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Stock</label>
+                        <Input 
+                          id="stock" 
+                          value={form.stock} 
+                          onChange={handleInput} 
+                          placeholder="0" 
+                          className="h-9 text-sm" 
+                          type="number" 
+                          min="0" 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Low Stock Alert</label>
+                        <Input 
+                          id="alert_quantity" 
+                          value={form.alert_quantity} 
+                          onChange={handleInput} 
+                          placeholder="0" 
+                          className="h-9 text-sm" 
+                          type="number" 
+                          min="0" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Status</label>
+                        <Select value={form.status} onValueChange={v => handleSelect("status", v)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active" className="text-sm">Active</SelectItem>
+                            <SelectItem value="inactive" className="text-sm">Inactive</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="text-sm">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Description</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Textarea 
+                      id="description" 
+                      value={form.description} 
+                      onChange={handleInput} 
+                      placeholder="Enter product description..." 
+                      className="min-h-[100px] text-sm"
+                    />
+                  </CardContent>
+                </Card>
+                
+                {error && (
+                  <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">
+                    <X className="w-3 h-3" />
+                    <span>{error}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" type="button" size="sm">
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" disabled={isCreating}>
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Product"
+                    )}
+                  </Button>
                 </div>
-                <h3 className="font-medium mb-2">Image</h3>
-                <p className="text-sm text-gray-500 mb-4">Drag & Drop or Click to Select Image</p>
-                <input
-                  type="file"
-                  className="mt-2 hidden"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  accept="image/*"
-                />
-                <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  {images.map((file, idx) => (
-                    <div key={idx} className="w-16 h-16 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="object-cover w-full h-full"
-                        onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+              </div>
+
+              {/* Image Upload Section */}
+              <div className="lg:col-span-1">
+                <Card className="text-sm">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Product Image</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                        images.length > 0 
+                          ? "border-primary bg-primary/10" 
+                          : "border-muted hover:border-primary/50"
+                      }`}
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onClick={handleBrowseClick}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="mb-3">
+                        <div className="w-14 h-14 bg-muted rounded-lg mx-auto flex items-center justify-center">
+                          {images.length > 0 ? (
+                            <img
+                              src={URL.createObjectURL(images[0])}
+                              alt="Preview"
+                              className="object-cover w-full h-full rounded-lg"
+                            />
+                          ) : (
+                            <Upload className="w-8 h-8 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                      <h3 className="font-medium mb-1 text-sm">
+                        {images.length > 0 ? "Change Image" : "Upload Image"}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Drag & drop or click to browse
+                      </p>
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={handleImageChange}
+                        accept="image/*"
                       />
                     </div>
-                  ))}
-                </div>
+                    
+                    {images.length > 0 && (
+                      <div className="mt-3">
+                        <h4 className="text-xs font-medium mb-1">Preview</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                          {images.map((file, idx) => (
+                            <div 
+                              key={idx} 
+                              className="aspect-square rounded-md bg-muted overflow-hidden border"
+                            >
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={file.name}
+                                className="object-cover w-full h-full"
+                                onLoad={e => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </div>
-          </div>
-        </form>
-      </div>
-    </DashboardLayout>
+          </form>
+        </div>
+      </DashboardLayout>
     </AuthGuard>
   )
 }

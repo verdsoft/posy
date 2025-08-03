@@ -11,3 +11,7 @@ const connection = mysql.createPool({
 })
 
 export const getConnection = () => connection
+
+export const getTransactionConnection = async () => {
+  return await connection.getConnection();
+}

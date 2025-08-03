@@ -1,33 +1,59 @@
 "use client"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { format } from "date-fns"
+import { Search, ChevronLeft, ChevronRight, FileDown, Eye, Edit, Trash2 } from "lucide-react"
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { toast } from "sonner"
 
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import AuthGuard from "@/components/AuthGuard"
-import { fetchAdjustments, fetchAdjustmentDetails } from "@/lib/api"
-import Link from "next/link"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination"
-import { useState } from "react"
-import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, ChevronLeft, ChevronRight,  X, FileDown } from "lucide-react"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import type React from "react"
-import { Edit, Trash2,Eye } from "lucide-react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRouter } from "next/navigation"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { Adjustment, AdjustmentItem, AdjustmentDetails, PaginatedAdjustmentResponse } from "@/lib/types/adjustment"
+import { useGetAdjustmentsQuery, useDeleteAdjustmentMutation } from "@/lib/slices/adjustmentsApi"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -35,55 +61,37 @@ declare module 'jspdf' {
   }
 }
 
-export interface Adjustment {
-  id: string;
-  reference: string;
-  warehouse_name: string;
-  date: Date;
-  type: 'addition' | 'subtraction';
-  notes?: string;
-  created_by?: string;
-  created_at: Date;
-  updated_at: Date;
-  quantity?: number; // Added based on your table usage
-}
-
 export default function AdjustmentList() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedAdjustment, setSelectedAdjustment] = useState<string | null>(null)
+  const [selectedAdjustmentDetails, setSelectedAdjustmentDetails] = useState<AdjustmentDetails | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [adjustmentToDelete, setAdjustmentToDelete] = useState<string | null>(null)
   const router = useRouter()
-  const queryClient = useQueryClient()
 
-  const { data, isLoading, isError } = useQuery<PaginatedResponse<Adjustment>>({
-    queryKey: ['adjustments', page, limit, searchQuery],
-    queryFn: () => fetchAdjustments({
-      page,
-      limit,
-      search: searchQuery
-    }),
-    staleTime: 1000 * 60 // 1 minute
+  // RTK Query hooks
+  const { data, isLoading, isError } = useGetAdjustmentsQuery({
+    page,
+    limit,
+    search: searchQuery
   })
+  const [deleteAdjustment, { isLoading: isDeleting }] = useDeleteAdjustmentMutation()
 
-  // Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF()
-
-    // Add title
     doc.text('Adjustment List', 14, 16)
-
-    // Prepare data for the table
+    
     const tableData = data?.data.map(adjustment => [
       format(new Date(adjustment.date), 'MMM dd, yyyy'),
       adjustment.reference,
       adjustment.warehouse_name,
       adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
-      adjustment.quantity?.toString() || '0'
+      adjustment.item_count?.toString() || '0'
     ]) || []
-
-    // Add table
+    
     autoTable(doc, {
       head: [['Date', 'Reference', 'Warehouse', 'Type', 'Total Products']],
       body: tableData,
@@ -91,11 +99,10 @@ export default function AdjustmentList() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-
+    
     doc.save('adjustments.pdf')
   }
 
-  // Export to Excel
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       data?.data.map(adjustment => ({
@@ -103,355 +110,367 @@ export default function AdjustmentList() {
         Reference: adjustment.reference,
         Warehouse: adjustment.warehouse_name,
         Type: adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
-        'Total Products': adjustment.quantity || 0
+        'Total Products': adjustment.item_count || 0
       })) || []
     )
-
+    
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Adjustments")
     XLSX.writeFile(workbook, "adjustments.xlsx")
   }
 
-  // Fetch single adjustment details when dialog opens
-  const { data: adjustmentDetails, isLoading: isDetailsLoading } = useQuery({
-    queryKey: ['adjustment', selectedAdjustment],
-    queryFn: () => selectedAdjustment ? fetchAdjustmentDetails(selectedAdjustment) : null,
-    enabled: !!selectedAdjustment
-  })
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setPage(1) // Reset to first page when searching
+    setPage(1)
   }
 
-  const handleViewAdjustment = (id: string) => {
-    setSelectedAdjustment(id)
-    setIsDialogOpen(true)
+  const handleViewAdjustment = async (id: string) => {
+    try {
+      const response = await fetch(`/api/adjustments/${id}`)
+      if (response.ok) {
+        const details = await response.json()
+        setSelectedAdjustmentDetails(details)
+        setSelectedAdjustment(id)
+        setIsDialogOpen(true)
+      } else {
+        toast.error("Failed to load adjustment details")
+      }
+    } catch (error) {
+      console.error("Error fetching adjustment details:", error)
+      toast.error("Failed to load adjustment details")
+    }
   }
 
-  const handleDeleteAdjustment = async (id: string) => {
-  if (!confirm("Are you sure you want to delete this adjustment?")) return
-  
-  try {
-    const response = await fetch(`/api/adjustments?id=${id}`, {
-      method: 'DELETE'
-    })
-
-    if (!response.ok) throw new Error('Failed to delete adjustment')
-
-    // Refresh the data after deletion
-    queryClient.invalidateQueries(['adjustments', page, limit, searchQuery])
-    toast.success("Adjustment deleted successfully")
-  } catch (error) {
-    console.error("Error deleting adjustment:", error)
-    toast.error("Failed to delete adjustment")
+  const handleDeleteClick = (id: string) => {
+    setAdjustmentToDelete(id)
+    setDeleteDialogOpen(true)
   }
-}
+
+  const handleDeleteAdjustment = async () => {
+    if (!adjustmentToDelete) return
+    
+    try {
+      await deleteAdjustment(adjustmentToDelete).unwrap()
+      toast.success("Adjustment deleted successfully")
+    } catch (error) {
+      console.error("Error deleting adjustment:", error)
+      toast.error("Failed to delete adjustment")
+    } finally {
+      setDeleteDialogOpen(false)
+      setAdjustmentToDelete(null)
+    }
+  }
 
   return (
     <AuthGuard>
       <DashboardLayout>
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-              <span>Adjustment</span>
+        <div className="p-4 md:p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <span>Inventory</span>
               <span>|</span>
-              <span>Adjustment List</span>
+              <span>Adjustments</span>
             </div>
-            <h1 className="text-2xl font-bold">Adjustment List</h1>
+            <h1 className="text-xl font-semibold">Adjustments</h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b flex items-center justify-between">
-              <form onSubmit={handleSearch} className="flex items-center gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search adjustments..."
-                    className="w-64 pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+          <Card>
+            <CardHeader className="p-4 pb-0">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <form onSubmit={handleSearch} className="flex items-center gap-2">
+                  <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search adjustments..."
+                      className="pl-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" variant="outline" size="sm">
+                    Search
+                  </Button>
+                </form>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportToPDF}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" /> PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportToExcel}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" /> Excel
+                  </Button>
+                  <Link href="/adjustment/create">
+                    <Button size="sm">Create Adjustment</Button>
+                  </Link>
                 </div>
-                <Button type="submit" variant="outline">
-                  Search
-                </Button>
-              </form>
-              <div className="flex items-center gap-2">
-                {/* <Button variant="outline" className="text-blue-600 bg-transparent">
-                  🔍 Filter
-                </Button> */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportToPDF}
-                >
-                  <FileDown className="h-4 w-4 mr-2" /> PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportToExcel}
-                >
-                  <FileDown className="h-4 w-4 mr-2" /> EXCEL
-                </Button>
-                <Link href="/adjustment/create">
-                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
-                </Link>
               </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-3">
-                      <input type="checkbox" />
-                    </th>
-                    <th className="text-left p-3">Date</th>
-                    <th className="text-left p-3">Reference</th>
-                    <th className="text-left p-3">Warehouse</th>
-                    <th className="text-left p-3">Type</th>
-                    <th className="text-left p-3">Total Products</th>
-                    <th className="text-left p-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="p-3">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Skeleton key={i} className="h-12 w-full mb-2" />
-                        ))}
-                      </td>
-                    </tr>
-                  ) : isError ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8 text-red-500">
-                        Failed to load adjustments
-                      </td>
-                    </tr>
-                  ) : data?.data.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8 text-gray-500">
-                        No adjustments found
-                      </td>
-                    </tr>
-                  ) : (
-                    data?.data.map((adjustment) => (
-                      <tr key={adjustment.id} className="hover:bg-gray-50">
-                        <td className="p-3">
-                          <input type="checkbox" />
-                        </td>
-                        <td className="p-3">
-                          {format(new Date(adjustment.date), 'MMM dd, yyyy')}
-                        </td>
-                        <td className="p-3 font-medium">
-                          {adjustment.reference}
-                        </td>
-                        <td className="p-3">
-                          {adjustment.warehouse_name}
-                        </td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded text-xs ${adjustment.type === 'addition'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                            }`}>
-                            {adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1)}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          {adjustment.quantity}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewAdjustment(adjustment.id)}
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[120px]">Date</TableHead>
+                      <TableHead className="w-[150px]">Reference</TableHead>
+                      <TableHead className="w-[180px]">Warehouse</TableHead>
+                      <TableHead className="w-[120px]">Type</TableHead>
+                      <TableHead className="w-[120px] text-right">Total Products</TableHead>
+                      <TableHead className="w-[150px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[180px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-4 w-[120px] ml-auto" /></TableCell>
+                          <TableCell className="flex gap-2 w-[150px]">
+                            <Skeleton className="h-8 w-8 rounded" />
+                            <Skeleton className="h-8 w-8 rounded" />
+                            <Skeleton className="h-8 w-8 rounded" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : isError ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          Failed to load adjustments
+                        </TableCell>
+                      </TableRow>
+                    ) : data?.data.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          No adjustments found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      data?.data.map((adjustment) => (
+                        <TableRow key={adjustment.id}>
+                          <TableCell className="w-[120px]">
+                            {format(new Date(adjustment.date), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell className="w-[150px]">{adjustment.reference}</TableCell>
+                          <TableCell className="w-[180px]">{adjustment.warehouse_name}</TableCell>
+                          <TableCell className="w-[120px]">
+                            <Badge 
+                              variant={adjustment.type === 'addition' ? 'default' : 'destructive'}
+                              className="text-xs"
                             >
-                             <Eye className="h-4 w-4 text-blue-600" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/adjustment/edit/${adjustment.id}`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteAdjustment(adjustment.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-4 border-t flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Rows per page:</span>
-                <select
-                  value={limit}
-                  onChange={(e) => setLimit(Number(e.target.value))}
-                  className="border rounded text-sm p-1"
-                >
-                  {[10, 25, 50, 100].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
+                              {adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="w-[120px] text-right">
+                            {adjustment.item_count}
+                          </TableCell>
+                          <TableCell className="w-[150px]">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleViewAdjustment(adjustment.id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.push(`/adjustment/edit/${adjustment.id}`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(adjustment.id)}
+                                className="text-destructive hover:text-destructive/80"
+                                disabled={isDeleting}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
 
               {data && (
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setPage((old) => Math.max(old - 1, 1))}
-                        disabled={page === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                    </PaginationItem>
+                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">Rows per page</p>
+                    <Select
+                      value={limit.toString()}
+                      onValueChange={(value) => setLimit(Number(value))}
+                    >
+                      <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={size.toString()}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <span className="text-sm text-gray-600 mx-4">
-                      {data.pagination.total > 0
-                        ? `${(page - 1) * limit + 1}-${Math.min(page * limit, data.pagination.total)} of ${data.pagination.total}`
-                        : '0-0 of 0'}
-                    </span>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-2" />
+                          Previous
+                        </Button>
+                      </PaginationItem>
+                      
+                      <span className="text-sm text-muted-foreground mx-4">
+                        Page {page} of {data.pagination.totalPages}
+                      </span>
 
-                    <PaginationItem>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setPage((old) => old + 1)}
-                        disabled={page >= (data?.pagination.totalPages || 1)}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => old + 1)}
+                          disabled={page >= (data?.pagination.totalPages || 1)}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* View Adjustment Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <div className="flex justify-between items-center">
-                <DialogTitle>Adjustment Details</DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  {/* <X className="h-4 w-4" /> */}
-                </Button>
-              </div>
+              <DialogTitle>Adjustment Details</DialogTitle>
             </DialogHeader>
-
-            {isDetailsLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-64 w-full" />
-              </div>
-            ) : adjustmentDetails ? (
+            {selectedAdjustmentDetails && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Reference</h3>
-                    <p className="mt-1 text-sm">{adjustmentDetails.reference}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Date</h3>
-                    <p className="mt-1 text-sm">
-                      {format(new Date(adjustmentDetails.date), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Warehouse</h3>
-                    <p className="mt-1 text-sm">{adjustmentDetails.warehouse_name}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Type</h3>
-                    <p className="mt-1 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs ${adjustmentDetails.type === 'addition'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}>
-                        {adjustmentDetails.type.charAt(0).toUpperCase() + adjustmentDetails.type.slice(1)}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Created At</h3>
-                    <p className="mt-1 text-sm">
-                      {format(new Date(adjustmentDetails.created_at), 'MMM dd, yyyy HH:mm')}
-                    </p>
-                  </div>
-                </div>
+                {/* Adjustment Header */}
+                <Card>
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Adjustment Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Reference</label>
+                        <p className="text-sm font-medium">{selectedAdjustmentDetails.reference}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Date</label>
+                        <p className="text-sm font-medium">{format(new Date(selectedAdjustmentDetails.date), 'MMM dd, yyyy')}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Warehouse</label>
+                        <p className="text-sm font-medium">{selectedAdjustmentDetails.warehouse_name}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Type</label>
+                        <Badge variant={selectedAdjustmentDetails.type === 'addition' ? 'default' : 'secondary'}>
+                          {selectedAdjustmentDetails.type.charAt(0).toUpperCase() + selectedAdjustmentDetails.type.slice(1)}
+                        </Badge>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Total Items</label>
+                        <p className="text-sm font-medium">{selectedAdjustmentDetails.item_count}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                        <p className="text-sm font-medium">{selectedAdjustmentDetails.notes || 'No notes'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Notes</h3>
-                  <p className="text-sm p-3 bg-gray-50 rounded">
-                    {adjustmentDetails.notes || 'No notes provided'}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Items</h3>
-                  <div className="border rounded overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left p-3 text-sm font-medium">Product</th>
-                          <th className="text-left p-3 text-sm font-medium">Code</th>
-                          {/* <th className="text-left p-3 text-sm font-medium">Previous Stock</th> */}
-                          <th className="text-left p-3 text-sm font-medium">Quantity</th>
-                          <th className="text-left p-3 text-sm font-medium">Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {adjustmentDetails.items.map((item) => (
-                          <tr key={item.id} className="border-t">
-                            <td className="p-3 text-sm">{item.product_id}</td>
-                            <td className="p-3 text-sm">{item.product_id}</td>
-                            {/* <td className="p-3 text-sm">{item.pre_stock}</td> */}
-                            <td className="p-3 text-sm">{item.quantity}</td>
-                            <td className="p-3 text-sm">
-                              <span className={`px-2 py-1 rounded text-xs ${item.type === 'addition'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                                }`}>
-                                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                {/* Adjustment Items */}
+                <Card>
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Adjustment Items</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead>Code</TableHead>
+                            <TableHead className="text-right">Quantity</TableHead>
+                            <TableHead className="text-right">Type</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedAdjustmentDetails.items.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{item.product_name}</TableCell>
+                              <TableCell>{item.product_code}</TableCell>
+                              <TableCell className="text-right">{item.quantity}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant={selectedAdjustmentDetails.type === 'addition' ? 'default' : 'secondary'}>
+                                  {selectedAdjustmentDetails.type.charAt(0).toUpperCase() + selectedAdjustmentDetails.type.slice(1)}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            ) : (
-              <p className="text-center text-gray-500">No details available</p>
             )}
           </DialogContent>
         </Dialog>
-      </DashboardLayout>
-    </AuthGuard>
-  )
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the adjustment
+              and remove its data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAdjustment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Adjustment"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </DashboardLayout>
+  </AuthGuard>
+)
 }

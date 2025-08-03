@@ -9,6 +9,7 @@ import { Search, X, Minus, Plus } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import type React from "react"
 
 interface Product {
   id: string

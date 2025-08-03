@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
+import { useGetSalesQuery, useDeleteSaleMutation } from "@/lib/slices/salesApi"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -28,34 +39,15 @@ declare module 'jspdf' {
 
 export default function SaleList() {
   const router = useRouter()
-  const [sales, setSales] = useState<Sale[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [saleToDelete, setSaleToDelete] = useState<string | null>(null)
 
-  // Add this function to fetch sale details
-  const fetchSaleDetails = async (id: string) => {
-    try {
-      const response = await fetch(`/api/pos/sales/${id}`)
-      if (!response.ok) throw new Error("Failed to fetch sale details")
-      return await response.json()
-    } catch (error) {
-      toast.error("Failed to load sale details")
-      console.error(error)
-      return null
-    }
-  }
-
-  // Fetch sales from API
-  useEffect(() => {
-    fetch("/api/pos/sales")
-      .then(res => res.json())
-      .then(data => {
-        setSales(data)
-        setLoading(false)
-      })
-  }, [])
+  // RTK Query hooks
+  const { data: sales = [], isLoading, isError } = useGetSalesQuery()
+  const [deleteSale, { isLoading: isDeleting }] = useDeleteSaleMutation()
 
   // Filtered sales
   const filteredSales = sales.filter(sale =>
@@ -65,23 +57,25 @@ export default function SaleList() {
   )
 
   // Delete sale
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this sale?")) return
-    try {
-      const res = await fetch(`/api/pos/sales?id=${id}`, { method: "DELETE" })
-      if (res.ok) {
-        setSales(sales.filter(sale => sale.id.toString() !== id))
-        toast.success("Sale deleted successfully")
-      } else {
-        throw new Error("Failed to delete sale")
-      }
-    } catch (error) {
-      toast.error("Failed to delete sale")
-      console.error("Delete error:", error)
-    }
+  const handleDeleteClick = (id: string) => {
+    setSaleToDelete(id)
+    setDeleteDialogOpen(true)
   }
 
-
+  const handleDeleteSale = async () => {
+    if (!saleToDelete) return
+    
+    try {
+      await deleteSale(saleToDelete).unwrap()
+      toast.success("Sale deleted successfully")
+    } catch (error) {
+      console.error("Delete error:", error)
+      toast.error("Failed to delete sale")
+    } finally {
+      setDeleteDialogOpen(false)
+      setSaleToDelete(null)
+    }
+  }
 
   // Export to PDF
   const handleExportPDF = () => {
@@ -96,9 +90,9 @@ export default function SaleList() {
       sale.reference ?? "",
       sale.customer_name ?? "",
       sale.status ?? "",
-      `$${Number(sale.total ?? 0)}`,
-      `$${Number(sale.paid ?? 0)}`,
-      `$${Number(sale.due ?? 0)}`,
+      `$${Number(sale.total ?? 0).toFixed(2)}`,
+      `$${Number(sale.paid ?? 0).toFixed(2)}`,
+      `$${Number(sale.due ?? 0).toFixed(2)}`,
       sale.payment_status ?? ""
     ])
 
@@ -188,80 +182,92 @@ export default function SaleList() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-3">
-                    <input type="checkbox" />
-                  </th>
-                  <th className="text-left p-3">Date</th>
-                  <th className="text-left p-3">Reference</th>
-                  <th className="text-left p-3">Customer</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Grand Total</th>
-                  <th className="text-left p-3">Paid</th>
-                  <th className="text-left p-3">Due</th>
-                  <th className="text-left p-3">Payment Status</th>
-                  <th className="text-left p-3">Action</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {loading ? (
+              <tbody className="bg-white divide-y divide-gray-200">
+                {isLoading ? (
                   <tr>
-                    <td colSpan={10} className="text-center p-6">Loading...</td>
+                    <td colSpan={9} className="px-6 py-4 text-center">Loading...</td>
+                  </tr>
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-4 text-center text-red-600">Failed to load sales</td>
                   </tr>
                 ) : filteredSales.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center p-6">No sales found.</td>
+                    <td colSpan={9} className="px-6 py-4 text-center text-gray-500">No sales found</td>
                   </tr>
                 ) : (
                   filteredSales.map((sale) => (
-                    <tr key={sale.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3">
-                        <input type="checkbox" />
+                    <tr key={sale.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(sale.date).toLocaleDateString()}
                       </td>
-                      <td className="p-3">{sale.date}</td>
-                      <td className="p-3">{sale.reference}</td>
-                      <td className="p-3">{sale.customer_name}</td>
-                      <td className="p-3">
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {sale.reference}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {sale.customer_name || "Walk-in Customer"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          sale.status === "completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                        }`}>
                           {sale.status}
                         </span>
                       </td>
-                      <td className="p-3">${Number(sale.total)}</td>
-                      <td className="p-3">${Number(sale.paid)}</td>
-                      <td className="p-3">${Number(sale.due)}</td>
-                      <td className="p-3">
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${Number(sale.total).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${Number(sale.paid).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${Number(sale.due).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          sale.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }`}>
                           {sale.payment_status}
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={async () => {
-                              const saleDetails = await fetchSaleDetails(sale.id.toString())
-                              if (saleDetails) {
-                                setSelectedSale(saleDetails)
-                                setIsViewDialogOpen(true)
-                              }
+                            onClick={() => {
+                              setSelectedSale(sale)
+                              setIsViewDialogOpen(true)
                             }}
                           >
                             <Eye className="h-4 w-4 text-blue-600" />
                           </Button>
-                          {/* <Button
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push(`/sales/edit/${sale.id}`)}
                           >
                             <Edit className="h-4 w-4 text-green-600" />
-                          </Button> */}
-                          {/* <Button
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(sale.id.toString())}
+                            onClick={() => handleDeleteClick(sale.id.toString())}
+                            disabled={isDeleting}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button> */}
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -270,97 +276,68 @@ export default function SaleList() {
               </tbody>
             </table>
           </div>
-
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="text-sm text-gray-600">
-              1 - {filteredSales.length} of {sales.length} | prev next
-            </div>
-          </div>
         </div>
+
+        {/* View Sale Dialog */}
+        {selectedSale && (
+          <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Sale Details</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 p-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Reference</label>
+                  <p className="mt-1 text-sm">{selectedSale.reference}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Date</label>
+                  <p className="mt-1 text-sm">{new Date(selectedSale.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Customer</label>
+                  <p className="mt-1 text-sm">{selectedSale.customer_name || "Walk-in Customer"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <p className="mt-1 text-sm">{selectedSale.status}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Total</label>
+                  <p className="mt-1 text-sm">${Number(selectedSale.total).toFixed(2)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Status</label>
+                  <p className="mt-1 text-sm">{selectedSale.payment_status}</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the sale
+                and remove its data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteSale}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete Sale"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      {selectedSale && (
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Sale Details - {selectedSale.reference}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Date</h3>
-                  <p className="mt-1 text-sm">{selectedSale.date}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Customer</h3>
-                  <p className="mt-1 text-sm">{selectedSale.customer_name}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                  <p className="mt-1 text-sm">
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                      {selectedSale.status}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Payment Status</h3>
-                  <p className="mt-1 text-sm">
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                      {selectedSale.payment_status}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Total</h3>
-                  <p className="mt-1 text-sm">${Number(selectedSale.total)}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Paid</h3>
-                  <p className="mt-1 text-sm">${Number(selectedSale.paid)}</p>
-                </div>
-              </div>
-
-              {selectedSale.notes && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Notes</h3>
-                  <p className="mt-1 text-sm p-3 bg-gray-50 rounded">
-                    {selectedSale.notes}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Items</h3>
-                <div className="border rounded overflow-hidden">
-                  <Table>
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left p-3 text-sm font-medium">Product</th>
-                        <th className="text-left p-3 text-sm font-medium">Price</th>
-                        <th className="text-left p-3 text-sm font-medium">Quantity</th>
-                        <th className="text-left p-3 text-sm font-medium">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <TableBody>
-                      {selectedSale.items?.map((item:Sale) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="p-3 text-sm">{item.product_name || item.product_id}</TableCell>
-                          <TableCell className="p-3 text-sm">${Number(item.price)}</TableCell>
-                          <TableCell className="p-3 text-sm">{item.quantity}</TableCell>
-                          <TableCell className="p-3 text-sm">${Number(item.subtotal)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </DashboardLayout>
   )
 }

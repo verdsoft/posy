@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { DateRangePicker } from "../../../components/date-range-picker"
-import { ShoppingCart, Package, RotateCcw, ArrowLeftRight, DollarSign, TrendingUp } from "lucide-react"
+import { ShoppingCart, Package, RotateCcw, ArrowLeftRight, DollarSign, TrendingUp, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FileDown } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useGetProfitLossQuery } from "@/lib/slices/reportsApi"
+import { DateRange } from "react-day-picker"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -17,167 +19,88 @@ declare module 'jspdf' {
   }
 }
 
-interface ProfitLossData {
-  sales: {
-    count: number
-    total: number
-  }
-  purchases: {
-    count: number
-    total: number
-  }
-  salesReturns: {
-    count: number
-    total: number
-  }
-  purchaseReturns: {
-    count: number
-    total: number
-  }
-  expenses: {
-    total: number
-  }
-  payments: {
-    received: number
-    sent: number
-  }
-}
-
 export default function ProfitAndLoss() {
-  const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<ProfitLossData>({
-    sales: { count: 0, total: 0 },
-    purchases: { count: 0, total: 0 },
-    salesReturns: { count: 0, total: 0 },
-    purchaseReturns: { count: 0, total: 0 },
-    expenses: { total: 0 },
-    payments: { received: 0, sent: 0 }
-  })
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(new Date().getFullYear(), 0, 1),
+        to: new Date(),
+    });
 
-  // Fetch profit and loss data
-  useEffect(() => {
-    const fetchProfitLossData = async () => {
-      try {
-        setLoading(true)
-        
-        // Fetch sales data
-        const salesRes = await fetch('/api/pos/sales')
-        const salesData = await salesRes.json()
-        const salesTotal = salesData.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0)
-        
-        // Fetch purchases data
-        const purchasesRes = await fetch('/api/purchases')
-        const purchasesData = await purchasesRes.json()
-        const purchasesTotal = purchasesData.reduce((sum: number, purchase: any) => sum + (purchase.total || 0), 0)
-        
-        // Fetch sales returns data
-        const salesReturnsRes = await fetch('/api/sales-returns')
-        const salesReturnsData = await salesReturnsRes.json()
-        const salesReturnsTotal = salesReturnsData.reduce((sum: number, ret: any) => sum + (ret.total || 0), 0)
-        
-        // Fetch purchase returns data
-        const purchaseReturnsRes = await fetch('/api/purchases-return')
-        const purchaseReturnsData = await purchaseReturnsRes.json()
-        const purchaseReturnsTotal = purchaseReturnsData.reduce((sum: number, ret: any) => sum + (ret.total || 0), 0)
-        
-        // Fetch expenses data
-        const expensesRes = await fetch('/api/expenses')
-        const expensesData = await expensesRes.json()
-        const expensesTotal = expensesData.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0)
-        
-        // Calculate payments
-        const paymentsReceived = salesTotal - salesReturnsTotal
-        const paymentsSent = purchasesTotal - purchaseReturnsTotal + expensesTotal
-        
-        setData({
-          sales: { count: salesData.length, total: salesTotal },
-          purchases: { count: purchasesData.length, total: purchasesTotal },
-          salesReturns: { count: salesReturnsData.length, total: salesReturnsTotal },
-          purchaseReturns: { count: purchaseReturnsData.length, total: purchaseReturnsTotal },
-          expenses: { total: expensesTotal },
-          payments: { received: paymentsReceived, sent: paymentsSent }
-        })
-      } catch (error) {
-        toast.error("Failed to load profit and loss data")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
+    const { data, error, isLoading } = useGetProfitLossQuery({
+        from: dateRange?.from?.toISOString().split('T')[0] || '',
+        to: dateRange?.to?.toISOString().split('T')[0] || '',
+    });
+
+    if (error) {
+        toast.error("Failed to load profit and loss data");
+        console.error(error);
     }
-    
-    fetchProfitLossData()
-  }, [])
 
-  // Calculate profit
-  const profit = data.sales.total - data.purchases.total - data.expenses.total
-  const paymentsNet = data.payments.received - data.payments.sent
-
-  const metrics = [
+  const metrics = data ? [
     {
       title: `${data.sales.count} Sales`,
-      amount: `$ ${data.sales.total}`,
+      amount: `$${data.sales.total.toFixed(2)}`,
       icon: ShoppingCart,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
       title: `${data.purchases.count} Purchases`,
-      amount: `$ ${data.purchases.total}`,
+      amount: `$${data.purchases.total.toFixed(2)}`,
       icon: Package,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       title: `${data.salesReturns.count} Sales Return`,
-      amount: `$ ${data.salesReturns.total}`,
+      amount: `$${data.salesReturns.total.toFixed(2)}`,
       icon: RotateCcw,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
     {
       title: `${data.purchaseReturns.count} Purchases Return`,
-      amount: `$ ${data.purchaseReturns.total}`,
+      amount: `$${data.purchaseReturns.total.toFixed(2)}`,
       icon: ArrowLeftRight,
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
       title: "Expenses",
-      amount: `$ ${data.expenses.total}`,
+      amount: `$${data.expenses.total.toFixed(2)}`,
       icon: DollarSign,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
       title: "Profit",
-      amount: `$ ${profit}`,
+      amount: `$${data.profit.toFixed(2)}`,
       icon: TrendingUp,
-      color: profit >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: profit >= 0 ? "bg-green-50" : "bg-red-50",
+      color: data.profit >= 0 ? "text-green-600" : "text-red-600",
+      bgColor: data.profit >= 0 ? "bg-green-50" : "bg-red-50",
     },
-  ]
+  ] : [];
 
-  const paymentMetrics = [
+  const paymentMetrics = data ? [
     {
       title: "Payments Received",
-      amount: `$ ${data.payments.received}`,
-      subtitle: `( $ ${data.sales.total} Sales - $ ${data.salesReturns.total} Sales Returns )`,
+      amount: `$${data.payments.received.toFixed(2)}`,
+      subtitle: `( $${data.sales.total.toFixed(2)} Sales - $${data.salesReturns.total.toFixed(2)} Sales Returns )`,
     },
     {
       title: "Payments Sent",
-      amount: `$ ${data.payments.sent}`,
-      subtitle: `( $ ${data.purchases.total} Purchases - $ ${data.purchaseReturns.total} Purchase Returns + $ ${data.expenses.total} Expenses )`,
+      amount: `$${data.payments.sent.toFixed(2)}`,
+      subtitle: `( $${data.purchases.total.toFixed(2)} Purchases - $${data.purchaseReturns.total.toFixed(2)} Purchase Returns + $${data.expenses.total.toFixed(2)} Expenses )`,
     },
     {
       title: "Payments Net",
-      amount: `$ ${paymentsNet}`,
-      subtitle: `( $ ${data.payments.received} Received - $ ${data.payments.sent} Sent )`,
+      amount: `$${data.paymentsNet.toFixed(2)}`,
+      subtitle: `( $${data.payments.received.toFixed(2)} Received - $${data.payments.sent.toFixed(2)} Sent )`,
     },
-  ]
+  ] : [];
 
   // Export to PDF
   const handleExportPDF = () => {
+    if (!data) return;
     const doc = new jsPDF()
     
     doc.text('Profit and Loss Report', 14, 16)
@@ -206,7 +129,7 @@ export default function ProfitAndLoss() {
     autoTable(doc, {
       head: [['Payment Type', 'Amount', 'Breakdown']],
       body: paymentData,
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: (doc as any).lastAutoTable.finalY + 10,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [26, 35, 126] }
     })
@@ -216,6 +139,7 @@ export default function ProfitAndLoss() {
 
   // Export to Excel
   const handleExportExcel = () => {
+    if(!data) return;
     const workbook = XLSX.utils.book_new()
     
     // Main metrics worksheet
@@ -252,11 +176,12 @@ export default function ProfitAndLoss() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Profit and Loss</h1>
             <div className="flex items-center gap-2">
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              <DateRangePicker onDateChange={setDateRange} />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExportPDF}
+                disabled={!data}
               >
                 <FileDown className="h-4 w-4 mr-2" />
                 PDF
@@ -265,6 +190,7 @@ export default function ProfitAndLoss() {
                 variant="outline"
                 size="sm"
                 onClick={handleExportExcel}
+                disabled={!data}
               >
                 <FileDown className="h-4 w-4 mr-2" />
                 EXCEL
@@ -273,11 +199,12 @@ export default function ProfitAndLoss() {
           </div>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="text-center py-8">
-            <div className="text-lg">Loading profit and loss data...</div>
+            <Loader2 className="mx-auto h-10 w-10 animate-spin" />
+            <div className="text-lg mt-4">Loading profit and loss data...</div>
           </div>
-        ) : (
+        ) : data ? (
           <>
             {/* Main Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -292,7 +219,7 @@ export default function ProfitAndLoss() {
                   <p className={`text-2xl font-bold ${metric.color}`}>{metric.amount}</p>
                   {index === 5 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      ( $ {data.sales.total} Sales ) - ( $ {data.purchases.total} Purchases ) - ( $ {data.expenses.total} Expenses )
+                      ( $ {data.sales.total.toFixed(2)} Sales ) - ( $ {data.purchases.total.toFixed(2)} Purchases ) - ( $ {data.expenses.total.toFixed(2)} Expenses )
                     </p>
                   )}
                 </div>
@@ -313,7 +240,7 @@ export default function ProfitAndLoss() {
               ))}
             </div>
           </>
-        )}
+        ) : <div className="text-center py-8">No data available for the selected date range.</div>}
       </div>
     </DashboardLayout>
   )

@@ -1,12 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, FileDown, Eye, Edit, Trash2 } from "lucide-react"
+import { Search, FileDown, Eye, Edit, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useGetCustomersQuery } from "@/lib/slices/reportsApi"
+import { useUpdateCustomerMutation, useDeleteCustomerMutation } from "@/lib/slices/customersApi"
+import { Customer } from "@/lib/types"
+import { DateRangePicker } from "@/components/date-range-picker"
+import { DateRange } from "react-day-picker"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -17,29 +23,22 @@ declare module 'jspdf' {
   }
 }
 
-interface BestCustomer {
-  id: string
-  name: string
-  phone: string
-  email: string
-  address: string
-  city: string
-  country: string
-  total_sales: number
-  total_paid: number
-  total_due: number
-  sales_count: number
-  created_at: string
-}
-
 export default function BestCustomers() {
-  const [customers, setCustomers] = useState<BestCustomer[]>([])
-  const [loading, setLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+  });
+  const { data: customers, isLoading, refetch } = useGetCustomersQuery({
+    from: dateRange?.from?.toISOString().split('T')[0] || '',
+    to: dateRange?.to?.toISOString().split('T')[0] || '',
+  });
+  const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation();
+  const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation();
+
   const [searchTerm, setSearchTerm] = useState("")
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState<BestCustomer | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -49,93 +48,52 @@ export default function BestCustomers() {
     country: ""
   })
 
-  // Fetch best customers
-  useEffect(() => {
-    const fetchBestCustomers = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/customers')
-        if (!res.ok) throw new Error("Failed to fetch customers")
-        const data = await res.json()
-        
-        // Sort by total sales to get best customers
-        const sortedCustomers = data
-          .filter((customer: any) => customer.total_sales > 0)
-          .sort((a: any, b: any) => b.total_sales - a.total_sales)
-        
-        setCustomers(sortedCustomers)
-      } catch (error) {
-        toast.error("Failed to load best customers")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchBestCustomers()
-  }, [])
+  const bestCustomers = useMemo(() => {
+    if (!customers) return [];
+    return [...customers]
+        .filter(c => c.total_sales > 0)
+        .sort((a, b) => b.total_sales - a.total_sales);
+  }, [customers]);
 
-  // Filter customers based on search
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  // Handle edit customer
+  const filteredCustomers = useMemo(() => {
+    return bestCustomers.filter(customer =>
+        customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+  }, [bestCustomers, searchTerm]);
+  
   const handleEdit = async () => {
     if (!selectedCustomer) return
     
     try {
-      const res = await fetch('/api/customers', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id: selectedCustomer.id })
-      })
-      
-      if (!res.ok) throw new Error("Failed to update customer")
-      
-      const updatedCustomer = await res.json()
-      setCustomers(customers.map(c => 
-        c.id === selectedCustomer.id ? { ...c, ...updatedCustomer } : c
-      ))
+      await updateCustomer({ id: selectedCustomer.id, data: formData }).unwrap();
       setShowEditModal(false)
-      resetForm()
       toast.success("Customer updated successfully")
+      refetch();
     } catch (error) {
       toast.error("Failed to update customer")
       console.error(error)
     }
   }
 
-  // Handle delete customer
-  const handleDelete = async () => {
-    if (!selectedCustomer) return
-    
+  const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/customers?id=${selectedCustomer.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete customer")
-      
-      setCustomers(customers.filter(c => c.id !== selectedCustomer.id))
-      setShowDeleteModal(false)
+      await deleteCustomer(id).unwrap();
       toast.success("Customer deleted successfully")
+      refetch();
     } catch (error) {
       toast.error("Failed to delete customer")
       console.error(error)
     }
   }
 
-  // Open view modal
-  const openViewModal = (customer: BestCustomer) => {
+  const openViewModal = (customer: Customer) => {
     setSelectedCustomer(customer)
     setShowViewModal(true)
   }
 
-  // Open edit modal
-  const openEditModal = (customer: BestCustomer) => {
+  const openEditModal = (customer: Customer) => {
     setSelectedCustomer(customer)
     setFormData({
       name: customer.name || "",
@@ -148,25 +106,6 @@ export default function BestCustomers() {
     setShowEditModal(true)
   }
 
-  // Open delete modal
-  const openDeleteModal = (customer: BestCustomer) => {
-    setSelectedCustomer(customer)
-    setShowDeleteModal(true)
-  }
-
-  // Reset form
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      phone: "",
-      email: "",
-      address: "",
-      city: "",
-      country: ""
-    })
-  }
-
-  // Export to PDF
   const handleExportPDF = () => {
     const doc = new jsPDF()
     
@@ -177,8 +116,8 @@ export default function BestCustomers() {
       customer.phone || "-",
       customer.email || "-",
       customer.total_sales.toString(),
-      `$${customer.total_paid || "0.00"}`,
-      `$${customer.total_due || "0.00"}`
+      `$${Number(customer.total_paid || 0).toFixed(2)}`,
+      `$${Number(customer.total_due || 0).toFixed(2)}`
     ])
     
     autoTable(doc, {
@@ -192,7 +131,6 @@ export default function BestCustomers() {
     doc.save('best-customers.pdf')
   }
 
-  // Export to Excel
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredCustomers.map(customer => ({
@@ -200,8 +138,8 @@ export default function BestCustomers() {
         Phone: customer.phone || "-",
         Email: customer.email || "-",
         'Total Sales': customer.total_sales,
-        'Total Paid': `$${customer.total_paid || "0.00"}`,
-        'Total Due': `$${customer.total_due || "0.00"}`
+        'Total Paid': `$${Number(customer.total_paid || 0).toFixed(2)}`,
+        'Total Due': `$${Number(customer.total_due || 0).toFixed(2)}`
       }))
     )
     
@@ -234,6 +172,7 @@ export default function BestCustomers() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              <DateRangePicker onDateChange={setDateRange} initialDateRange={dateRange} />
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -269,9 +208,9 @@ export default function BestCustomers() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-6">Loading...</td>
+                    <td colSpan={7} className="text-center p-6"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></td>
                   </tr>
                 ) : filteredCustomers.length === 0 ? (
                   <tr>
@@ -284,8 +223,8 @@ export default function BestCustomers() {
                       <td className="p-3">{customer.phone || "-"}</td>
                       <td className="p-3">{customer.email || "-"}</td>
                       <td className="p-3">{customer.total_sales}</td>
-                      <td className="p-3">${customer.total_paid || "0.00"}</td>
-                      <td className="p-3">${customer.total_due || "0.00"}</td>
+                      <td className="p-3">${Number(customer.total_paid || 0).toFixed(2)}</td>
+                      <td className="p-3">${Number(customer.total_due || 0).toFixed(2)}</td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           <Button
@@ -302,13 +241,23 @@ export default function BestCustomers() {
                           >
                             <Edit className="h-4 w-4 text-green-600" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteModal(customer)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the customer.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(customer.id)} disabled={isDeleting}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                           </AlertDialog>
                         </div>
                       </td>
                     </tr>
@@ -317,18 +266,8 @@ export default function BestCustomers() {
               </tbody>
             </table>
           </div>
-
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="text-sm text-gray-600">
-              {filteredCustomers.length > 0 
-                ? `1 - ${Math.min(filteredCustomers.length, 10)} of ${filteredCustomers.length}` 
-                : '0 - 0 of 0'}
-            </div>
-          </div>
         </div>
 
-        {/* View Customer Modal */}
         {selectedCustomer && (
           <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
             <DialogContent className="max-w-2xl">
@@ -366,11 +305,11 @@ export default function BestCustomers() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Paid</label>
-                  <p className="mt-1 text-sm">${selectedCustomer.total_paid || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedCustomer.total_paid || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Due</label>
-                  <p className="mt-1 text-sm">${selectedCustomer.total_due || "0.00"}</p>
+                  <p className="mt-1 text-sm">${Number(selectedCustomer.total_due || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Customer Since</label>
@@ -381,7 +320,6 @@ export default function BestCustomers() {
           </Dialog>
         )}
 
-        {/* Edit Customer Modal */}
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -447,44 +385,15 @@ export default function BestCustomers() {
                 <Button 
                   className="bg-purple-600 hover:bg-purple-700" 
                   onClick={handleEdit}
-                  disabled={!formData.name}
+                  disabled={isUpdating || !formData.name}
                 >
+                  {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Update
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Delete Confirmation Modal */}
-        {selectedCustomer && (
-          <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Delete Customer</DialogTitle>
-              </DialogHeader>
-              <div className="p-4">
-                <p className="text-sm text-gray-600 mb-4">
-                  Are you sure you want to delete customer "{selectedCustomer.name}"? This action cannot be undone.
-                </p>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowDeleteModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    className="bg-red-600 hover:bg-red-700" 
-                    onClick={handleDelete}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
       </div>
     </DashboardLayout>
   )

@@ -1,20 +1,39 @@
 "use client"
-
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit, FileDown } from "lucide-react"
-import type React from "react"
+import { Eye, Edit, FileDown, Trash2 } from "lucide-react"
 import { ViewProductDialog } from "@/components/view-product-dialog"
-import { Trash2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Product } from "@/lib/types/index"
 import AuthGuard from "@/components/AuthGuard"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Pagination } from "@/components/ui/pagination"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useGetProductsQuery, useDeleteProductMutation } from '@/lib/slices/productsApi'
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -22,49 +41,27 @@ declare module 'jspdf' {
   }
 }
 
+const PAGE_SIZE = 10;
+
+type ProductWithMeta = Product & {
+  category_name?: string;
+  brand_name?: string;
+  unit_name?: string;
+};
+
 export default function ProductList() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
   const [viewProduct, setViewProduct] = useState<Product | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Add delete function
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return
-
-    try {
-      const res = await fetch(`/api/products?id=${id}`, {
-        method: "DELETE"
-      })
-
-      if (res.ok) {
-        setProducts(products.filter(p => p.id !== id))
-        toast({
-          title: "Success",
-          description: "Product deleted successfully",
-        })
-      } else {
-        throw new Error("Failed to delete")
-      }
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete product",
-        variant: "destructive",
-      })
-      console.log("Delete error:", err)
-    }
-  }
-
-  useEffect(() => {
-    fetch("/api/products")
-      .then(res => res.json())
-      .then(data => setProducts(data || []))
-      .finally(() => setLoading(false))
-  }, [])
+  // RTK Query
+  const { data: products = [], isLoading, isError } = useGetProductsQuery() as { data: ProductWithMeta[], isLoading: boolean, isError: boolean };
+  const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) =>
@@ -73,14 +70,41 @@ export default function ProductList() {
     )
   }, [products, search])
 
-  // Export to PDF
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE
+    return filteredProducts.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [filteredProducts, currentPage])
+
+  const handleDeleteClick = (id: string) => {
+    setProductToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!productToDelete) return
+    try {
+      await deleteProduct(productToDelete).unwrap()
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive",
+      })
+      console.error("Delete error:", err)
+    } finally {
+      setDeleteDialogOpen(false)
+      setProductToDelete(null)
+    }
+  }
+
   const exportToPDF = () => {
     const doc = new jsPDF()
-    
-    // Add title
     doc.text('Product List', 14, 16)
     
-    // Prepare data for the table
     const tableData = filteredProducts.map(product => [
       product.name || '',
       product.code || '',
@@ -91,7 +115,6 @@ export default function ProductList() {
       Number(product.stock ?? 0)
     ])
     
-    // Add table
     autoTable(doc, {
       head: [['Name', 'Code', 'Category', 'Brand', 'Price', 'Unit', 'Quantity']],
       body: tableData,
@@ -103,7 +126,6 @@ export default function ProductList() {
     doc.save('products.pdf')
   }
 
-  // Export to Excel
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredProducts.map(product => ({
@@ -125,160 +147,177 @@ export default function ProductList() {
   return (
     <AuthGuard>
       <DashboardLayout>
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+        <div className="p-4 md:p-6">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
               <span>Products</span>
               <span>|</span>
               <span>Product List</span>
             </div>
-            <h1 className="text-2xl font-bold">Product List</h1>
+            <h1 className="text-xl font-semibold">Product List</h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
+          <Card>
+            <CardHeader className="p-4 pb-0">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="w-full md:w-64">
                   <Input
-                    placeholder="Search this table..."
-                    className="w-64"
+                    placeholder="Search products..."
                     value={search}
-                    onChange={e => setSearch(e.target.value)}
+                    onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={exportToPDF}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    PDF
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={exportToExcel}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Excel
+                  </Button>
+                  <Button
+                    onClick={() => router.push("/products/create")}
+                    size="sm"
+                  >
+                    Create Product
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={exportToPDF}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  PDF
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={exportToExcel}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  EXCEL
-                </Button>
-                <Button
-                  className="bg-[#1a237e] hover:bg-purple-700"
-                  onClick={() => router.push("/products/create")}
-                >
-                  Create Product
-                </Button>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead className="w-[150px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-10 w-10 rounded" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell className="flex gap-2">
+                            <Skeleton className="h-8 w-8 rounded" />
+                            <Skeleton className="h-8 w-8 rounded" />
+                            <Skeleton className="h-8 w-8 rounded" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : filteredProducts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center">
+                          No products found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedProducts.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell>
+                            {product.image ? (
+                              <img
+                                src={product.image.startsWith("/uploads") ? product.image : `/uploads/${product.image}`}
+                                alt={product.name}
+                                className="w-10 h-10 object-cover rounded"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">📷</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.code}</TableCell>
+                          <TableCell>{product.category_name}</TableCell>
+                          <TableCell>{product.brand_name}</TableCell>
+                          <TableCell>{Number(product.price).toFixed(2)}</TableCell>
+                          <TableCell>{product.unit_name}</TableCell>
+                          <TableCell>{Number(product.stock ?? 0)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setViewProduct(product)
+                                  setIsViewDialogOpen(true)
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => router.push(`/products/edit/${product.id}`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteClick(product.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-3">
-                      <input type="checkbox" />
-                    </th>
-                    <th className="text-left p-3">Image</th>
-                    <th className="text-left p-3">Name</th>
-                    <th className="text-left p-3">Code</th>
-                    <th className="text-left p-3">Category</th>
-                    <th className="text-left p-3">Brand</th>
-                    <th className="text-left p-3">Price</th>
-                    <th className="text-left p-3">Unit</th>
-                    <th className="text-left p-3">Quantity</th>
-                    <th className="text-left p-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={10} className="p-6 text-center text-gray-500">
-                        Loading...
-                      </td>
-                    </tr>
-                  ) : filteredProducts.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="p-6 text-center text-gray-500">
-                        No products found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredProducts.map((product) => (
-                      <tr key={product.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3">
-                          <input type="checkbox" />
-                        </td>
-                        <td className="p-3">
-                          {product.image ? (
-                            <img
-                              src={product.image.startsWith("/uploads") ? product.image : `/uploads/${product.image}`}
-                              alt={product.name}
-                              className="w-10 h-10 object-cover rounded"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">📷</div>
-                          )}
-                        </td>
-                        <td className="p-3 font-medium">{product.name}</td>
-                        <td className="p-3">{product.code}</td>
-                        <td className="p-3">{product.category_name}</td>
-                        <td className="p-3">{product.brand_name}</td>
-                        <td className="p-3">{Number(product.price)}</td>
-                        <td className="p-3">{product.unit_name}</td>
-                        <td className="p-3">{Number(product.stock ?? 0)}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-blue-600"
-                              onClick={() => {
-                                setViewProduct(product)
-                                setIsViewDialogOpen(true)
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-green-600"
-                              onClick={() => router.push(`/products/edit/${product.id}`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-600"
-                              onClick={() => handleDelete(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="p-4 border-t flex items-center justify-between">
-              <div className="text-sm text-gray-600">Rows per page: 10</div>
-              <div className="text-sm text-gray-600">
-                {filteredProducts.length > 0
-                  ? `1 - ${filteredProducts.length} of ${filteredProducts.length}`
-                  : "0 - 0 of 0"}{" "}
-                | prev next
-              </div>
-            </div>
-          </div>
+              {/* Pagination Controls */}
+              {!isLoading && filteredProducts.length > 0 && (
+                <div className="mt-4 flex justify-center items-center gap-2">
+                  <button
+                    className="px-2 py-1 rounded border disabled:opacity-50"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    aria-label="Previous page"
+                  >
+                    &lt;
+                  </button>
+                  <span className="text-xs font-medium">
+                    {currentPage} / {Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))}
+                  </span>
+                  <button
+                    className="px-2 py-1 rounded border disabled:opacity-50"
+                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredProducts.length / PAGE_SIZE), p + 1))}
+                    disabled={currentPage === Math.ceil(filteredProducts.length / PAGE_SIZE) || filteredProducts.length === 0}
+                    aria-label="Next page"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+
         {viewProduct && (
           <ViewProductDialog
             product={viewProduct}
@@ -286,6 +325,27 @@ export default function ProductList() {
             onOpenChange={setIsViewDialogOpen}
           />
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the product and remove its data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Product
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DashboardLayout>
     </AuthGuard>
   )
