@@ -48,7 +48,7 @@ export default function ProductQuantityAlerts() {
       product.alert_quantity.toString(),
       product.category_name || "-",
       product.brand_name || "-",
-      `$${Number(product.price || 0).toFixed(2)}`
+      `$${Number(product.price || 0) }`
     ])
     
     autoTable(doc, {
@@ -72,7 +72,7 @@ export default function ProductQuantityAlerts() {
         'Alert Quantity': product.alert_quantity,
         Category: product.category_name || "-",
         Brand: product.brand_name || "-",
-        Price: `$${Number(product.price || 0).toFixed(2)}`
+        Price: `$${Number(product.price || 0) }`
       }))
     )
     
@@ -257,11 +257,11 @@ export default function ProductQuantityAlerts() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Cost</label>
-                  <p className="mt-1 text-sm">${Number(selectedProduct.cost || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedProduct.cost || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Price</label>
-                  <p className="mt-1 text-sm">${Number(selectedProduct.price || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedProduct.price || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>

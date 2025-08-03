@@ -263,9 +263,9 @@ export default function SaleReport() {
                           {sale.status}
                         </span>
                       </td>
-                      <td className="p-3">${Number(sale.total || 0).toFixed(2)}</td>
-                      <td className="p-3">${Number(sale.paid || 0).toFixed(2)}</td>
-                      <td className="p-3">${Number(sale.due || 0).toFixed(2)}</td>
+                      <td className="p-3">${Number(sale.total || 0) }</td>
+                      <td className="p-3">${Number(sale.paid || 0) }</td>
+                      <td className="p-3">${Number(sale.due || 0) }</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded text-xs ${
                           sale.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
@@ -349,31 +349,31 @@ export default function SaleReport() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Subtotal</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.subtotal || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.subtotal || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Tax Amount</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.tax_amount || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.tax_amount || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Discount</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.discount || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.discount || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Shipping</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.shipping || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.shipping || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.total || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.total || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.paid || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.paid || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Due</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.due || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.due || 0) }</p>
                 </div>
                 {selectedSale.notes && (
                   <div className="col-span-2">

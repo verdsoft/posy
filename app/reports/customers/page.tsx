@@ -112,9 +112,9 @@ export default function CustomerReport() {
         customer.phone || "-",
         customer.email || "-",
         customer.total_sales,
-        `$${Number(customer.total_sales || 0).toFixed(2)}`,
-        `$${Number(customer.total_paid || 0).toFixed(2)}`,
-        `$${Number(customer.total_due || 0).toFixed(2)}`
+        `$${Number(customer.total_sales || 0) }`,
+        `$${Number(customer.total_paid || 0) }`,
+        `$${Number(customer.total_due || 0) }`
     ]);
     
     autoTable(doc, {
@@ -136,9 +136,9 @@ export default function CustomerReport() {
         Phone: customer.phone || "-",
         Email: customer.email || "-",
         'Total Sales': customer.total_sales,
-        'Amount': `$${Number(customer.total_sales || 0).toFixed(2)}`,
-        'Paid': `$${Number(customer.total_paid || 0).toFixed(2)}`,
-        'Due': `$${Number(customer.total_due || 0).toFixed(2)}`
+        'Amount': `$${Number(customer.total_sales || 0) }`,
+        'Paid': `$${Number(customer.total_paid || 0) }`,
+        'Due': `$${Number(customer.total_due || 0) }`
       }))
     )
     
@@ -212,8 +212,8 @@ export default function CustomerReport() {
                       <td className="p-4">{customer.email || "-"}</td>
                       <td className="p-4">{customer.total_sales || 0}</td>
                       <td className="p-4">${(customer.total_sales || 0)}</td>
-                      <td className="p-4">${Number(customer.total_paid || 0).toFixed(2)}</td>
-                      <td className="p-4">${Number(customer.total_due || 0).toFixed(2)}</td>
+                      <td className="p-4">${Number(customer.total_paid || 0) }</td>
+                      <td className="p-4">${Number(customer.total_due || 0) }</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <Button
@@ -294,11 +294,11 @@ export default function CustomerReport() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Paid</label>
-                  <p className="mt-1 text-sm">${Number(selectedCustomer.total_paid || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedCustomer.total_paid || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Due</label>
-                  <p className="mt-1 text-sm">${Number(selectedCustomer.total_due || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedCustomer.total_due || 0) }</p>
                 </div>
                 {selectedCustomer.address && (
                   <div className="col-span-2">

@@ -54,7 +54,7 @@ export default function PurchasesPayments() {
       payment.purchase_reference,
       payment.supplier_name,
       payment.payment_method,
-      `$${payment.amount.toFixed(2)}`
+      `$${payment.amount }`
     ])
     
     autoTable(doc, {
@@ -76,7 +76,7 @@ export default function PurchasesPayments() {
         Purchase: payment.purchase_reference,
         Supplier: payment.supplier_name,
         'Payment Method': payment.payment_method,
-        Amount: `$${payment.amount.toFixed(2)}`
+        Amount: `$${payment.amount }`
       }))
     )
     
@@ -165,7 +165,7 @@ export default function PurchasesPayments() {
                             {payment.payment_method}
                             </span>
                         </td>
-                        <td className="p-3">${payment.amount.toFixed(2)}</td>
+                        <td className="p-3">${payment.amount }</td>
                         <td className="p-3">
                             <div className="flex items-center gap-2">
                             <Button
@@ -225,7 +225,7 @@ export default function PurchasesPayments() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Amount</label>
-                  <p className="mt-1 text-sm">${selectedPayment.amount.toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${selectedPayment.amount }</p>
                 </div>
               </div>
             </DialogContent>

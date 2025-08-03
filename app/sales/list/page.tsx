@@ -90,9 +90,9 @@ export default function SaleList() {
       sale.reference ?? "",
       sale.customer_name ?? "",
       sale.status ?? "",
-      `$${Number(sale.total ?? 0).toFixed(2)}`,
-      `$${Number(sale.paid ?? 0).toFixed(2)}`,
-      `$${Number(sale.due ?? 0).toFixed(2)}`,
+      `$${Number(sale.total ?? 0) }`,
+      `$${Number(sale.paid ?? 0) }`,
+      `$${Number(sale.due ?? 0) }`,
       sale.payment_status ?? ""
     ])
 
@@ -226,13 +226,13 @@ export default function SaleList() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${Number(sale.total).toFixed(2)}
+                        ${Number(sale.total) }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${Number(sale.paid).toFixed(2)}
+                        ${Number(sale.paid) }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${Number(sale.due).toFixed(2)}
+                        ${Number(sale.due) }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -304,7 +304,7 @@ export default function SaleList() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.total).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSale.total) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Payment Status</label>

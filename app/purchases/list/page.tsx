@@ -270,9 +270,9 @@ export default function PurchaseList() {
                         <td className="p-3">{purchase.supplier_name}</td>
                         <td className="p-3">{purchase.warehouse_name}</td>
                         <td className="p-3">{getStatusBadge(purchase.status)}</td>
-                        <td className="p-3 font-medium">${Number(purchase.total).toFixed(2)}</td>
-                        <td className="p-3">${Number(purchase.paid).toFixed(2)}</td>
-                        <td className="p-3">${Number(purchase.due).toFixed(2)}</td>
+                        <td className="p-3 font-medium">${Number(purchase.total) }</td>
+                        <td className="p-3">${Number(purchase.paid) }</td>
+                        <td className="p-3">${Number(purchase.due) }</td>
                         <td className="p-3">{getPaymentStatusBadge(purchase.payment_status)}</td>
                         <td className="p-3">
                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

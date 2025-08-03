@@ -242,7 +242,7 @@ export default function Dashboard() {
                         <td className="p-2 text-gray-800">{new Date(sale.date).toLocaleDateString()}</td>
                         <td className="p-2 text-gray-800">{sale.reference}</td>
                         <td className="p-2 text-gray-800">{sale.customer_id || '-'}</td>
-                        <td className="p-2 text-right font-medium">${(Number(sale.total) || 0).toFixed(2)}</td>
+                        <td className="p-2 text-right font-medium">${(Number(sale.total) || 0) }</td>
                         <td className="p-2 text-right font-medium">{sale.status}</td>
                       </tr>
                     ))

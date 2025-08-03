@@ -66,10 +66,10 @@ export default function TopSellingProducts() {
     const tableData = filteredProducts.map(product => [
       product.code,
       product.name,
-      `$${Number(product.price || 0).toFixed(2)}`,
+      `$${Number(product.price || 0) }`,
       product.total_sales.toString(),
       `${product.total_quantity} Pcs`,
-      `$${product.total_amount.toFixed(2)}`
+      `$${product.total_amount }`
     ])
     
     autoTable(doc, {
@@ -88,10 +88,10 @@ export default function TopSellingProducts() {
       filteredProducts.map(product => ({
         Code: product.code,
         Product: product.name,
-        Price: `$${Number(product.price || 0).toFixed(2)}`,
+        Price: `$${Number(product.price || 0) }`,
         'Total Sales': product.total_sales,
         Quantity: `${product.total_quantity} Pcs`,
-        'Total Amount': `$${product.total_amount.toFixed(2)}`
+        'Total Amount': `$${product.total_amount }`
       }))
     )
     
@@ -174,10 +174,10 @@ export default function TopSellingProducts() {
                     <tr key={product.id} className="border-b hover:bg-gray-50">
                       <td className="p-3 font-medium">{product.code}</td>
                       <td className="p-3">{product.name}</td>
-                      <td className="p-3">$ {Number(product.price || 0).toFixed(2)}</td>
+                      <td className="p-3">$ {Number(product.price || 0) }</td>
                       <td className="p-3">{product.total_sales}</td>
                       <td className="p-3">{product.total_quantity} Pcs</td>
-                      <td className="p-3">$ {product.total_amount.toFixed(2)}</td>
+                      <td className="p-3">$ {product.total_amount }</td>
                     </tr>
                   ))
                 )}

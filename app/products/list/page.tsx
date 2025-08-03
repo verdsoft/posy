@@ -252,7 +252,7 @@ export default function ProductList() {
                           <TableCell>{product.code}</TableCell>
                           <TableCell>{product.category_name}</TableCell>
                           <TableCell>{product.brand_name}</TableCell>
-                          <TableCell>{Number(product.price).toFixed(2)}</TableCell>
+                          <TableCell>{Number(product.price) }</TableCell>
                           <TableCell>{product.unit_name}</TableCell>
                           <TableCell>{Number(product.stock ?? 0)}</TableCell>
                           <TableCell>

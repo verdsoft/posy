@@ -103,7 +103,7 @@ export default function QuotationList() {
       quotation.customer_name,
       quotation.warehouse_name,
       quotation.status,
-      `$${Number(quotation.total).toFixed(2)}`
+      `$${Number(quotation.total) }`
     ])
     
     // Add table
@@ -228,7 +228,7 @@ export default function QuotationList() {
                           {quotation.status}
                         </Badge>
                       </td>
-                      <td className="p-3 font-medium">${Number(quotation.total).toFixed(2)}</td>
+                      <td className="p-3 font-medium">${Number(quotation.total) }</td>
                       <td className="p-3">
                         <div className="flex gap-2">
                           <Button

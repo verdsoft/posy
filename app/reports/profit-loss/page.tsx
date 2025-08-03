@@ -38,42 +38,42 @@ export default function ProfitAndLoss() {
   const metrics = data ? [
     {
       title: `${data.sales.count} Sales`,
-      amount: `$${data.sales.total.toFixed(2)}`,
+      amount: `$${data.sales.total }`,
       icon: ShoppingCart,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
       title: `${data.purchases.count} Purchases`,
-      amount: `$${data.purchases.total.toFixed(2)}`,
+      amount: `$${data.purchases.total }`,
       icon: Package,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       title: `${data.salesReturns.count} Sales Return`,
-      amount: `$${data.salesReturns.total.toFixed(2)}`,
+      amount: `$${data.salesReturns.total }`,
       icon: RotateCcw,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
     {
       title: `${data.purchaseReturns.count} Purchases Return`,
-      amount: `$${data.purchaseReturns.total.toFixed(2)}`,
+      amount: `$${data.purchaseReturns.total }`,
       icon: ArrowLeftRight,
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
       title: "Expenses",
-      amount: `$${data.expenses.total.toFixed(2)}`,
+      amount: `$${data.expenses.total }`,
       icon: DollarSign,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
       title: "Profit",
-      amount: `$${data.profit.toFixed(2)}`,
+      amount: `$${data.profit }`,
       icon: TrendingUp,
       color: data.profit >= 0 ? "text-green-600" : "text-red-600",
       bgColor: data.profit >= 0 ? "bg-green-50" : "bg-red-50",
@@ -83,18 +83,18 @@ export default function ProfitAndLoss() {
   const paymentMetrics = data ? [
     {
       title: "Payments Received",
-      amount: `$${data.payments.received.toFixed(2)}`,
-      subtitle: `( $${data.sales.total.toFixed(2)} Sales - $${data.salesReturns.total.toFixed(2)} Sales Returns )`,
+      amount: `$${data.payments.received }`,
+      subtitle: `( $${data.sales.total } Sales - $${data.salesReturns.total } Sales Returns )`,
     },
     {
       title: "Payments Sent",
-      amount: `$${data.payments.sent.toFixed(2)}`,
-      subtitle: `( $${data.purchases.total.toFixed(2)} Purchases - $${data.purchaseReturns.total.toFixed(2)} Purchase Returns + $${data.expenses.total.toFixed(2)} Expenses )`,
+      amount: `$${data.payments.sent }`,
+      subtitle: `( $${data.purchases.total } Purchases - $${data.purchaseReturns.total } Purchase Returns + $${data.expenses.total } Expenses )`,
     },
     {
       title: "Payments Net",
-      amount: `$${data.paymentsNet.toFixed(2)}`,
-      subtitle: `( $${data.payments.received.toFixed(2)} Received - $${data.payments.sent.toFixed(2)} Sent )`,
+      amount: `$${data.paymentsNet }`,
+      subtitle: `( $${data.payments.received } Received - $${data.payments.sent } Sent )`,
     },
   ] : [];
 
@@ -219,7 +219,7 @@ export default function ProfitAndLoss() {
                   <p className={`text-2xl font-bold ${metric.color}`}>{metric.amount}</p>
                   {index === 5 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      ( $ {data.sales.total.toFixed(2)} Sales ) - ( $ {data.purchases.total.toFixed(2)} Purchases ) - ( $ {data.expenses.total.toFixed(2)} Expenses )
+                      ( $ {data.sales.total } Sales ) - ( $ {data.purchases.total } Purchases ) - ( $ {data.expenses.total } Expenses )
                     </p>
                   )}
                 </div>

@@ -205,9 +205,9 @@ export default function SalesReturnsReport() {
       returnItem.customer_name || "-",
       returnItem.warehouse_name || "-",
       returnItem.status,
-      `$${Number(returnItem.total || 0).toFixed(2)}`,
-      `$${Number(returnItem.paid || 0).toFixed(2)}`,
-      `$${Number(returnItem.due || 0).toFixed(2)}`,
+      `$${Number(returnItem.total || 0) }`,
+      `$${Number(returnItem.paid || 0) }`,
+      `$${Number(returnItem.due || 0) }`,
       returnItem.payment_status
     ])
     
@@ -231,9 +231,9 @@ export default function SalesReturnsReport() {
         Customer: returnItem.customer_name || "-",
         Warehouse: returnItem.warehouse_name || "-",
         Status: returnItem.status,
-        Total: `$${Number(returnItem.total || 0).toFixed(2)}`,
-        Paid: `$${Number(returnItem.paid || 0).toFixed(2)}`,
-        Due: `$${Number(returnItem.due || 0).toFixed(2)}`,
+        Total: `$${Number(returnItem.total || 0) }`,
+        Paid: `$${Number(returnItem.paid || 0) }`,
+        Due: `$${Number(returnItem.due || 0) }`,
         'Payment Status': returnItem.payment_status
       }))
     )
@@ -330,9 +330,9 @@ export default function SalesReturnsReport() {
                           {returnItem.status}
                         </span>
                       </td>
-                      <td className="p-3">${Number(returnItem.total || 0).toFixed(2)}</td>
-                      <td className="p-3">${Number(returnItem.paid || 0).toFixed(2)}</td>
-                      <td className="p-3">${Number(returnItem.due || 0).toFixed(2)}</td>
+                      <td className="p-3">${Number(returnItem.total || 0) }</td>
+                      <td className="p-3">${Number(returnItem.paid || 0) }</td>
+                      <td className="p-3">${Number(returnItem.due || 0) }</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded text-xs ${
                           returnItem.payment_status === "paid" ? "bg-green-100 text-green-800" : 
@@ -418,31 +418,31 @@ export default function SalesReturnsReport() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Subtotal</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.subtotal || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.subtotal || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Tax Amount</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.tax_amount || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.tax_amount || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Discount</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.discount || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.discount || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Shipping</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.shipping || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.shipping || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.total || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.total || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.paid || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.paid || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Due</label>
-                  <p className="mt-1 text-sm">${Number(selectedReturn.due || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedReturn.due || 0) }</p>
                 </div>
                 {selectedReturn.notes && (
                   <div className="col-span-2">

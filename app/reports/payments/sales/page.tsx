@@ -56,7 +56,7 @@ export default function SalesPayments() {
       payment.sale_reference,
       payment.customer_name,
       payment.payment_method,
-      `$${payment.amount.toFixed(2)}`
+      `$${payment.amount }`
     ])
     
     autoTable(doc, {
@@ -78,7 +78,7 @@ export default function SalesPayments() {
         Sale: payment.sale_reference,
         Customer: payment.customer_name,
         'Payment Method': payment.payment_method,
-        Amount: `$${payment.amount.toFixed(2)}`
+        Amount: `$${payment.amount }`
       }))
     )
     
@@ -167,7 +167,7 @@ export default function SalesPayments() {
                           {payment.payment_method}
                         </span>
                       </td>
-                      <td className="p-3">${payment.amount.toFixed(2)}</td>
+                      <td className="p-3">${payment.amount }</td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           <Button
@@ -227,7 +227,7 @@ export default function SalesPayments() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Amount</label>
-                  <p className="mt-1 text-sm">${selectedPayment.amount.toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${selectedPayment.amount }</p>
                 </div>
               </div>
             </DialogContent>

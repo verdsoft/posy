@@ -112,9 +112,9 @@ export default function SupplierReport() {
       supplier.name,
       supplier.phone || "-",
       supplier.email || "-",
-      `$${Number(supplier.total_purchases || 0).toFixed(2)}`,
-      `$${Number(supplier.total_paid || 0).toFixed(2)}`,
-      `$${Number(supplier.total_due || 0).toFixed(2)}`
+      `$${Number(supplier.total_purchases || 0) }`,
+      `$${Number(supplier.total_paid || 0) }`,
+      `$${Number(supplier.total_due || 0) }`
     ])
     
     autoTable(doc, {
@@ -135,9 +135,9 @@ export default function SupplierReport() {
         Name: supplier.name,
         Phone: supplier.phone || "-",
         Email: supplier.email || "-",
-        'Total Purchases': `$${Number(supplier.total_purchases || 0).toFixed(2)}`,
-        'Total Paid': `$${Number(supplier.total_paid || 0).toFixed(2)}`,
-        'Total Due': `$${Number(supplier.total_due || 0).toFixed(2)}`
+        'Total Purchases': `$${Number(supplier.total_purchases || 0) }`,
+        'Total Paid': `$${Number(supplier.total_paid || 0) }`,
+        'Total Due': `$${Number(supplier.total_due || 0) }`
       }))
     )
     
@@ -208,9 +208,9 @@ export default function SupplierReport() {
                       <td className="p-4">{supplier.name}</td>
                       <td className="p-4">{supplier.phone || "-"}</td>
                       <td className="p-4">{supplier.email}</td>
-                      <td className="p-4">${Number(supplier.total_purchases || 0).toFixed(2)}</td>
-                      <td className="p-4">${Number(supplier.total_paid || 0).toFixed(2)}</td>
-                      <td className="p-4">${Number(supplier.total_due || 0).toFixed(2)}</td>
+                      <td className="p-4">${Number(supplier.total_purchases || 0) }</td>
+                      <td className="p-4">${Number(supplier.total_paid || 0) }</td>
+                      <td className="p-4">${Number(supplier.total_due || 0) }</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <Button
@@ -287,15 +287,15 @@ export default function SupplierReport() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Purchases</label>
-                  <p className="mt-1 text-sm">${Number(selectedSupplier.total_purchases || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSupplier.total_purchases || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Paid</label>
-                  <p className="mt-1 text-sm">${Number(selectedSupplier.total_paid || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSupplier.total_paid || 0) }</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Total Due</label>
-                  <p className="mt-1 text-sm">${Number(selectedSupplier.total_due || 0).toFixed(2)}</p>
+                  <p className="mt-1 text-sm">${Number(selectedSupplier.total_due || 0) }</p>
                 </div>
                 {selectedSupplier.address && (
                   <div className="col-span-2">
