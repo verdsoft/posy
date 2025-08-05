@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
 import { v4 as uuidv4 } from "uuid"
-import type { Fields } from "formidable"
 import type { RowDataPacket, FieldPacket } from "mysql2"
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -13,9 +12,9 @@ export const config = {
 }
 
 // Helper function to parse form data
-export async function parseForm(req: NextRequest): Promise<{ fields: Fields }> {
+export async function parseForm(req: NextRequest): Promise<{ fields: any }> {
   const formData = await req.formData()
-  const fields: Fields = {}
+  const fields: any = {}
   
   formData.forEach((value, key) => {
     fields[key] = value.toString()
@@ -25,7 +24,7 @@ export async function parseForm(req: NextRequest): Promise<{ fields: Fields }> {
 }
 
 // Helper function to get field value
-function getField(fields: Fields, key: string) {
+function getField(fields: any, key: string) {
   const val = fields[key]
   if (Array.isArray(val)) return (val[0] ?? "").toString()
   return (val ?? "").toString()

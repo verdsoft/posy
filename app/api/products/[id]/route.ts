@@ -3,58 +3,10 @@ import { getConnection } from "@/lib/mysql"
 import type { RowDataPacket, FieldPacket } from "mysql2"
 import fs from "fs"
 import path from "path"
-import { Readable } from "stream"
-import { IncomingMessage } from "http"
-import formidable from "formidable"
 
-interface Fields {
-  [key: string]: string | string[]
-}
-
-interface Files {
-  [key: string]: any
-}
-
-export function parseForm(req: NextRequest): Promise<{ fields: Fields; files: Files }> {
-  return new Promise((resolve, reject) => {
-    const run = async () => {
-      const reader = req.body?.getReader()
-      const chunks: Uint8Array[] = []
-
-      while (true) {
-        const { done, value } = await reader!.read()
-        if (done) break
-        if (value) chunks.push(value)
-      }
-
-      const buffer = Buffer.concat(chunks)
-
-      // Cast to IncomingMessage-like object
-      const stream = new Readable() as Readable & IncomingMessage
-      stream.push(buffer)
-      stream.push(null)
-      stream.headers = Object.fromEntries(req.headers.entries())
-
-      const form = formidable({
-        multiples: false,
-        uploadDir: "./public/uploads",
-        keepExtensions: true,
-        maxFileSize: 5 * 1024 * 1024,
-        filter: ({ mimetype }) => !!mimetype?.includes("image"),
-      })
-
-      form.parse(stream, (err, fields, files) => {
-        if (err) reject(err)
-        else resolve({ fields, files })
-      })
-    }
-
-    run().catch(reject)
-  })
-}
-
-function getField(fields: Fields, key: string) {
-  const val = fields[key]
+// Helper function to get field value from FormData or object
+function getField(data: any, key: string) {
+  const val = data[key]
   if (Array.isArray(val)) return (val[0] ?? "").toString()
   return (val ?? "").toString()
 }
@@ -130,12 +82,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         fs.mkdirSync(uploadDir, { recursive: true })
       }
 
-      const { fields, files } = await parseForm(req)
-      data = fields
-      const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null
+      const formData = await req.formData()
+      const imageFile = formData.get("image") as File | null
+      
+      // Convert FormData to object
+      for (const [key, value] of formData.entries()) {
+        if (key !== 'image') {
+          data[key] = value
+        }
+      }
       
       if (imageFile) {
-        data.image = `/uploads/${path.basename(imageFile.filepath)}`
+        data.image = `/uploads/${path.basename(imageFile.name)}`
       }
     } else {
       // Handle JSON data
