@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
-import formidable from "formidable"
 import fs from "fs"
 import path from "path"
 
-import type { Fields, Files, File } from "formidable"
 import type { RowDataPacket, FieldPacket } from "mysql2"
 
 export const dynamic = "force-dynamic"
@@ -16,24 +14,10 @@ export const config = {
   },
 }
 
-const parseForm = (req: NextRequest): Promise<{ fields: Fields; files: Files }> => {
-  return new Promise((resolve, reject) => {
-    const form = formidable({
-      uploadDir: "./public/uploads",
-      keepExtensions: true,
-      maxFileSize: 4 * 1024 * 1024, // 4MB
-    })
-
-    form.parse(req as any, (err, fields, files) => {
-      if (err) return reject(err)
-      resolve({ fields, files })
-    })
-  })
-}
-
-const getField = (fields: Fields, fieldName: string) => {
-  const field = fields[fieldName]
-  return Array.isArray(field) ? field[0] : field || ""
+// Helper function to get field value from FormData
+const getField = (formData: FormData, fieldName: string) => {
+  const field = formData.get(fieldName)
+  return field ? field.toString() : ""
 }
 
 
@@ -131,16 +115,16 @@ export async function PUT(req: NextRequest) {
       ({ error: "Product ID is required" }, { status: 400 })
     }
 
-    const { fields, files } = await parseForm(req)
-    const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null
-    let imagePath = getField(fields, 'image_path') || null
+    const formData = await req.formData()
+    const imageFile = formData.get("image") as File | null
+    let imagePath = getField(formData, 'image_path') || null
 
     if (imageFile) {
-        imagePath = `/uploads/${path.basename(imageFile.filepath)}`
+        imagePath = `/uploads/${path.basename(imageFile.name)}`
     }
     
     const requiredFields = ["name", "code", "category_id", "unit_id", "cost", "price"]
-    const missingFields = requiredFields.filter((field) => !fields[field])
+    const missingFields = requiredFields.filter((field) => !getField(formData, field))
     if (missingFields.length > 0) {
       return NextResponse.json({ error: `Missing required fields: ${missingFields.join(", ")}` }, { status: 400 })
     }
@@ -151,19 +135,19 @@ export async function PUT(req: NextRequest) {
           cost = ?, price = ?, stock = ?, alert_quantity = ?, description = ?, status = ?, image = ?
          WHERE id = ?`,
       [
-        getField(fields, "name").trim(),
-        getField(fields, "code").trim(),
-        getField(fields, "barcode").trim() || null,
-        getField(fields, "category_id").trim(),
-        getField(fields, "brand_id").trim() || null,
-        getField(fields, "unit_id").trim(),
-        getField(fields, "warehouse_id").trim() || null,
-        Number(getField(fields, "cost")) || 0,
-        Number(getField(fields, "price")) || 0,
-        Number(getField(fields, "stock")) || 0,
-        Number(getField(fields, "alert_quantity")) || 0,
-        getField(fields, "description").trim() || null,
-        getField(fields, "status") || "active",
+        getField(formData, "name").trim(),
+        getField(formData, "code").trim(),
+        getField(formData, "barcode").trim() || null,
+        getField(formData, "category_id").trim(),
+        getField(formData, "brand_id").trim() || null,
+        getField(formData, "unit_id").trim(),
+        getField(formData, "warehouse_id").trim() || null,
+        Number(getField(formData, "cost")) || 0,
+        Number(getField(formData, "price")) || 0,
+        Number(getField(formData, "stock")) || 0,
+        Number(getField(formData, "alert_quantity")) || 0,
+        getField(formData, "description").trim() || null,
+        getField(formData, "status") || "active",
         imagePath,
         id,
       ]
@@ -222,12 +206,12 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(uploadDir, { recursive: true })
     }
 
-    const { fields, files } = await parseForm(req)
-    const imageFile = files.image ? (Array.isArray(files.image) ? files.image[0] : files.image) : null
-    const imagePath = imageFile ? `/uploads/${path.basename(imageFile.filepath)}` : null
+    const formData = await req.formData()
+    const imageFile = formData.get("image") as File | null
+    const imagePath = imageFile ? `/uploads/${path.basename(imageFile.name)}` : null
 
     const requiredFields = ["name", "code", "category_id", "unit_id", "cost", "price"]
-    const missingFields = requiredFields.filter((field) => !fields[field])
+    const missingFields = requiredFields.filter((field) => !getField(formData, field))
     if (missingFields.length > 0) {
       return NextResponse.json({ error: `Missing required fields: ${missingFields.join(", ")}` }, { status: 400 })
     }
@@ -237,19 +221,19 @@ export async function POST(req: NextRequest) {
           (name, code, barcode, category_id, brand_id, unit_id, warehouse_id, cost, price, stock, alert_quantity, description, status, image)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        getField(fields, "name").trim(),
-        getField(fields, "code").trim(),
-        getField(fields, "barcode").trim() || null,
-        getField(fields, "category_id").trim(),
-        getField(fields, "brand_id").trim() || null,
-        getField(fields, "unit_id").trim(),
-        getField(fields, "warehouse_id").trim() || null,
-        Number(getField(fields, "cost")) || 0,
-        Number(getField(fields, "price")) || 0,
-        Number(getField(fields, "stock")) || 0,
-        Number(getField(fields, "alert_quantity")) || 0,
-        getField(fields, "description").trim() || null,
-        getField(fields, "status") || "active",
+        getField(formData, "name").trim(),
+        getField(formData, "code").trim(),
+        getField(formData, "barcode").trim() || null,
+        getField(formData, "category_id").trim(),
+        getField(formData, "brand_id").trim() || null,
+        getField(formData, "unit_id").trim(),
+        getField(formData, "warehouse_id").trim() || null,
+        Number(getField(formData, "cost")) || 0,
+        Number(getField(formData, "price")) || 0,
+        Number(getField(formData, "stock")) || 0,
+        Number(getField(formData, "alert_quantity")) || 0,
+        getField(formData, "description").trim() || null,
+        getField(formData, "status") || "active",
         imagePath,
       ]
     )
