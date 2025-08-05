@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Loader2, Search, Minus, Plus, X } from "lucide-react"
 import { toast } from "sonner"
 import type React from "react"
 import { use } from "react"
+import { useGetQuotationByIdQuery, useUpdateQuotationMutation } from '@/lib/slices/quotationsApi'
+import { useGetProductsQuery } from '@/lib/slices/productsApi'
 
 // Interfaces matching your create page
 interface PageParams {
@@ -68,29 +70,119 @@ interface Quotation {
 }
 
 export default function EditQuotation({ params }: { params: Promise<PageParams> }) {
-  const router = useRouter()
+  const [id, setId] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-    const { id } = use(params)
-  
-  // Form state - matching create page structure
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<Product[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+
+  // Form state
   const [date, setDate] = useState("")
+  const [validUntil, setValidUntil] = useState("")
   const [customerId, setCustomerId] = useState("")
   const [warehouseId, setWarehouseId] = useState("")
-  const [validUntil, setValidUntil] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<Product[]>([])
   const [items, setItems] = useState<QuotationItem[]>([])
   const [orderTax, setOrderTax] = useState(0)
   const [discount, setDiscount] = useState(0)
   const [shipping, setShipping] = useState(0)
   const [status, setStatus] = useState("pending")
   const [note, setNote] = useState("")
-  
-  // Data - matching create page
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+
+  const router = useRouter()
+
+  // RTK Query hooks
+  const { data: quotationData, isLoading: isQuotationLoading } = useGetQuotationByIdQuery(id, {
+    skip: !id
+  })
+  const [updateQuotation] = useUpdateQuotationMutation()
+  const { data: productsData } = useGetProductsQuery({ page: 1, limit: 1000, search: searchQuery })
+
+  // Get params
+  useEffect(() => {
+    const getParams = async () => {
+      const resolvedParams = await params
+      setId(resolvedParams.id)
+    }
+    getParams()
+  }, [params])
+
+  // Load reference data (customers, warehouses)
+  useEffect(() => {
+    const fetchReferenceData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch customers and warehouses in parallel
+        const [customersRes, warehousesRes] = await Promise.all([
+          fetch('/api/customers'),
+          fetch('/api/settings/warehouses')
+        ])
+
+        if (!customersRes.ok || !warehousesRes.ok) {
+          throw new Error("Failed to fetch reference data")
+        }
+
+        const customersData = await customersRes.json()
+        const warehousesData = await warehousesRes.json()
+        
+        setCustomers(customersData.data || [])
+        setWarehouses(warehousesData)
+      } catch (error) {
+        console.error("Error fetching reference data:", error)
+        toast.error("Failed to load reference data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) {
+      fetchReferenceData()
+    }
+  }, [id])
+
+  // Update form when quotation data is loaded
+  useEffect(() => {
+    if (quotationData) {
+      // Handle date conversion
+      const formatDate = (date: Date | string) => {
+        if (typeof date === 'string') return date
+        return date.toISOString().split('T')[0]
+      }
+      
+      setDate(formatDate(quotationData.date))
+      setValidUntil(quotationData.valid_until ? formatDate(quotationData.valid_until) : "")
+      setCustomerId(quotationData.customer_id || "")
+      setWarehouseId(quotationData.warehouse_id || "")
+      // Note: items will be loaded separately since they're not part of the main Quotation type
+      setOrderTax(quotationData.tax_rate || 0)
+      setDiscount(quotationData.discount || 0)
+      setShipping(quotationData.shipping || 0)
+      setStatus(quotationData.status || "pending")
+      setNote(quotationData.notes || "")
+    }
+  }, [quotationData])
+
+  // Load quotation items separately
+  useEffect(() => {
+    const loadQuotationItems = async () => {
+      if (!id) return
+      
+      try {
+        const response = await fetch(`/api/quotations/items?quotation_id=${id}`)
+        if (response.ok) {
+          const itemsData = await response.json()
+          setItems(itemsData || [])
+        }
+      } catch (error) {
+        console.error("Error loading quotation items:", error)
+      }
+    }
+
+    loadQuotationItems()
+  }, [id])
 
   // Calculations - matching create page logic
   const subtotal = useMemo(() => {
@@ -119,54 +211,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
     return date.toISOString().split('T')[0]
   }
 
-  // Fetch initial data - matching create page pattern
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        
-        // Fetch quotation data
-        const quotationRes = await fetch(`/api/quotations?id=${id}`)
-        if (!quotationRes.ok) throw new Error("Failed to fetch quotation")
-        const quotationData: Quotation = await quotationRes.json()
-
-        // Fetch customers and warehouses in parallel
-        const [customersRes, warehousesRes] = await Promise.all([
-          fetch('/api/customers'),
-          fetch('/api/settings/warehouses')
-        ])
-
-        if (!customersRes.ok || !warehousesRes.ok) {
-          throw new Error("Failed to fetch reference data")
-        }
-
-        // Set states
-        setDate(formatDateForInput(quotationData.date))
-        setValidUntil(formatDateForInput(quotationData.valid_until || ""))
-        setCustomerId(quotationData.customer_id)
-        setWarehouseId(quotationData.warehouse_id)
-        setItems(quotationData.items || [])
-        setOrderTax(quotationData.tax_rate)
-        setDiscount(quotationData.discount)
-        setShipping(quotationData.shipping)
-        setStatus(quotationData.status)
-        setNote(quotationData.notes || "")
-        
-        setCustomers(await customersRes.json())
-        setWarehouses(await warehousesRes.json())
-
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast.error("Failed to load quotation data")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [id])
-
-  // Product search - matching create page
+  // Product search using RTK Query
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast.error("Please enter a search term")
@@ -175,12 +220,12 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
 
     setIsSearching(true)
     try {
-      const res = await fetch(`/api/products?search=${searchQuery}`)
-      if (!res.ok) throw new Error("Search failed")
-      const results = await res.json()
-      setSearchResults(results)
-      if (results.length === 0) {
-        toast.info("No products found matching your search")
+      // The products data is already fetched via RTK Query
+      if (productsData?.data) {
+        setSearchResults(productsData.data)
+        if (productsData.data.length === 0) {
+          toast.info("No products found matching your search")
+        }
       }
     } catch (error) {
       console.error("Search error:", error)
@@ -223,7 +268,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
     setItems(prev => prev.filter(item => item.id !== id))
   }
 
-  // Submit handler - matching create page structure
+  // Submit handler - using RTK Query mutation
   const handleSubmit = async () => {
     if (!customerId || !warehouseId || items.length === 0) {
       toast.error("Please fill all required fields and add at least one product")
@@ -240,7 +285,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
         customer_id: customerId,
         warehouse_id: warehouseId,
         subtotal: Number(Number(subtotal)),
-        tax_rate:Number( Number(orderTax)) ,
+        tax_rate: Number(Number(orderTax)),
         tax_amount: Number(Number(taxAmount)),
         discount: Number(Number(discount)),
         shipping: Number(Number(shipping)),
@@ -259,25 +304,15 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
         }))
       }
 
-      const response = await fetch('/api/quotations', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+      // Use RTK Query mutation
+      await updateQuotation({ id, data: payload }).unwrap()
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || "Failed to update quotation")
-      }
-
-      const result = await response.json()
       toast.success("Quotation updated successfully")
-      router.push(`/quotations/view/${result.id}`)
-
+      router.push("/quotations/list")
     } catch (error) {
-      console.error("Error updating quotation:", error)
-      const message = error instanceof Error ? error.message : "An unexpected error occurred"
-      toast.error(message)
+      console.error("Update error:", error)
+      const errorMessage = error instanceof Error ? error.message : "Failed to update quotation"
+      toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

@@ -101,7 +101,7 @@ export default function CreateQuotation() {
         const customersRes = await fetch('/api/customers')
         if (customersRes.ok) {
           const customersData = await customersRes.json()
-          setCustomers(customersData)
+          setCustomers(customersData.data || [])
         }
 
         // Fetch warehouses
@@ -192,17 +192,17 @@ const handleSubmit = async () => {
     
     // Ensure all calculations use proper decimal formatting
     const subtotal = parseFloat(
-  items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0)
-    
-);
+      items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0).toFixed(2)
+    );
 
-const tax_amount = parseFloat(
-  (subtotal * (Number(orderTax) / 100))
-);
+    const tax_amount = Number(
+      (subtotal * (Number(orderTax) / 100)).toFixed(2)
+    );
 
-const total = parseFloat(
-  (subtotal + tax_amount - Number(discount) + Number(shipping))
-);
+    const total = Number(
+      (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
+    );
+
 
     console.log("4 - Before fetch", {
       customerId,
