@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Image as ImageIcon, Upload, X } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Category } from "@/lib/types/index"
+
 import { useGetProductByIdQuery, useUpdateProductMutation } from '@/lib/slices/productsApi'
 
 interface FormData {
@@ -89,6 +89,7 @@ export default function EditProduct() {
 
   useEffect(() => {
     if (productData) {
+      console.log("Product data loaded:", productData)
       setForm({
         name: productData.name || "",
         code: productData.code || "",
@@ -148,47 +149,71 @@ export default function EditProduct() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form) return
-    
-    setError(null)
-    const requiredFields: (keyof FormData)[] = ["name", "code", "category_id", "unit_id", "cost", "price"]
-    const missingFields = requiredFields.filter(field => !form[field]?.toString().trim())
-
+    e.preventDefault();
+    if (!form) return;
+  
+    setError(null);
+    const requiredFields: (keyof FormData)[] = ["name", "code", "category_id", "unit_id", "cost", "price"];
+    const missingFields = requiredFields.filter(field => !form[field]?.toString().trim());
+  
     if (missingFields.length > 0) {
-      setError(`Please fill all required fields: ${missingFields.join(", ")}`)
-      return
+      setError(`Please fill all required fields: ${missingFields.join(", ")}`);
+      toast({
+        title: "Validation Error",
+        description: `Please fill all required fields: ${missingFields.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
     }
-
-    setSubmitting(true)
-
+  
+    setSubmitting(true);
+  
     try {
-      const formData = new FormData()
+      const formData = new FormData();
+      
+      // Append all form fields except image
       Object.entries(form).forEach(([key, value]) => {
-        if (value !== undefined) formData.append(key, value.toString())
-      })
-
-      if (newImage) formData.append("image", newImage)
-
-      // Use mutation
-      await updateProduct({ id: productId, data: formData }).unwrap()
-
+        if (value !== undefined && value !== null && key !== 'image') {
+          formData.append(key, value.toString());
+        }
+      });
+  
+      // Handle image separately
+      if (newImage) {
+        console.log("Adding image to form data:", newImage.name, newImage.size);
+        formData.append("image", newImage);
+      } else if (form.image) {
+        // If no new image but existing image, send the existing image path
+        formData.append("existingImage", form.image);
+      }
+  
+      // Debug: Log all form data entries
+      console.log("Form data entries:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
+  
+      // Use RTK Query mutation
+      await updateProduct({ id: productId, data: formData }).unwrap();
+  
       toast({
         title: "Success",
         description: "Product updated successfully",
-      })
-      router.push("/products/list")
+      });
+      router.push("/products/list");
     } catch (error) {
-      setError("Failed to update product")
+      const errorMessage = error instanceof Error ? error.message : "Failed to update product";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to update product",
+        description: errorMessage,
         variant: "destructive",
-      })
+      });
+      console.error("Update error:", error);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   if (isProductLoading || !form) {
     return (

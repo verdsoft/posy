@@ -110,24 +110,53 @@ export async function PUT(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
 
+    console.log("PUT request received for product ID:", id)
+
     if (!id) {
       return NextResponse.json
       ({ error: "Product ID is required" }, { status: 400 })
+    }
+
+    const uploadDir = "./public/uploads"
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
     }
 
     const formData = await req.formData()
     const imageFile = formData.get("image") as File | null
     let imagePath = getField(formData, 'image_path') || null
 
-    if (imageFile) {
-        imagePath = `/uploads/${path.basename(imageFile.name)}`
+    console.log("Image file received:", imageFile ? `Size: ${imageFile.size}, Name: ${imageFile.name}` : "No image")
+
+    if (imageFile && imageFile.size > 0) {
+      // Generate unique filename
+      const fileExtension = path.extname(imageFile.name)
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`
+      const filePath = path.join(uploadDir, fileName)
+      
+      console.log("Saving image to:", filePath)
+      
+      // Convert File to Buffer and save
+      const bytes = await imageFile.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      fs.writeFileSync(filePath, buffer)
+      
+      imagePath = `/uploads/${fileName}`
+      console.log("Image saved successfully:", imagePath)
     }
     
     const requiredFields = ["name", "code", "category_id", "unit_id", "cost", "price"]
     const missingFields = requiredFields.filter((field) => !getField(formData, field))
     if (missingFields.length > 0) {
+      console.log("Missing fields:", missingFields)
       return NextResponse.json({ error: `Missing required fields: ${missingFields.join(", ")}` }, { status: 400 })
     }
+    
+    console.log("Updating product with data:", {
+      name: getField(formData, "name"),
+      code: getField(formData, "code"),
+      imagePath
+    })
     
     await conn.execute(
       `UPDATE products SET
@@ -153,8 +182,10 @@ export async function PUT(req: NextRequest) {
       ]
     )
 
+    console.log("Product updated successfully")
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
+    console.error("Error updating product:", error)
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
   } finally {
@@ -208,7 +239,21 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData()
     const imageFile = formData.get("image") as File | null
-    const imagePath = imageFile ? `/uploads/${path.basename(imageFile.name)}` : null
+    let imagePath = null
+
+    if (imageFile && imageFile.size > 0) {
+      // Generate unique filename
+      const fileExtension = path.extname(imageFile.name)
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`
+      const filePath = path.join(uploadDir, fileName)
+      
+      // Convert File to Buffer and save
+      const bytes = await imageFile.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      fs.writeFileSync(filePath, buffer)
+      
+      imagePath = `/uploads/${fileName}`
+    }
 
     const requiredFields = ["name", "code", "category_id", "unit_id", "cost", "price"]
     const missingFields = requiredFields.filter((field) => !getField(formData, field))

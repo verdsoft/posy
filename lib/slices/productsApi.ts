@@ -40,7 +40,7 @@ export const productsApi = createApi({
         }),
         updateProduct: builder.mutation<Product, { id: string, data: FormData }>({
             query: ({ id, data }) => ({
-                url: `/${id}`,
+                url: `?id=${id}`,
                 method: 'PUT',
                 body: data,
             }),
