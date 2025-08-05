@@ -1,23 +1,60 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
 
-export async function GET() {
-  const conn = await getConnection()
+export async function GET(req: NextRequest) {
+  const pool = getConnection()
+  let conn
   try {
-    const [rows]: any = await conn.query(
-      "SELECT id, name, email, phone, country, city, address FROM suppliers ORDER BY name ASC"
-    )
+    conn = await pool.getConnection()
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "10")
+    const search = searchParams.get("search") || ""
+    const offset = (page - 1) * limit
+
+    let whereClause = ""
+    let queryParams: any[] = []
     
-    return NextResponse.json(rows)
+    if (search) {
+      whereClause = "WHERE name LIKE ? OR email LIKE ? OR phone LIKE ?"
+      queryParams = [`%${search}%`, `%${search}%`, `%${search}%`]
+    }
+
+    const [rows]: any = await conn.query(
+      `SELECT id, name, email, phone, country, city, address FROM suppliers 
+       ${whereClause}
+       ORDER BY name ASC
+       LIMIT ? OFFSET ?`,
+      [...queryParams, limit, offset]
+    )
+
+    const [totalRows]: any = await conn.query(
+        `SELECT COUNT(*) as total FROM suppliers ${whereClause}`,
+        queryParams
+    );
+
+    return NextResponse.json({
+        data: rows,
+        pagination: {
+            total: totalRows[0].total,
+            page,
+            limit,
+            totalPages: Math.ceil(totalRows[0].total / limit),
+        },
+    });
   } catch (error: any) {
     console.error("Error fetching suppliers:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
-  } 
+  } finally {
+    if (conn) conn.release()
+  }
 }
 
 export async function POST(request: NextRequest) {
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
     const body = await request.json()
     const { name, email, phone, country, city, address } = body
 
@@ -42,12 +79,16 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Error creating supplier:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
-  } 
+  } finally {
+    if (conn) conn.release()
+  }
 }
 
 export async function PUT(request: NextRequest) {
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
     const body = await request.json()
     const { id, name, email, phone, country, city, address } = body
 
@@ -72,7 +113,9 @@ export async function PUT(request: NextRequest) {
   } catch (error: any) {
     console.error("Error updating supplier:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
-  } 
+  } finally {
+    if (conn) conn.release()
+  }
 }
 
 export async function DELETE(request: NextRequest) {

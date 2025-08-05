@@ -39,7 +39,8 @@ export default function Dashboard() {
     queryFn: fetchDashboardStats,
   })
 
-  const { data: salesData = [], isLoading: isSalesLoading } = useGetSalesQuery()
+  const { data: salesResponse, isLoading: isSalesLoading } = useGetSalesQuery({ page: 1, limit: 10, search: '' })
+  const salesData = salesResponse?.data || []
 
   useEffect(() => {
     if (!isAuthenticated) {

@@ -1,15 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const pool = getConnection()
   let conn
   try {
     conn = await pool.getConnection()
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "10")
+    const search = searchParams.get("search") || ""
+    const offset = (page - 1) * limit
+
+    const searchQuery = `WHERE name LIKE ? OR email LIKE ? OR phone LIKE ?`
     const [rows]: any = await conn.query(
-      "SELECT id, name, email, phone, address, city, country, total_sales, total_paid, total_due FROM customers ORDER BY name ASC"
+      `SELECT id, name, email, phone, address, city, country, total_sales, total_paid, total_due FROM customers 
+       ${search ? searchQuery : ''}
+       ORDER BY name ASC
+       LIMIT ? OFFSET ?`,
+      search ? [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset] : [limit, offset]
     )
-    return NextResponse.json(rows)
+
+    const [totalRows]: any = await conn.query(
+        `SELECT COUNT(*) as total FROM customers ${search ? searchQuery : ''}`,
+        search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []
+    );
+
+    return NextResponse.json({
+        data: rows,
+        pagination: {
+            total: totalRows[0].total,
+            page,
+            limit,
+            totalPages: Math.ceil(totalRows[0].total / limit),
+        },
+    });
   } catch (error: any) {
     console.error("Error fetching customers:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })

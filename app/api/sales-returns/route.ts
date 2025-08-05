@@ -6,9 +6,11 @@ import type { FieldPacket } from "mysql2"
 // CREATE (POST)
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   
   try {
+    conn = await pool.getConnection()
     const returnId = uuidv4()
     const reference = body.reference || `SR-${Date.now()}`
     
@@ -73,6 +75,8 @@ export async function POST(req: NextRequest) {
     console.error('Sales return creation error:', error)
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
@@ -84,9 +88,12 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "10")
   
   const offset = (page - 1) * limit
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   
   try {
+    conn = await pool.getConnection()
+    const searchQuery = `WHERE sr.reference LIKE ? OR c.name LIKE ? OR s.reference LIKE ?`
     // Get sales returns
     const [returns]: [any[], FieldPacket[]] = await conn.query(
       `SELECT 
@@ -98,10 +105,10 @@ export async function GET(req: NextRequest) {
        LEFT JOIN customers c ON sr.customer_id = c.id
        LEFT JOIN warehouses w ON sr.warehouse_id = w.id
        LEFT JOIN sales s ON sr.sale_id = s.id
-       WHERE sr.reference LIKE ? OR c.name LIKE ? OR s.reference LIKE ?
+       ${search ? searchQuery : ''}
        ORDER BY sr.created_at DESC
        LIMIT ? OFFSET ?`,
-      [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset]
+      search ? [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset] : [limit, offset]
     )
 
     // Get total count for pagination
@@ -110,8 +117,8 @@ export async function GET(req: NextRequest) {
        FROM sales_returns sr
        LEFT JOIN customers c ON sr.customer_id = c.id
        LEFT JOIN sales s ON sr.sale_id = s.id
-       WHERE sr.reference LIKE ? OR c.name LIKE ? OR s.reference LIKE ?`,
-      [`%${search}%`, `%${search}%`, `%${search}%`]
+       ${search ? searchQuery : ''}`,
+      search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []
     )
     
     return NextResponse.json({
@@ -126,5 +133,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }

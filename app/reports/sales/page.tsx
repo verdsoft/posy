@@ -199,7 +199,7 @@ export default function SaleReport() {
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              <DateRangePicker onDateChange={(range) => setDateRange(`${range?.from?.toISOString().split('T')[0]} - ${range?.to?.toISOString().split('T')[0]}`)} />
               <div className="relative">
                 <Input 
                   placeholder="Search this table..." 

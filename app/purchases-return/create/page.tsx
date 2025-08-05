@@ -60,7 +60,7 @@ export default function CreatePurchaseReturn() {
         // Fetch suppliers
         const suppliersRes = await fetch('/api/suppliers')
         const suppliersData = await suppliersRes.json()
-        setSuppliers(suppliersData)
+        setSuppliers(suppliersData.data || [])
         
         // Fetch warehouses
         const warehousesRes = await fetch('/api/settings/warehouses')
@@ -71,9 +71,9 @@ export default function CreatePurchaseReturn() {
         const purchasesRes = await fetch('/api/purchases')
         const purchasesData = await purchasesRes.json()
         console.log('Purchases data:', purchasesData) // Debug log
-        setPurchases(purchasesData || [])
+        setPurchases(purchasesData.data || [])
         
-        if (!purchasesData || purchasesData.length === 0) {
+        if (!purchasesData.data || purchasesData.data.length === 0) {
           toast.error("No purchases found. Please create some purchases first.")
         }
         

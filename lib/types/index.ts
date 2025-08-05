@@ -7,6 +7,7 @@ export * from './sale';
 export * from './customer';
 export * from './supplier';
 export * from './purchase-return';
+export * from './sales-return';
 
 export interface PaginatedResponse<T> {
     data: T[];

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit, FileDown, Trash2 } from "lucide-react"
+import { Eye, Edit, FileDown, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { ViewProductDialog } from "@/components/view-product-dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { Product } from "@/lib/types/index"
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Pagination } from "@/components/ui/pagination"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   AlertDialog,
@@ -34,14 +34,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useGetProductsQuery, useDeleteProductMutation } from '@/lib/slices/productsApi'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
 }
-
-const PAGE_SIZE = 10;
 
 type ProductWithMeta = Product & {
   category_name?: string;
@@ -51,7 +50,8 @@ type ProductWithMeta = Product & {
 
 export default function ProductList() {
   const [search, setSearch] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const router = useRouter()
   const [viewProduct, setViewProduct] = useState<Product | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
@@ -59,21 +59,11 @@ export default function ProductList() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // RTK Query
-  const { data: products = [], isLoading, isError } = useGetProductsQuery() as { data: ProductWithMeta[], isLoading: boolean, isError: boolean };
+  const { data, isLoading, isError } = useGetProductsQuery({ page, limit, search });
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) =>
-      product.name?.toLowerCase().includes(search.toLowerCase()) ||
-      product.code?.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [products, search])
-
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE
-    return filteredProducts.slice(startIndex, startIndex + PAGE_SIZE)
-  }, [filteredProducts, currentPage])
+  
+  const products = data?.data || [];
+  const pagination = data?.pagination;
 
   const handleDeleteClick = (id: string) => {
     setProductToDelete(id)
@@ -105,7 +95,7 @@ export default function ProductList() {
     const doc = new jsPDF()
     doc.text('Product List', 14, 16)
     
-    const tableData = filteredProducts.map(product => [
+    const tableData = products.map(product => [
       product.name || '',
       product.code || '',
       product.category_name || '',
@@ -128,7 +118,7 @@ export default function ProductList() {
 
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredProducts.map(product => ({
+      products.map(product => ({
         Name: product.name,
         Code: product.code,
         Category: product.category_name,
@@ -228,14 +218,14 @@ export default function ProductList() {
                           </TableCell>
                         </TableRow>
                       ))
-                    ) : filteredProducts.length === 0 ? (
+                    ) : products.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9} className="h-24 text-center">
                           No products found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedProducts.map((product) => (
+                      products.map((product) => (
                         <TableRow key={product.id}>
                           <TableCell>
                             {product.image ? (
@@ -290,28 +280,58 @@ export default function ProductList() {
                 </Table>
               </div>
 
-              {/* Pagination Controls */}
-              {!isLoading && filteredProducts.length > 0 && (
-                <div className="mt-4 flex justify-center items-center gap-2">
-                  <button
-                    className="px-2 py-1 rounded border disabled:opacity-50"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    aria-label="Previous page"
-                  >
-                    &lt;
-                  </button>
-                  <span className="text-xs font-medium">
-                    {currentPage} / {Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))}
-                  </span>
-                  <button
-                    className="px-2 py-1 rounded border disabled:opacity-50"
-                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredProducts.length / PAGE_SIZE), p + 1))}
-                    disabled={currentPage === Math.ceil(filteredProducts.length / PAGE_SIZE) || filteredProducts.length === 0}
-                    aria-label="Next page"
-                  >
-                    &gt;
-                  </button>
+              {pagination && (
+                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">Rows per page</p>
+                    <Select
+                      value={limit.toString()}
+                      onValueChange={(value) => setLimit(Number(value))}
+                    >
+                      <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={size.toString()}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <UIPagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-2" />
+                          Previous
+                        </Button>
+                      </PaginationItem>
+                      
+                      <span className="text-sm text-muted-foreground mx-4">
+                        Page {page} of {pagination.totalPages}
+                      </span>
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => old + 1)}
+                          disabled={page >= (pagination.totalPages || 1)}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </UIPagination>
                 </div>
               )}
             </CardContent>
@@ -326,7 +346,6 @@ export default function ProductList() {
           />
         )}
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>

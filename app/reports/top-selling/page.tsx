@@ -35,13 +35,13 @@ export default function TopSellingProducts() {
   });
 
   const topSellingProducts = useMemo((): TopSellingProduct[] => {
-    if(!productsData) return [];
+    if(!productsData?.data) return [];
 
     const productsWithSales = productsData.data.map((product: Product): TopSellingProduct => ({
         ...product,
         total_sales: Math.floor(Math.random() * 20) + 1,
         total_quantity: Math.floor(Math.random() * 100) + 1,
-        total_amount: (Math.floor(Math.random() * 20) + 1) * (product.price || 0)
+        total_amount: (Math.floor(Math.random() * 20) + 1) * (Number(product.price) || 0)
       }));
 
     return productsWithSales

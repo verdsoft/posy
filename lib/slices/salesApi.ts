@@ -1,15 +1,20 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { Sale } from '@/lib/types/api';
+import type { Sale, PaginatedSalesResponse } from '@/lib/types/api';
 
 export const salesApi = createApi({
   reducerPath: 'salesApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/pos/sales' }),
   tagTypes: ['Sale'],
   endpoints: (builder) => ({
-    getSales: builder.query<Sale[], void>({
-      query: () => '',
-      providesTags: (result) =>
-        result ? [...result.map(({ id }) => ({ type: 'Sale' as const, id })), { type: 'Sale', id: 'LIST' }] : [{ type: 'Sale', id: 'LIST' }],
+    getSales: builder.query<PaginatedSalesResponse, { page: number; limit: number; search: string }>({
+        query: ({ page, limit, search }) => `?page=${page}&limit=${limit}&search=${search}`,
+        providesTags: (result) =>
+            result
+                ? [
+                    ...result.data.map(({ id }) => ({ type: 'Sale' as const, id })),
+                    { type: 'Sale', id: 'LIST' },
+                ]
+                : [{ type: 'Sale', id: 'LIST' }],
     }),
     getSaleById: builder.query<Sale, string>({
       query: (id) => `/${id}`,
@@ -25,9 +30,9 @@ export const salesApi = createApi({
     }),
     updateSale: builder.mutation<{ success: boolean }, { id: string; data: any }>({
       query: ({ id, data }) => ({
-        url: '',
+        url: `/${id}`,
         method: 'PUT',
-        body: { id, ...data },
+        body: data,
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Sale', id }, { type: 'Sale', id: 'LIST' }],
     }),

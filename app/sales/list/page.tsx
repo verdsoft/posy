@@ -1,24 +1,17 @@
 "use client"
 
-import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit, Trash2, FileDown } from "lucide-react"
+import { Eye, Edit, Trash2, FileDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "sonner"
 import type React from "react"
-import { Sale } from "@/lib/types/api"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { toast } from "sonner"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
+import AuthGuard from "@/components/AuthGuard"
 import { useGetSalesQuery, useDeleteSaleMutation } from "@/lib/slices/salesApi"
 import {
   AlertDialog,
@@ -30,6 +23,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Sale } from "@/lib/types/api"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -39,24 +35,18 @@ declare module 'jspdf' {
 
 export default function SaleList() {
   const router = useRouter()
-  const [search, setSearch] = useState("")
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [searchTerm, setSearchTerm] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null)
 
-  // RTK Query hooks
-  const { data: sales = [], isLoading, isError } = useGetSalesQuery()
+  const { data, isLoading, isError } = useGetSalesQuery({ page, limit, search: searchTerm })
   const [deleteSale, { isLoading: isDeleting }] = useDeleteSaleMutation()
+  
+  const sales = data?.data || [];
+  const pagination = data?.pagination;
 
-  // Filtered sales
-  const filteredSales = sales.filter(sale =>
-    sale.reference?.toLowerCase().includes(search.toLowerCase()) ||
-    sale.customer_id?.toString().toLowerCase().includes(search.toLowerCase()) ||
-    sale.status?.toLowerCase().includes(search.toLowerCase())
-  )
-
-  // Delete sale
   const handleDeleteClick = (id: string) => {
     setSaleToDelete(id)
     setDeleteDialogOpen(true)
@@ -69,7 +59,7 @@ export default function SaleList() {
       await deleteSale(saleToDelete).unwrap()
       toast.success("Sale deleted successfully")
     } catch (error) {
-      console.error("Delete error:", error)
+      console.error("Error deleting sale:", error)
       toast.error("Failed to delete sale")
     } finally {
       setDeleteDialogOpen(false)
@@ -77,44 +67,40 @@ export default function SaleList() {
     }
   }
 
-  // Export to PDF
-  const handleExportPDF = () => {
+  const exportToPDF = () => {
     const doc = new jsPDF()
-
-    // Add title
-    doc.text('Sale List', 14, 16)
-
-    // Prepare data for the table
-    const tableData = filteredSales.map(sale => [
-      sale.date ?? "",
-      sale.reference ?? "",
-      sale.customer_name ?? "",
-      sale.status ?? "",
-      `$${Number(sale.total ?? 0) }`,
-      `$${Number(sale.paid ?? 0) }`,
-      `$${Number(sale.due ?? 0) }`,
-      sale.payment_status ?? ""
+    doc.text('Sales List', 14, 16)
+    
+    const tableData = sales.map(sale => [
+      new Date(sale.date).toLocaleDateString(),
+      sale.reference,
+      sale.customer_name || 'N/A',
+      sale.warehouse_name || 'N/A',
+      sale.status,
+      `$${Number(sale.total).toFixed(2)}`,
+      `$${Number(sale.paid).toFixed(2)}`,
+      `$${Number(sale.due).toFixed(2)}`,
+      sale.payment_status
     ])
-
-    // Add table
+    
     autoTable(doc, {
-      head: [['Date', 'Reference', 'Customer', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
+      head: [['Date', 'Reference', 'Customer', 'Warehouse', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
       body: tableData,
       startY: 20,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-
+    
     doc.save('sales.pdf')
   }
 
-  // Export to Excel
-  const handleExportExcel = () => {
+  const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredSales.map(sale => ({
-        Date: sale.date,
+      sales.map(sale => ({
+        Date: new Date(sale.date).toLocaleDateString(),
         Reference: sale.reference,
-        Customer: sale.customer_name,
+        Customer: sale.customer_name || 'N/A',
+        Warehouse: sale.warehouse_name || 'N/A',
         Status: sale.status,
         Total: Number(sale.total),
         Paid: Number(sale.paid),
@@ -122,200 +108,191 @@ export default function SaleList() {
         'Payment Status': sale.payment_status
       }))
     )
-
+    
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sales")
     XLSX.writeFile(workbook, "sales.xlsx")
   }
 
+  const handleCreate = () => {
+    router.push('/sales/create')
+  }
+
   return (
-    <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <span>Sales</span>
-            <span>|</span>
-            <span>Sale List</span>
+    <AuthGuard>
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+              <span>Sales</span>
+              <span>|</span>
+              <span>Sales List</span>
+            </div>
+            <h1 className="text-2xl font-bold">Sales List</h1>
           </div>
-          <h1 className="text-2xl font-bold">Sale List</h1>
-        </div>
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Input
-                  placeholder="Search this table..."
-                  className="w-64"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Input
+                    placeholder="Search sales..."
+                    className="w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToPDF}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToExcel}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+                <Button
+                  className="bg-[#1a237e] hover:bg-purple-700"
+                  onClick={handleCreate}
+                >
+                  Create Sale
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportPDF}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportExcel}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                EXCEL
-              </Button>
-              <Button
-                className="bg-[#1a237e] hover:bg-purple-700"
-                onClick={() => router.push('/sales/create')}
-              >
-                Create Sale
-              </Button>
-            </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {isLoading ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan={9} className="px-6 py-4 text-center">Loading...</td>
+                    <th className="text-left p-3">Date</th>
+                    <th className="text-left p-3">Reference</th>
+                    <th className="text-left p-3">Customer</th>
+                    <th className="text-left p-3">Warehouse</th>
+                    <th className="text-left p-3">Status</th>
+                    <th className="text-left p-3">Total</th>
+                    <th className="text-left p-3">Paid</th>
+                    <th className="text-left p-3">Due</th>
+                    <th className="text-left p-3">Payment Status</th>
+                    <th className="text-left p-3">Actions</th>
                   </tr>
-                ) : isError ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-4 text-center text-red-600">Failed to load sales</td>
-                  </tr>
-                ) : filteredSales.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-4 text-center text-gray-500">No sales found</td>
-                  </tr>
-                ) : (
-                  filteredSales.map((sale) => (
-                    <tr key={sale.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(sale.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {sale.reference}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {sale.customer_name || "Walk-in Customer"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          sale.status === "completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                        }`}>
-                          {sale.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${Number(sale.total) }
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${Number(sale.paid) }
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${Number(sale.due) }
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          sale.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }`}>
-                          {sale.payment_status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSale(sale)
-                              setIsViewDialogOpen(true)
-                            }}
-                          >
-                            <Eye className="h-4 w-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => router.push(`/sales/edit/${sale.id}`)}
-                          >
-                            <Edit className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(sale.id.toString())}
-                            disabled={isDeleting}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={10} className="text-center p-6">Loading...</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : isError ? (
+                    <tr>
+                      <td colSpan={10} className="text-center p-6 text-red-600">Failed to load sales</td>
+                    </tr>
+                  ) : sales.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="text-center p-6 text-gray-500">No sales found</td>
+                    </tr>
+                  ) : (
+                    sales.map((sale) => (
+                      <tr key={sale.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3">{new Date(sale.date).toLocaleDateString()}</td>
+                        <td className="p-3 font-medium">{sale.reference}</td>
+                        <td className="p-3">{sale.customer_name}</td>
+                        <td className="p-3">{sale.warehouse_name}</td>
+                        <td className="p-3">{sale.status}</td>
+                        <td className="p-3 font-medium">${Number(sale.total).toFixed(2)}</td>
+                        <td className="p-3">${Number(sale.paid).toFixed(2)}</td>
+                        <td className="p-3">${Number(sale.due).toFixed(2)}</td>
+                        <td className="p-3">{sale.payment_status}</td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/sales/edit/${sale.id}`)}
+                            >
+                              <Edit className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(sale.id)}
+                              disabled={isDeleting}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {pagination && (
+                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">Rows per page</p>
+                    <Select
+                      value={limit.toString()}
+                      onValueChange={(value) => setLimit(Number(value))}
+                    >
+                      <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={size.toString()}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <UIPagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-2" />
+                          Previous
+                        </Button>
+                      </PaginationItem>
+                      
+                      <span className="text-sm text-muted-foreground mx-4">
+                        Page {page} of {pagination.totalPages}
+                      </span>
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => old + 1)}
+                          disabled={page >= (pagination.totalPages || 1)}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </UIPagination>
+                </div>
+              )}
           </div>
         </div>
 
-        {/* View Sale Dialog */}
-        {selectedSale && (
-          <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Sale Details</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 p-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Reference</label>
-                  <p className="mt-1 text-sm">{selectedSale.reference}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Date</label>
-                  <p className="mt-1 text-sm">{new Date(selectedSale.date).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Customer</label>
-                  <p className="mt-1 text-sm">{selectedSale.customer_name || "Walk-in Customer"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <p className="mt-1 text-sm">{selectedSale.status}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Total</label>
-                  <p className="mt-1 text-sm">${Number(selectedSale.total) }</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Payment Status</label>
-                  <p className="mt-1 text-sm">{selectedSale.payment_status}</p>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -337,7 +314,7 @@ export default function SaleList() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </AuthGuard>
   )
 }

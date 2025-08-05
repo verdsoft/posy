@@ -13,14 +13,30 @@ export interface Customer {
   total_due?: number
 }
 
+export interface PaginatedCustomersResponse {
+    data: Customer[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+}
+
 export const customersApi = createApi({
   reducerPath: 'customersApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
   tagTypes: ['Customer'],
   endpoints: (builder) => ({
-    getCustomers: builder.query<Customer[], void>({
-      query: () => 'customers',
-      providesTags: ['Customer'],
+    getCustomers: builder.query<PaginatedCustomersResponse, { page: number; limit: number; search: string }>({
+        query: ({ page, limit, search }) => `/customers?page=${page}&limit=${limit}&search=${search}`,
+        providesTags: (result) =>
+            result
+                ? [
+                    ...result.data.map(({ id }) => ({ type: 'Customer' as const, id })),
+                    { type: 'Customer', id: 'LIST' },
+                ]
+                : [{ type: 'Customer', id: 'LIST' }],
     }),
     getCustomerById: builder.query<Customer, string>({
       query: (id) => `customers?id=${id}`,

@@ -57,7 +57,9 @@ export function DateRangePicker({ onDateChange, initialDateRange }: DateRangePic
         to = new Date(today.getFullYear(), today.getMonth(), 0)
         break
     }
-    setSelectedRange({ from, to });
+    const newRange = { from, to };
+    setSelectedRange(newRange);
+    onDateChange(newRange);
     setIsOpen(false)
   }
 

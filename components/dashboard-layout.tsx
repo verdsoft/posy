@@ -197,9 +197,8 @@ const menuItems = [
 interface SubMenuItem {
   label: string;
   href?: string; 
-   roles?: UserRole[];
-    submenu?: SubMenuItem[];// Adjust based on your URL type
- 
+  roles?: string[];
+  submenu?: SubMenuItem[];
 }
 
 

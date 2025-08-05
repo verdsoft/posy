@@ -57,11 +57,16 @@ export const expensesApi = createApi({
     }),
 
     // Expense Endpoints
-    getExpenses: builder.query<Expense[], void>({
-      query: () => "expenses",
-      providesTags: (result) =>
-        result ? [...result.map(({ id }) => ({ type: "Expense" as const, id })), { type: "Expense", id: "LIST" }] : [{ type: "Expense", id: "LIST" }],
-    }),
+    getExpenses: builder.query<PaginatedExpensesResponse, { page: number; limit: number; search: string }>({
+    query: ({ page, limit, search }) => `/expenses?page=${page}&limit=${limit}&search=${search}`,
+    providesTags: (result) =>
+        result
+            ? [
+                ...result.data.map(({ id }) => ({ type: 'Expense' as const, id })),
+                { type: 'Expense', id: 'LIST' },
+            ]
+            : [{ type: 'Expense', id: 'LIST' }],
+}),
     createExpense: builder.mutation<Expense, Partial<Expense>>({
       query: (body) => ({
         url: "expenses",

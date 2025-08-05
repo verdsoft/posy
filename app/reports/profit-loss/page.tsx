@@ -37,64 +37,64 @@ export default function ProfitAndLoss() {
 
   const metrics = data ? [
     {
-      title: `${data.sales.count} Sales`,
-      amount: `$${data.sales.total }`,
+      title: `${data.sales?.count || 0} Sales`,
+      amount: `$${Number(data.sales?.total || 0).toFixed(2)}`,
       icon: ShoppingCart,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: `${data.purchases.count} Purchases`,
-      amount: `$${data.purchases.total }`,
+      title: `${data.purchases?.count || 0} Purchases`,
+      amount: `$${Number(data.purchases?.total || 0).toFixed(2)}`,
       icon: Package,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: `${data.salesReturns.count} Sales Return`,
-      amount: `$${data.salesReturns.total }`,
+      title: `${data.salesReturns?.count || 0} Sales Return`,
+      amount: `$${Number(data.salesReturns?.total || 0).toFixed(2)}`,
       icon: RotateCcw,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
     {
-      title: `${data.purchaseReturns.count} Purchases Return`,
-      amount: `$${data.purchaseReturns.total }`,
+      title: `${data.purchaseReturns?.count || 0} Purchases Return`,
+      amount: `$${Number(data.purchaseReturns?.total || 0).toFixed(2)}`,
       icon: ArrowLeftRight,
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
       title: "Expenses",
-      amount: `$${data.expenses.total }`,
+      amount: `$${Number(data.expenses?.total || 0).toFixed(2)}`,
       icon: DollarSign,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
       title: "Profit",
-      amount: `$${data.profit }`,
+      amount: `$${Number(data.profit || 0).toFixed(2)}`,
       icon: TrendingUp,
-      color: data.profit >= 0 ? "text-green-600" : "text-red-600",
-      bgColor: data.profit >= 0 ? "bg-green-50" : "bg-red-50",
+      color: (data.profit || 0) >= 0 ? "text-green-600" : "text-red-600",
+      bgColor: (data.profit || 0) >= 0 ? "bg-green-50" : "bg-red-50",
     },
   ] : [];
 
   const paymentMetrics = data ? [
     {
       title: "Payments Received",
-      amount: `$${data.payments.received }`,
-      subtitle: `( $${data.sales.total } Sales - $${data.salesReturns.total } Sales Returns )`,
+      amount: `$${Number(data.payments?.received || 0).toFixed(2)}`,
+      subtitle: `( $${Number(data.sales?.total || 0).toFixed(2)} Sales - $${Number(data.salesReturns?.total || 0).toFixed(2)} Sales Returns )`,
     },
     {
       title: "Payments Sent",
-      amount: `$${data.payments.sent }`,
-      subtitle: `( $${data.purchases.total } Purchases - $${data.purchaseReturns.total } Purchase Returns + $${data.expenses.total } Expenses )`,
+      amount: `$${Number(data.purchases?.sent || 0).toFixed(2)}`,
+      subtitle: `( $${Number(data.purchases?.total || 0).toFixed(2)} Purchases - $${Number(data.purchaseReturns?.total || 0).toFixed(2)} Purchase Returns + $${Number(data.expenses?.total || 0).toFixed(2)} Expenses )`,
     },
     {
       title: "Payments Net",
-      amount: `$${data.paymentsNet }`,
-      subtitle: `( $${data.payments.received } Received - $${data.payments.sent } Sent )`,
+      amount: `$${Number(data.paymentsNet || 0).toFixed(2)}`,
+      subtitle: `( $${Number(data.payments?.received || 0).toFixed(2)} Received - $${Number(data.payments?.sent || 0).toFixed(2)} Sent )`,
     },
   ] : [];
 

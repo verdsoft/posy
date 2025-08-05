@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { Customer, Supplier } from '@/lib/types';
+import { Customer, Supplier, PaginatedResponse } from '@/lib/types';
 
 export interface ProfitLossData {
     sales: { count: number; total: number };
@@ -21,13 +21,25 @@ export const reportsApi = createApi({
             query: ({ from, to }) => `profit-loss?from=${from}&to=${to}`,
             providesTags: ['Report'],
         }),
-        getCustomers: builder.query<Customer[], { from: string, to: string }>({
+        getCustomers: builder.query<PaginatedResponse<Customer>, { from: string, to: string }>({
             query: ({ from, to }) => `customers?from=${from}&to=${to}`,
-            providesTags: ['CustomerReport'],
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.data.map(({ id }) => ({ type: 'CustomerReport' as const, id })),
+                        { type: 'CustomerReport', id: 'LIST' },
+                    ]
+                    : [{ type: 'CustomerReport', id: 'LIST' }],
         }),
-        getSuppliers: builder.query<Supplier[], { from: string, to: string }>({
+        getSuppliers: builder.query<PaginatedResponse<Supplier>, { from: string, to: string }>({
             query: ({ from, to }) => `suppliers?from=${from}&to=${to}`,
-            providesTags: ['SupplierReport'],
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.data.map(({ id }) => ({ type: 'SupplierReport' as const, id })),
+                        { type: 'SupplierReport', id: 'LIST' },
+                    ]
+                    : [{ type: 'SupplierReport', id: 'LIST' }],
         }),
     }),
 });

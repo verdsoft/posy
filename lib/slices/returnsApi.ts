@@ -1,6 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import { PurchaseReturn, PaginatedPurchaseReturnsResponse } from "@/lib/types";
-import { SalesReturn } from "@/lib/types"; // Assuming you have a SalesReturn type defined in your types folder
+import { PurchaseReturn, PaginatedPurchaseReturnsResponse, SalesReturn, PaginatedSalesReturnsResponse } from "@/lib/types";
 
 export const returnsApi = createApi({
   reducerPath: "returnsApi",
@@ -8,10 +7,16 @@ export const returnsApi = createApi({
   tagTypes: ["SalesReturn", "PurchaseReturn"],
   endpoints: (builder) => ({
     // Sales Return endpoints
-    getSalesReturns: builder.query<SalesReturn[], void>({
-      query: () => "sales-returns",
-      providesTags: ["SalesReturn"],
-    }),
+    getSalesReturns: builder.query<PaginatedSalesReturnsResponse, { page: number; limit: number; search: string }>({
+    query: ({ page, limit, search }) => `/sales-returns?page=${page}&limit=${limit}&search=${search}`,
+    providesTags: (result) =>
+        result
+            ? [
+                ...result.data.map(({ id }) => ({ type: 'SalesReturn' as const, id })),
+                { type: 'SalesReturn', id: 'LIST' },
+            ]
+            : [{ type: 'SalesReturn', id: 'LIST' }],
+}),
     createSalesReturn: builder.mutation<SalesReturn, Partial<SalesReturn>>({
       query: (body) => ({
         url: "sales-returns",
@@ -29,13 +34,16 @@ export const returnsApi = createApi({
     }),
 
     // Purchase Return endpoints
-    getPurchaseReturns: builder.query<PaginatedPurchaseReturnsResponse, void>({
-        query: () => '/purchases-return',
-        providesTags: (result) =>
-            result
-                ? [...result.data.map(({ id }) => ({ type: 'PurchaseReturn' as const, id })), { type: 'PurchaseReturn', id: 'LIST' }]
-                : [{ type: 'PurchaseReturn', id: 'LIST' }],
-    }),
+    getPurchaseReturns: builder.query<PaginatedPurchaseReturnsResponse, { page: number; limit: number; search: string }>({
+    query: ({ page, limit, search }) => `/purchases-return?page=${page}&limit=${limit}&search=${search}`,
+    providesTags: (result) =>
+        result
+            ? [
+                ...result.data.map(({ id }) => ({ type: 'PurchaseReturn' as const, id })),
+                { type: 'PurchaseReturn', id: 'LIST' },
+            ]
+            : [{ type: 'PurchaseReturn', id: 'LIST' }],
+}),
     createPurchaseReturn: builder.mutation<PurchaseReturn, Partial<PurchaseReturn>>({
       query: (body) => ({
         url: "purchases-return",

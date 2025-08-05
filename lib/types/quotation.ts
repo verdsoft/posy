@@ -31,3 +31,13 @@ export interface QuotationItem {
   subtotal: number;
   created_at: Date;
 }
+
+export interface PaginatedQuotationsResponse {
+  data: Quotation[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}

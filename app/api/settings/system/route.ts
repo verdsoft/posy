@@ -6,8 +6,10 @@ import path from 'path';
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 
 export async function GET() {
+  const pool = getConnection();
+  let conn;
   try {
-    const conn = await getConnection();
+    conn = await pool.getConnection();
     const [rows]: any = await conn.query("SELECT * FROM settings WHERE `key` IN ('system_title', 'system_logo')");
     const settings = rows.reduce((acc: any, row: any) => {
       acc[row.key] = row.value;
@@ -17,10 +19,14 @@ export async function GET() {
   } catch (error) {
     console.error('Failed to fetch system settings:', error);
     return NextResponse.json({ error: 'Failed to fetch system settings.' }, { status: 500 });
+  } finally {
+    if (conn) conn.release();
   }
 }
 
 export async function POST(req: NextRequest) {
+    const pool = getConnection();
+    let conn;
     try {
         await fs.mkdir(uploadDir, { recursive: true });
         const formData = await req.formData();
@@ -28,7 +34,7 @@ export async function POST(req: NextRequest) {
         const systemTitle = formData.get('system_title') as string;
         const logoFile = formData.get('logo') as File | null;
         
-        const conn = await getConnection();
+        conn = await pool.getConnection();
 
         if (systemTitle) {
             await conn.query("INSERT INTO settings (`key`, `value`) VALUES ('system_title', ?) ON DUPLICATE KEY UPDATE `value` = ?", [systemTitle, systemTitle]);
@@ -51,5 +57,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error('Error processing form:', error);
         return NextResponse.json({ success: false, error: 'Failed to process form' }, { status: 500 });
+    } finally {
+        if (conn) conn.release();
     }
 }

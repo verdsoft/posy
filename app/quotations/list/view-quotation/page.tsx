@@ -4,19 +4,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-interface Quotation {
+interface QuotationListItem {
   id: string
   date: string
   reference: string
-  customer_name: string
-  warehouse_name: string
+  customer_name?: string
+  warehouse_name?: string
   status: string
   total: number
-  // Add more fields as needed
+  created_by?: string
+  valid_until?: string | null
 }
 
 interface ViewQuotationDialogProps {
-  quotation: Quotation | null
+  quotation: QuotationListItem | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -46,11 +47,11 @@ export function ViewQuotationDialog({ quotation, open, onOpenChange }: ViewQuota
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Customer</p>
-              <p className="font-medium">{quotation.customer_name}</p>
+              <p className="font-medium">{quotation.customer_name || 'Unknown'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Warehouse</p>
-              <p className="font-medium">{quotation.warehouse_name}</p>
+              <p className="font-medium">{quotation.warehouse_name || 'Unknown'}</p>
             </div>
           </div>
 
@@ -70,7 +71,7 @@ export function ViewQuotationDialog({ quotation, open, onOpenChange }: ViewQuota
             </div>
             <div>
               <p className="text-sm text-gray-500">Total Amount</p>
-              <p className="font-medium">${quotation.total}</p>
+              <p className="font-medium">${Number(quotation.total).toFixed(2)}</p>
             </div>
           </div>
 

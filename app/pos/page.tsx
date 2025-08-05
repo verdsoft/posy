@@ -107,7 +107,8 @@ export default function POSSystem() {
   const { data: brandsData, isLoading: brandsLoading } = useGetBrandsQuery()
   const { data: warehousesData, isLoading: warehousesLoading } = useGetWarehousesQuery()
   const { data: customersData, isLoading: customersLoading } = useGetCustomersQuery()
-  const { data: productsData, isLoading: productsLoading } = useGetProductsQuery()
+  const { data: productsResponse, isLoading: productsLoading } = useGetProductsQuery({ page: 1, limit: 1000 })
+  const productsData = productsResponse?.data || []
 
   // Set data when loaded
   useEffect(() => {

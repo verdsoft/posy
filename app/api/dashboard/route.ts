@@ -3,9 +3,11 @@ import { getConnection } from "@/lib/mysql"
 import type { FieldPacket } from "mysql2"
 
 export async function GET() {
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
 
   try {
+    conn = await pool.getConnection()
     const [rows]: [any[], FieldPacket[]] = await conn.query(`
       SELECT 
         (SELECT COUNT(*) FROM customers WHERE status = 'active') AS total_customers,
@@ -26,5 +28,7 @@ export async function GET() {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }

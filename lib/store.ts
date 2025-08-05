@@ -19,7 +19,7 @@ import { settingsApi } from "./slices/settingsApi"
 import { expensesApi } from "./slices/expensesApi"
 import { returnsApi } from "./slices/returnsApi"
 import { suppliersApi } from "./slices/suppliersApi"
-import { reportsApi } from "./slices/reportsApi" // Import the new reportsApi
+import { reportsApi } from "./slices/reportsApi" 
 import { paymentsApi } from "./slices/paymentsApi"
 
 export const store = configureStore({
@@ -43,7 +43,7 @@ export const store = configureStore({
     [expensesApi.reducerPath]: expensesApi.reducer,
     [returnsApi.reducerPath]: returnsApi.reducer,
     [suppliersApi.reducerPath]: suppliersApi.reducer,
-    [reportsApi.reducerPath]: reportsApi.reducer, // Add the new reducer
+    [reportsApi.reducerPath]: reportsApi.reducer, 
     [paymentsApi.reducerPath]: paymentsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>

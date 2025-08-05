@@ -1,15 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Edit, Eye, Trash2, FileDown, Plus } from "lucide-react"
+import { Edit, Eye, Trash2, FileDown, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useGetCustomersQuery, useCreateCustomerMutation, useUpdateCustomerMutation, useDeleteCustomerMutation } from "@/lib/slices/customersApi"
+import { Customer } from "@/lib/types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -18,8 +22,8 @@ declare module 'jspdf' {
 }
 
 export default function CustomerList() {
-  const [customers, setCustomers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -35,102 +39,56 @@ export default function CustomerList() {
     address: ""
   })
 
-  // Fetch customers
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/customers')
-        if (!res.ok) throw new Error("Failed to fetch customers")
-        const data = await res.json()
-        setCustomers(data)
-      } catch (error) {
-        toast.error("Failed to load customers")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchCustomers()
-  }, [])
+  const { data, isLoading, isError, refetch } = useGetCustomersQuery({ page, limit, search: searchTerm })
+  const [createCustomer, { isLoading: isCreating }] = useCreateCustomerMutation()
+  const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation()
+  const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation()
 
-  // Filter customers based on search
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.code?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const customers = data?.data || [];
+  const pagination = data?.pagination;
 
-  // Handle create customer
   const handleCreate = async () => {
     try {
-      const res = await fetch('/api/customers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      
-      if (!res.ok) throw new Error("Failed to create customer")
-      
-      const newCustomer = await res.json()
-      setCustomers([...customers, newCustomer])
+      await createCustomer(formData).unwrap()
       setShowCreateModal(false)
       resetForm()
       toast.success("Customer created successfully")
+      refetch()
     } catch (error) {
       toast.error("Failed to create customer")
       console.error(error)
     }
   }
 
-  // Handle edit customer
   const handleEdit = async () => {
     if (!selectedCustomer) return
     
     try {
-      const res = await fetch(`/api/customers/${selectedCustomer.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      
-      if (!res.ok) throw new Error("Failed to update customer")
-      
-      setCustomers(customers.map(c => 
-        c.id === selectedCustomer.id ? { ...c, ...formData } : c
-      ))
+      await updateCustomer({ id: selectedCustomer.id, data: formData }).unwrap()
       setShowEditModal(false)
       resetForm()
       toast.success("Customer updated successfully")
+      refetch()
     } catch (error) {
       toast.error("Failed to update customer")
       console.error(error)
     }
   }
 
-  // Handle delete customer
   const handleDelete = async () => {
     if (!selectedCustomer) return
     
     try {
-      const res = await fetch(`/api/customers/${selectedCustomer.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete customer")
-      
-      setCustomers(customers.filter(c => c.id !== selectedCustomer.id))
+      await deleteCustomer(selectedCustomer.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Customer deleted successfully")
+      refetch()
     } catch (error) {
       toast.error("Failed to delete customer")
       console.error(error)
     }
   }
 
-  // Open edit modal
   const openEditModal = (customer: any) => {
     setSelectedCustomer(customer)
     setFormData({
@@ -144,19 +102,16 @@ export default function CustomerList() {
     setShowEditModal(true)
   }
 
-  // Open view modal
   const openViewModal = (customer: any) => {
     setSelectedCustomer(customer)
     setShowViewModal(true)
   }
 
-  // Open delete modal
   const openDeleteModal = (customer: any) => {
     setSelectedCustomer(customer)
     setShowDeleteModal(true)
   }
 
-  // Reset form
   const resetForm = () => {
     setFormData({
       name: "",
@@ -168,14 +123,13 @@ export default function CustomerList() {
     })
   }
 
-  // Export to PDF
   const handleExportPDF = () => {
     const doc = new jsPDF()
     
     doc.text('Customers List', 14, 16)
     
-    const tableData = filteredCustomers.map(customer => [
-      customer.code,
+    const tableData = customers.map(customer => [
+      customer.id,
       customer.name,
       customer.phone || "-",
       customer.email,
@@ -184,7 +138,7 @@ export default function CustomerList() {
     ])
     
     autoTable(doc, {
-      head: [['Code', 'Name', 'Phone', 'Email', 'Country', 'City']],
+      head: [['ID', 'Name', 'Phone', 'Email', 'Country', 'City']],
       body: tableData,
       startY: 20,
       styles: { fontSize: 8 },
@@ -194,11 +148,10 @@ export default function CustomerList() {
     doc.save('customers.pdf')
   }
 
-  // Export to Excel
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredCustomers.map(customer => ({
-        Code: customer.code,
+      customers.map(customer => ({
+        ID: customer.id,
         Name: customer.name,
         Phone: customer.phone || "-",
         Email: customer.email,
@@ -270,7 +223,7 @@ export default function CustomerList() {
                   <th className="text-left p-3">
                     <input type="checkbox" />
                   </th>
-                  <th className="text-left p-3">Code</th>
+                  <th className="text-left p-3">ID</th>
                   <th className="text-left p-3">Name</th>
                   <th className="text-left p-3">Phone</th>
                   <th className="text-left p-3">Email</th>
@@ -280,21 +233,21 @@ export default function CustomerList() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {isLoading ? (
                   <tr>
                     <td colSpan={8} className="text-center p-6">Loading...</td>
                   </tr>
-                ) : filteredCustomers.length === 0 ? (
+                ) : customers.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center p-6">No customers found.</td>
                   </tr>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  customers.map((customer) => (
                     <tr key={customer.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">
                         <input type="checkbox" />
                       </td>
-                      <td className="p-3">{customer.code}</td>
+                      <td className="p-3">{customer.id}</td>
                       <td className="p-3">{customer.name}</td>
                       <td className="p-3">{customer.phone || "-"}</td>
                       <td className="p-3">{customer.email}</td>
@@ -332,17 +285,62 @@ export default function CustomerList() {
             </table>
           </div>
 
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="text-sm text-gray-600">
-              {filteredCustomers.length > 0 
-                ? `1 - ${Math.min(filteredCustomers.length, 10)} of ${filteredCustomers.length}` 
-                : '0 - 0 of 0'}
+          {pagination && (
+            <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">Rows per page</p>
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => setLimit(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <UIPagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Previous
+                    </Button>
+                  </PaginationItem>
+                  
+                  <span className="text-sm text-muted-foreground mx-4">
+                    Page {page} of {pagination.totalPages}
+                  </span>
+
+                  <PaginationItem>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (pagination.totalPages || 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </PaginationItem>
+                </PaginationContent>
+              </UIPagination>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Create Customer Modal */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -408,7 +406,7 @@ export default function CustomerList() {
                 <Button 
                   className="bg-purple-600 hover:bg-purple-700" 
                   onClick={handleCreate}
-                  disabled={!formData.name || !formData.email}
+                  disabled={isCreating || !formData.name || !formData.email}
                 >
                   Submit
                 </Button>
@@ -417,7 +415,6 @@ export default function CustomerList() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Customer Modal */}
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -483,7 +480,7 @@ export default function CustomerList() {
                 <Button 
                   className="bg-purple-600 hover:bg-purple-700" 
                   onClick={handleEdit}
-                  disabled={!formData.name || !formData.email}
+                  disabled={isUpdating || !formData.name || !formData.email}
                 >
                   Update
                 </Button>
@@ -492,7 +489,6 @@ export default function CustomerList() {
           </DialogContent>
         </Dialog>
 
-        {/* View Customer Modal */}
         {selectedCustomer && (
           <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
             <DialogContent className="max-w-2xl">
@@ -501,8 +497,8 @@ export default function CustomerList() {
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4 p-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Code</label>
-                  <p className="mt-1 text-sm">{selectedCustomer.code}</p>
+                  <label className="text-sm font-medium text-gray-500">ID</label>
+                  <p className="mt-1 text-sm">{selectedCustomer.id}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Name</label>
@@ -535,7 +531,6 @@ export default function CustomerList() {
           </Dialog>
         )}
 
-        {/* Delete Confirmation Modal */}
         {selectedCustomer && (
           <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
             <DialogContent className="max-w-md">
@@ -556,6 +551,7 @@ export default function CustomerList() {
                   <Button 
                     className="bg-red-600 hover:bg-red-700" 
                     onClick={handleDelete}
+                    disabled={isDeleting}
                   >
                     Delete
                   </Button>

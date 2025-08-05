@@ -3,9 +3,9 @@
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit, Trash2, FileDown } from "lucide-react"
+import { Eye, Edit, Trash2, FileDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 import type React from "react"
 import * as XLSX from 'xlsx'
@@ -24,6 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -46,30 +48,19 @@ interface Purchase {
 
 export default function PurchaseList() {
   const router = useRouter()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null)
 
-  // RTK Query hooks
-  const { data: purchases = [], isLoading, isError } = useGetPurchasesQuery()
+  const { data, isLoading, isError } = useGetPurchasesQuery({ page, limit, search: searchTerm })
   const [deletePurchase, { isLoading: isDeleting }] = useDeletePurchaseMutation()
 
-  // Filter purchases based on search term
-  const filteredPurchases = useMemo(() => {
-    if (!searchTerm) return purchases
-    
-    const lowerCaseSearch = searchTerm.toLowerCase()
-    return purchases.filter(purchase => 
-      purchase.reference.toLowerCase().includes(lowerCaseSearch) ||
-      purchase.supplier_name.toLowerCase().includes(lowerCaseSearch) ||
-      purchase.warehouse_name.toLowerCase().includes(lowerCaseSearch) ||
-      purchase.status.toLowerCase().includes(lowerCaseSearch) ||
-      purchase.payment_status.toLowerCase().includes(lowerCaseSearch) ||
-      purchase.total.toString().includes(searchTerm)
-    )
-  }, [purchases, searchTerm])
+  const purchases = data?.data || [];
+  const pagination = data?.pagination;
 
   const handleDeleteClick = (id: string) => {
     setPurchaseToDelete(id)
@@ -91,15 +82,11 @@ export default function PurchaseList() {
     }
   }
 
-  // Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF()
-
-    // Add title
     doc.text('Purchase List', 14, 16)
-
-    // Prepare data for the table
-    const tableData = filteredPurchases.map(purchase => [
+    
+    const tableData = purchases.map(purchase => [
       formatDate(purchase.date),
       purchase.reference,
       purchase.supplier_name,
@@ -110,8 +97,7 @@ export default function PurchaseList() {
       Number(purchase.due),
       purchase.payment_status
     ])
-
-    // Add table
+    
     autoTable(doc, {
       head: [['Date', 'Reference', 'Supplier', 'Warehouse', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
       body: tableData,
@@ -119,14 +105,13 @@ export default function PurchaseList() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-
+    
     doc.save('purchases.pdf')
   }
 
-  // Export to Excel
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredPurchases.map(purchase => ({
+      purchases.map(purchase => ({
         Date: formatDate(purchase.date),
         Reference: purchase.reference,
         Supplier: purchase.supplier_name,
@@ -138,7 +123,7 @@ export default function PurchaseList() {
         'Payment Status': purchase.payment_status
       }))
     )
-
+    
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Purchases")
     XLSX.writeFile(workbook, "purchases.xlsx")
@@ -258,12 +243,12 @@ export default function PurchaseList() {
                     <tr>
                       <td colSpan={10} className="text-center p-6 text-red-600">Failed to load purchases</td>
                     </tr>
-                  ) : filteredPurchases.length === 0 ? (
+                  ) : purchases.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="text-center p-6 text-gray-500">No purchases found</td>
                     </tr>
                   ) : (
-                    filteredPurchases.map((purchase) => (
+                    purchases.map((purchase) => (
                       <tr key={purchase.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(purchase.id)}>
                         <td className="p-3">{formatDate(purchase.date)}</td>
                         <td className="p-3 font-medium">{purchase.reference}</td>
@@ -309,9 +294,63 @@ export default function PurchaseList() {
                 </tbody>
               </table>
             </div>
+            
+            {pagination && (
+                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">Rows per page</p>
+                    <Select
+                      value={limit.toString()}
+                      onValueChange={(value) => setLimit(Number(value))}
+                    >
+                      <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={size.toString()}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <UIPagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-2" />
+                          Previous
+                        </Button>
+                      </PaginationItem>
+                      
+                      <span className="text-sm text-muted-foreground mx-4">
+                        Page {page} of {pagination.totalPages}
+                      </span>
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => old + 1)}
+                          disabled={page >= (pagination.totalPages || 1)}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </UIPagination>
+                </div>
+              )}
           </div>
 
-          {/* View Purchase Dialog */}
           {viewPurchase && (
             <ViewPurchaseDialog
               purchase={viewPurchase}
@@ -320,7 +359,6 @@ export default function PurchaseList() {
             />
           )}
 
-          {/* Delete Confirmation Dialog */}
           <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>

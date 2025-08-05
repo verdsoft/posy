@@ -24,11 +24,12 @@ declare module 'jspdf' {
 export default function ProductQuantityAlerts() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedWarehouse, setSelectedWarehouse] = useState("all")
-  const { data: productsData, isLoading } = useGetProductsQuery({ page: 1, limit: 1000, searchTerm, warehouse: selectedWarehouse });
+  const { data: productsResponse, isLoading } = useGetProductsQuery({ page: 1, limit: 1000, search: searchTerm })
+  const productsData = productsResponse?.data || []
 
   const products = useMemo(() => {
     if (!productsData) return [];
-    return productsData.data.filter((product: Product) =>
+    return productsData.filter((product: Product) =>
       product.stock <= product.alert_quantity
     );
   }, [productsData]);
@@ -83,7 +84,7 @@ export default function ProductQuantityAlerts() {
 
   const warehouses = useMemo(() => {
     if (!productsData) return [];
-    return [...new Set(productsData.data.map(p => p.warehouse_name).filter(Boolean))]
+    return [...new Set(productsData.map(p => p.warehouse_name).filter(Boolean))]
   }, [productsData]);
 
   return (

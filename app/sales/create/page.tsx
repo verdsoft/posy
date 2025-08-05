@@ -76,7 +76,8 @@ export default function CreateSale() {
 
   // RTK Query hooks
   const [createSale, { isLoading: isCreating }] = useCreateSaleMutation()
-  const { data: products = [], isLoading: isProductsLoading } = useGetProductsQuery()
+  const { data: productsResponse, isLoading: isProductsLoading } = useGetProductsQuery({ page: 1, limit: 1000 })
+  const products = productsResponse?.data || []
 
   // Fetch initial data
   useEffect(() => {
@@ -85,7 +86,7 @@ export default function CreateSale() {
         // Fetch customers
         const customersRes = await fetch('/api/customers')
         const customersData = await customersRes.json()
-        setCustomers(customersData)
+        setCustomers(customersData.data || [])
         
         // Fetch warehouses
         const warehousesRes = await fetch('/api/settings/warehouses')

@@ -36,6 +36,10 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "10")
+    const search = searchParams.get("search") || ""
+    const offset = (page - 1) * limit
 
     const conn = await getConnection()
     
@@ -75,18 +79,37 @@ export async function GET(req: NextRequest) {
         items: items || []
       })
     } else {
-      // List all purchases with basic info
-      const [rows]: [RowDataPacket[], FieldPacket[]] = await conn.query(`
-        SELECT p.*, 
-          s.name as supplier_name,
-          w.name as warehouse_name
-        FROM purchases p
-        LEFT JOIN suppliers s ON p.supplier_id = s.id
-        LEFT JOIN warehouses w ON p.warehouse_id = w.id
-        ORDER BY p.date DESC
-      `)
-     
-      return NextResponse.json(rows || [])
+        // List all purchases with pagination
+        const searchQuery = `WHERE p.reference LIKE ? OR s.name LIKE ?`
+        const [rows]: [RowDataPacket[], FieldPacket[]] = await conn.query(
+            `
+            SELECT p.*, 
+              s.name as supplier_name,
+              w.name as warehouse_name
+            FROM purchases p
+            LEFT JOIN suppliers s ON p.supplier_id = s.id
+            LEFT JOIN warehouses w ON p.warehouse_id = w.id
+            ${search ? searchQuery : ''}
+            ORDER BY p.date DESC
+            LIMIT ? OFFSET ?
+          `,
+            search ? [`%${search}%`, `%${search}%`, limit, offset] : [limit, offset]
+        );
+
+        const [totalRows]: [RowDataPacket[], FieldPacket[]] = await conn.query(
+            `SELECT COUNT(*) as total FROM purchases p LEFT JOIN suppliers s ON p.supplier_id = s.id ${search ? searchQuery : ''}`,
+            search ? [`%${search}%`, `%${search}%`] : []
+        );
+
+        return NextResponse.json({
+            data: rows,
+            pagination: {
+                total: totalRows[0].total,
+                page,
+                limit,
+                totalPages: Math.ceil(totalRows[0].total / limit),
+            },
+        });
     }
   } catch (error: unknown) {
     return NextResponse.json(

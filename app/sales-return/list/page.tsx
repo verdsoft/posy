@@ -3,32 +3,33 @@
 import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Trash2, FileDown, Loader2 } from "lucide-react"
+import { Eye, Trash2, FileDown, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 import * as XLSX from "xlsx"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useGetSalesReturnsQuery, useDeleteSalesReturnMutation, SalesReturn } from "@/lib/slices/returnsApi"
+import { useGetSalesReturnsQuery, useDeleteSalesReturnMutation } from "@/lib/slices/returnsApi"
+import { SalesReturn } from "@/lib/types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
 export default function SalesReturnList() {
   const router = useRouter()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedReturn, setSelectedReturn] = useState<SalesReturn | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
-  const { data, isLoading, isError } = useGetSalesReturnsQuery()
+  const { data, isLoading, isError } = useGetSalesReturnsQuery({ page, limit, search: searchTerm })
   const salesReturns = data?.data || []
+  const pagination = data?.pagination
   const [deleteSalesReturn, { isLoading: isDeleting }] = useDeleteSalesReturnMutation()
-
-  const filteredReturns = useMemo(() => {
-    if (!salesReturns) return []
-    return salesReturns.filter((ret) => ret.reference.toLowerCase().includes(searchTerm.toLowerCase()))
-  }, [salesReturns, searchTerm])
 
   const handleDelete = async () => {
     if (!selectedReturn) return
@@ -49,7 +50,7 @@ export default function SalesReturnList() {
   const handleExportPDF = () => {
     const doc = new jsPDF()
     doc.text("Sales Returns List", 14, 16)
-    const tableData = filteredReturns.map((ret) => [ret.date, ret.reference, ret.status, `$${ret.total}`])
+    const tableData = salesReturns.map((ret: SalesReturn) => [ret.date, ret.reference, ret.status, `$${ret.total}`])
     autoTable(doc, {
       head: [["Date", "Reference", "Status", "Total"]],
       body: tableData,
@@ -60,7 +61,7 @@ export default function SalesReturnList() {
 
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredReturns.map((ret) => ({
+      salesReturns.map((ret: SalesReturn) => ({
         Date: ret.date,
         Reference: ret.reference,
         Status: ret.status,
@@ -104,7 +105,7 @@ export default function SalesReturnList() {
                 ) : isError ? (
                   <TableRow><TableCell colSpan={5} className="text-center text-red-500">Error loading data.</TableCell></TableRow>
                 ) : (
-                  filteredReturns.map((ret) => (
+                  salesReturns.map((ret: SalesReturn) => (
                     <TableRow key={ret.id}>
                       <TableCell>{ret.date}</TableCell>
                       <TableCell>{ret.reference}</TableCell>
@@ -120,10 +121,64 @@ export default function SalesReturnList() {
               </TableBody>
             </Table>
           </div>
+          
+          {pagination && (
+            <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">Rows per page</p>
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => setLimit(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <UIPagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Previous
+                    </Button>
+                  </PaginationItem>
+                  
+                  <span className="text-sm text-muted-foreground mx-4">
+                    Page {page} of {pagination.totalPages}
+                  </span>
+
+                  <PaginationItem>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (pagination.totalPages || 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </PaginationItem>
+                </PaginationContent>
+              </UIPagination>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Dialogs */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
               <DialogHeader>

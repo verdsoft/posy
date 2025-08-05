@@ -38,13 +38,19 @@ export async function POST(req: NextRequest) {
     // Insert sale items
     if (Array.isArray(body.items)) {
       for (const item of body.items) {
+        // Ensure product_id exists and is valid
+        if (!item.product_id) {
+          console.error('Missing product_id for item:', item);
+          return NextResponse.json({ error: "Invalid product data" }, { status: 400 });
+        }
+        
         await conn.execute(
           `INSERT INTO sale_items (id, sale_id, product_id, quantity, unit_price, discount, tax, subtotal)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             uuidv4(),
             saleId,
-            item.product_id || null,
+            item.product_id,
             item.quantity || 0,
             item.price || 0,
             item.discount || 0,
@@ -71,8 +77,10 @@ export async function GET_ONE(req: NextRequest) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
     const [sales]: [Sale[], FieldPacket[]] = await conn.query<Sale[]>(
         `SELECT 
         s.*, 
@@ -92,13 +100,24 @@ export async function GET_ONE(req: NextRequest) {
     
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
 // READ ALL (GET)
-export async function GET() {
-  const conn = await getConnection()
+export async function GET(req: NextRequest) {
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "10")
+    const search = searchParams.get("search") || ""
+    const offset = (page - 1) * limit
+
+    const searchQuery = `WHERE s.reference LIKE ? OR c.name LIKE ?`
     const [sales]: [Sale[], FieldPacket[]] = await conn.query<Sale[]>(
       `SELECT 
         s.*, 
@@ -107,15 +126,32 @@ export async function GET() {
        FROM sales s
        LEFT JOIN customers c ON s.customer_id = c.id
        LEFT JOIN warehouses w ON s.warehouse_id = w.id
+       ${search ? searchQuery : ''}
        ORDER BY s.created_at DESC
-       LIMIT 100`
+       LIMIT ? OFFSET ?`,
+      search ? [`%${search}%`, `%${search}%`, limit, offset] : [limit, offset]
     )
+
+    const [totalRows]: [RowDataPacket[], FieldPacket[]] = await conn.query(
+        `SELECT COUNT(*) as total FROM sales s LEFT JOIN customers c ON s.customer_id = c.id ${search ? searchQuery : ''}`,
+        search ? [`%${search}%`, `%${search}%`] : []
+    );
     
-    return NextResponse.json(sales)
+    return NextResponse.json({
+        data: sales,
+        pagination: {
+            total: totalRows[0].total,
+            page,
+            limit,
+            totalPages: Math.ceil(totalRows[0].total / limit),
+        },
+    });
   } catch (error: unknown) {
     
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
@@ -124,8 +160,10 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const body = await req.json()
   if (!body.id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
     await conn.execute(
       `UPDATE sales SET 
         reference=?, customer_id=?, warehouse_id=?, date=?, subtotal=?, tax_rate=?, tax_amount=?, discount=?, shipping=?, total=?, paid=?, due=?, status=?, payment_status=?, notes=?, updated_at=NOW()
@@ -155,6 +193,8 @@ export async function PUT(req: NextRequest) {
     
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
@@ -164,8 +204,10 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
   
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
     // Check if sale exists first
     const [sale] = await conn.execute(
       'SELECT id FROM sales WHERE id = ?',
@@ -192,5 +234,7 @@ export async function DELETE(req: NextRequest) {
     console.error("Error deleting sale:", error)
     const message = error instanceof Error ? error.message : "Unknown error occurred during sale deletion"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }

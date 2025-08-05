@@ -1,42 +1,26 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { Purchase, PurchaseItem } from '@/lib/types/purchase';
+import type { Purchase, PurchaseItem, PaginatedPurchasesResponse } from '@/lib/types/purchase';
 
 export const purchasesApi = createApi({
   reducerPath: 'purchasesApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/purchases' }),
   tagTypes: ['Purchase'],
   endpoints: (builder) => ({
-    getPurchases: builder.query<Purchase[], void>({
-      query: () => '',
-      providesTags: (result) =>
-        result ? [...result.map(({ id }) => ({ type: 'Purchase' as const, id })), { type: 'Purchase', id: 'LIST' }] : [{ type: 'Purchase', id: 'LIST' }],
+    getPurchases: builder.query<PaginatedPurchasesResponse, { page: number; limit: number; search: string }>({
+        query: ({ page, limit, search }) => `?page=${page}&limit=${limit}&search=${search}`,
+        providesTags: (result) =>
+            result
+                ? [
+                    ...result.data.map(({ id }) => ({ type: 'Purchase' as const, id })),
+                    { type: 'Purchase', id: 'LIST' },
+                ]
+                : [{ type: 'Purchase', id: 'LIST' }],
     }),
     getPurchaseById: builder.query<Purchase, string>({
       query: (id) => `/${id}`,
       providesTags: (result, error, id) => [{ type: 'Purchase', id }],
     }),
-    createPurchase: builder.mutation<{ success: boolean; purchase_id: string; reference: string }, {
-      supplier_id: string;
-      warehouse_id: string;
-      date: string;
-      subtotal: number;
-      tax_rate: number;
-      tax_amount: number;
-      discount: number;
-      shipping: number;
-      total: number;
-      status?: string;
-      payment_status?: string;
-      notes?: string;
-      items: Array<{
-        product_id: string;
-        quantity: number;
-        unit_cost: number;
-        discount: number;
-        tax: number;
-        subtotal: number;
-      }>;
-    }>({
+    createPurchase: builder.mutation<{ success: boolean; purchase_id: string; reference: string }, any>({
       query: (purchaseData) => ({
         url: '',
         method: 'POST',
@@ -46,9 +30,9 @@ export const purchasesApi = createApi({
     }),
     updatePurchase: builder.mutation<{ success: boolean }, { id: string; data: any }>({
       query: ({ id, data }) => ({
-        url: '',
+        url: `/${id}`,
         method: 'PUT',
-        body: { id, ...data },
+        body: data,
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Purchase', id }, { type: 'Purchase', id: 'LIST' }],
     }),

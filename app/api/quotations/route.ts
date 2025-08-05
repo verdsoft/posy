@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
-import { ResultSetHeader, RowDataPacket } from "mysql2/promise"
+import { ResultSetHeader, RowDataPacket, FieldPacket } from "mysql2/promise"
 
 interface QuotationItem {
   id: string
@@ -69,9 +69,11 @@ interface QuotationItemWithProduct extends RowDataPacket {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const body = await req.json();
-  const conn = await getConnection();
+  const pool = getConnection();
+  let conn;
   
   try {
+    conn = await pool.getConnection();
     // Insert quotation with type-safe values
     const [quotationResult] = await conn.execute<ResultSetHeader>(
       `INSERT INTO quotations 
@@ -138,6 +140,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { error: message },
       { status: 500 }
     );
+  } finally {
+    if (conn) conn.release();
   }
 }
 
@@ -146,9 +150,41 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
-  const conn = await getConnection()
-
+  const test = searchParams.get('test')
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
+    
+    // Test endpoint to check database status
+    if (test === 'db-status') {
+      try {
+        const [quotationsCount]: [RowDataPacket[], FieldPacket[]] = await conn.query('SELECT COUNT(*) as count FROM quotations')
+        const [customersCount]: [RowDataPacket[], FieldPacket[]] = await conn.query('SELECT COUNT(*) as count FROM customers')
+        const [warehousesCount]: [RowDataPacket[], FieldPacket[]] = await conn.query('SELECT COUNT(*) as count FROM warehouses')
+        const [usersCount]: [RowDataPacket[], FieldPacket[]] = await conn.query('SELECT COUNT(*) as count FROM users')
+        
+        return NextResponse.json({
+          quotations: quotationsCount[0]?.count || 0,
+          customers: customersCount[0]?.count || 0,
+          warehouses: warehousesCount[0]?.count || 0,
+          users: usersCount[0]?.count || 0
+        })
+      } catch (error) {
+        console.error('Database status check error:', error)
+        return NextResponse.json({ error: 'Database tables not accessible' }, { status: 500 })
+      }
+    }
+    
+    // Test if quotations table exists and has data
+    try {
+      const [testResult]: [RowDataPacket[], FieldPacket[]] = await conn.query('SELECT COUNT(*) as count FROM quotations')
+      console.log('Quotations table exists, count:', testResult[0]?.count)
+    } catch (tableError) {
+      console.error('Quotations table error:', tableError)
+      return NextResponse.json({ error: 'Quotations table not found or inaccessible' }, { status: 500 })
+    }
+    
     if (id) {
       // Get single quotation with items
       const [quotation] = await conn.execute<Quotation[]>(
@@ -185,46 +221,73 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         items
       })
     } else {
-      // Get all quotations
-      const [rows] = await conn.execute<Quotation[]>(
+      // Get all quotations with pagination
+      const page = parseInt(searchParams.get("page") || "1")
+      const limit = parseInt(searchParams.get("limit") || "10")
+      const search = searchParams.get("search") || ""
+      const offset = (page - 1) * limit
+
+      let whereClause = ""
+      let queryParams: any[] = []
+      
+      if (search) {
+        whereClause = "WHERE q.reference LIKE ? OR c.name LIKE ?"
+        queryParams = [`%${search}%`, `%${search}%`]
+      }
+
+      const finalParams = [...queryParams, limit, offset]
+
+      const [rows]: [RowDataPacket[], FieldPacket[]] = await conn.query(
         `SELECT 
           q.id, 
           q.reference, 
           q.date, 
           q.valid_until,
-          c.name as customer_name, 
-          w.name as warehouse_name, 
+          COALESCE(c.name, 'Unknown') as customer_name, 
+          COALESCE(w.name, 'Unknown') as warehouse_name, 
           q.status, 
-          q.subtotal,
-          q.tax_rate,
-          q.tax_amount,
-          q.discount, 
-          q.shipping,
           q.total,
-          q.notes,
-          q.created_at,
-          u.name as created_by
+          COALESCE(u.name, 'Unknown') as created_by
          FROM quotations q
          LEFT JOIN customers c ON q.customer_id = c.id
          LEFT JOIN warehouses w ON q.warehouse_id = w.id
          LEFT JOIN users u ON q.created_by = u.id
+         ${whereClause}
          ORDER BY q.created_at DESC
-         LIMIT 100`
+         LIMIT ? OFFSET ?`,
+        finalParams
       )
-      
-      return NextResponse.json(rows)
+
+      const [totalRows]: [RowDataPacket[], FieldPacket[]] = await conn.query(
+        `SELECT COUNT(*) as total FROM quotations q LEFT JOIN customers c ON q.customer_id = c.id ${whereClause}`,
+        queryParams
+      );
+
+      return NextResponse.json({
+        data: rows,
+        pagination: {
+          total: totalRows[0].total,
+          page,
+          limit,
+          totalPages: Math.ceil(totalRows[0].total / limit),
+        },
+      });
     }
   } catch (error: unknown) {
+    console.error('Quotations API Error:', error);
     const err = error instanceof Error ? error : new Error('Unknown error')
     return NextResponse.json({ error: err.message }, { status: 500 })
-  } 
+  } finally {
+    if (conn) conn.release()
+  }
 }
 
 export async function PUT(req: NextRequest): Promise<NextResponse> {
   const body: QuotationRequest & { id: string } = await req.json()
-  const conn = await getConnection()
-
+  const pool = getConnection()
+  let conn
   try {
+    conn = await pool.getConnection()
     // Update quotation
     await conn.execute<ResultSetHeader>(
       `UPDATE quotations SET
@@ -289,19 +352,23 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error('Unknown error')
     return NextResponse.json({ error: err.message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
 
   if (!id) {
     return NextResponse.json({ error: "ID is required" }, { status: 400 })
   }
 
   try {
+    conn = await pool.getConnection()
     // First delete items to maintain referential integrity
     await conn.execute<ResultSetHeader>(
       `DELETE FROM quotation_items WHERE quotation_id = ?`,
@@ -322,20 +389,24 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error('Unknown error')
     return NextResponse.json({ error: err.message }, { status: 500 })
-  } 
+  } finally {
+    if (conn) conn.release()
+  }
 }
 
 // Add this new endpoint to your existing API route file
 export async function GET_ITEMS(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url)
   const quotationId = searchParams.get('quotation_id')
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
 
   if (!quotationId) {
     return NextResponse.json({ error: "Quotation ID is required" }, { status: 400 })
   }
 
   try {
+    conn = await pool.getConnection()
     const [items] = await conn.execute<QuotationItemWithProduct[]>(
       `SELECT 
         qi.id,
@@ -360,5 +431,7 @@ export async function GET_ITEMS(req: NextRequest): Promise<NextResponse> {
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error('Unknown error')
     return NextResponse.json({ error: err.message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }

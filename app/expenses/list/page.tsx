@@ -3,7 +3,7 @@
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Edit, Eye, Trash2, Plus, FileDown, Loader2 } from "lucide-react"
+import { Edit, Eye, Trash2, Plus, FileDown, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useState, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -17,16 +17,21 @@ import { useGetExpenseCategoriesQuery } from "@/lib/slices/expensesApi"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useRouter } from "next/navigation"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
 export default function ExpenseListPage() {
   const router = useRouter()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const [search, setSearch] = useState("")
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
-  const { data: expenses, isLoading, isError } = useGetExpensesQuery()
+  const { data, isLoading, isError } = useGetExpensesQuery({ page, limit, search })
+  const expenses = data?.data || []
+  const pagination = data?.pagination
   const { data: categories, isLoading: categoriesLoading } = useGetExpenseCategoriesQuery()
   const [updateExpense, { isLoading: isUpdating }] = useUpdateExpenseMutation()
   const [deleteExpense, { isLoading: isDeleting }] = useDeleteExpenseMutation()
@@ -39,17 +44,6 @@ export default function ExpenseListPage() {
     amount: "",
     description: "",
   })
-
-  const filteredExpenses = useMemo(() => {
-    if (!expenses) return []
-    return expenses.filter(
-      (exp) =>
-        exp.reference?.toLowerCase().includes(search.toLowerCase()) ||
-        exp.description?.toLowerCase().includes(search.toLowerCase()) ||
-        exp.amount.toString().includes(search) ||
-        exp.category_name?.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [expenses, search])
 
   const handleDelete = async () => {
     if (!selectedExpense) return
@@ -101,7 +95,7 @@ export default function ExpenseListPage() {
   const handleExportPDF = () => {
     const doc = new jsPDF()
     doc.text("Expense List", 14, 16)
-    const tableData = filteredExpenses.map((exp) => [exp.date, exp.reference, exp.description, exp.amount, exp.category_name, exp.status])
+    const tableData = expenses.map((exp) => [exp.date, exp.reference, exp.description, exp.amount, exp.category_name, exp.status])
     autoTable(doc, {
       head: [["Date", "Reference", "Details", "Amount", "Category", "Status"]],
       body: tableData,
@@ -112,7 +106,7 @@ export default function ExpenseListPage() {
 
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredExpenses.map((exp) => ({
+      expenses.map((exp) => ({
         Date: exp.date,
         Reference: exp.reference,
         Details: exp.description,
@@ -173,7 +167,7 @@ export default function ExpenseListPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredExpenses.map((expense) => (
+                  expenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>{expense.date}</TableCell>
                       <TableCell>{expense.reference}</TableCell>
@@ -199,10 +193,64 @@ export default function ExpenseListPage() {
               </TableBody>
             </Table>
           </div>
+
+            {pagination && (
+                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">Rows per page</p>
+                    <Select
+                      value={limit.toString()}
+                      onValueChange={(value) => setLimit(Number(value))}
+                    >
+                      <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((size) => (
+                          <SelectItem key={size} value={size.toString()}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <UIPagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-2" />
+                          Previous
+                        </Button>
+                      </PaginationItem>
+                      
+                      <span className="text-sm text-muted-foreground mx-4">
+                        Page {page} of {pagination.totalPages}
+                      </span>
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPage((old) => old + 1)}
+                          disabled={page >= (pagination.totalPages || 1)}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </UIPagination>
+                </div>
+              )}
         </div>
       </div>
 
-      {/* Dialogs */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>

@@ -11,9 +11,12 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "10")
   
   const offset = (page - 1) * limit
-  const conn = await getConnection()
+  const pool = getConnection()
+  let conn
   
   try {
+    conn = await pool.getConnection()
+    const searchQuery = `WHERE pr.reference LIKE ? OR s.name LIKE ? OR p.reference LIKE ?`
     // Get purchase returns
     const [returns]: [any[], FieldPacket[]] = await conn.query(
       `SELECT 
@@ -25,10 +28,10 @@ export async function GET(req: NextRequest) {
        LEFT JOIN suppliers s ON pr.supplier_id = s.id
        LEFT JOIN warehouses w ON pr.warehouse_id = w.id
        LEFT JOIN purchases p ON pr.purchase_id = p.id
-       WHERE pr.reference LIKE ? OR s.name LIKE ? OR p.reference LIKE ?
+       ${search ? searchQuery : ''}
        ORDER BY pr.created_at DESC
        LIMIT ? OFFSET ?`,
-      [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset]
+      search ? [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset] : [limit, offset]
     )
 
     // Get total count for pagination
@@ -37,8 +40,8 @@ export async function GET(req: NextRequest) {
        FROM purchase_returns pr
        LEFT JOIN suppliers s ON pr.supplier_id = s.id
        LEFT JOIN purchases p ON pr.purchase_id = p.id
-       WHERE pr.reference LIKE ? OR s.name LIKE ? OR p.reference LIKE ?`,
-      [`%${search}%`, `%${search}%`, `%${search}%`]
+       ${search ? searchQuery : ''}`,
+      search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []
     )
     
     return NextResponse.json({
@@ -53,15 +56,19 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
 // POST: Create a new purchase return
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const conn = await getConnection();
+  const pool = getConnection();
+  let conn;
   
   try {
+    conn = await pool.getConnection();
     const returnId = uuidv4()
     const reference = body.reference || `PR-${Date.now()}`
     
@@ -126,5 +133,7 @@ export async function POST(req: NextRequest) {
     console.error('Purchase return creation error:', error)
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }

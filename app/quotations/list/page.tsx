@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Filter, FileDown, Edit, Trash2 } from "lucide-react"
+import { Search, Filter, FileDown, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
@@ -15,6 +15,7 @@ import type React from "react"
 import { Eye } from "lucide-react"
 import { ViewQuotationDialog } from "./view-quotation/page"
 import { useGetQuotationsQuery, useDeleteQuotationMutation } from "@/lib/slices/quotationsApi"
+import { Quotation } from "@/lib/types/quotation"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -33,41 +35,33 @@ declare module 'jspdf' {
   }
 }
 
-interface Quotation {
+interface QuotationListItem {
   id: string
   date: string
   reference: string
-  customer_name: string
-  warehouse_name: string
+  customer_name?: string
+  warehouse_name?: string
   status: string
   total: number
+  created_by?: string
+  valid_until?: string | null
 }
 
 export default function QuotationList() {
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const router = useRouter()
-  const [viewQuotation, setViewQuotation] = useState<Quotation | null>(null)
+  const [viewQuotation, setViewQuotation] = useState<QuotationListItem | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [quotationToDelete, setQuotationToDelete] = useState<string | null>(null)
 
-  // RTK Query hooks
-  const { data: quotations = [], isLoading, isError } = useGetQuotationsQuery()
+  const { data, isLoading, isError } = useGetQuotationsQuery({ page, limit, search: searchTerm })
   const [deleteQuotation, { isLoading: isDeleting }] = useDeleteQuotationMutation()
-
-  // Filter quotations based on search term
-  const filteredQuotations = useMemo(() => {
-    if (!searchTerm) return quotations
-    
-    const lowerCaseSearch = searchTerm.toLowerCase()
-    return quotations.filter(quotation => 
-      quotation.reference.toLowerCase().includes(lowerCaseSearch) ||
-      quotation.customer_name.toLowerCase().includes(lowerCaseSearch) ||
-      quotation.warehouse_name.toLowerCase().includes(lowerCaseSearch) ||
-      quotation.status.toLowerCase().includes(lowerCaseSearch) ||
-      quotation.total.toString().includes(searchTerm)
-    )
-  }, [quotations, searchTerm])
+  
+  const quotations = (data?.data || []) as unknown as QuotationListItem[];
+  const pagination = data?.pagination;
 
   const handleDeleteClick = (id: string) => {
     setQuotationToDelete(id)
@@ -89,24 +83,19 @@ export default function QuotationList() {
     }
   }
 
-  // Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF()
-    
-    // Add title
     doc.text('Quotation List', 14, 16)
     
-    // Prepare data for the table
-    const tableData = filteredQuotations.map(quotation => [
+    const tableData = quotations.map(quotation => [
       quotation.date,
       quotation.reference,
-      quotation.customer_name,
-      quotation.warehouse_name,
+      quotation.customer_name || 'Unknown',
+      quotation.warehouse_name || 'Unknown',
       quotation.status,
-      `$${Number(quotation.total) }`
+      `$${Number(quotation.total).toFixed(2)}`
     ])
     
-    // Add table
     autoTable(doc, {
       head: [['Date', 'Reference', 'Customer', 'Warehouse', 'Status', 'Total']],
       body: tableData,
@@ -118,14 +107,13 @@ export default function QuotationList() {
     doc.save('quotations.pdf')
   }
 
-  // Export to Excel
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredQuotations.map(quotation => ({
+      quotations.map(quotation => ({
         Date: quotation.date,
         Reference: quotation.reference,
-        Customer: quotation.customer_name,
-        Warehouse: quotation.warehouse_name,
+        Customer: quotation.customer_name || 'Unknown',
+        Warehouse: quotation.warehouse_name || 'Unknown',
         Status: quotation.status,
         Total: Number(quotation.total)
       }))
@@ -209,17 +197,17 @@ export default function QuotationList() {
                   <tr>
                     <td colSpan={7} className="text-center p-6 text-red-600">Failed to load quotations</td>
                   </tr>
-                ) : filteredQuotations.length === 0 ? (
+                ) : quotations.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center p-6 text-gray-500">No quotations found</td>
                   </tr>
                 ) : (
-                  filteredQuotations.map((quotation) => (
+                  quotations.map((quotation) => (
                     <tr key={quotation.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">{quotation.date}</td>
                       <td className="p-3 font-medium">{quotation.reference}</td>
-                      <td className="p-3">{quotation.customer_name}</td>
-                      <td className="p-3">{quotation.warehouse_name}</td>
+                      <td className="p-3">{quotation.customer_name || 'Unknown'}</td>
+                      <td className="p-3">{quotation.warehouse_name || 'Unknown'}</td>
                       <td className="p-3">
                         <Badge 
                           variant={quotation.status === 'sent' ? 'default' : 'secondary'}
@@ -228,7 +216,7 @@ export default function QuotationList() {
                           {quotation.status}
                         </Badge>
                       </td>
-                      <td className="p-3 font-medium">${Number(quotation.total) }</td>
+                      <td className="p-3 font-medium">${Number(quotation.total).toFixed(2)}</td>
                       <td className="p-3">
                         <div className="flex gap-2">
                           <Button
@@ -264,9 +252,63 @@ export default function QuotationList() {
               </tbody>
             </table>
           </div>
+          
+          {pagination && (
+            <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">Rows per page</p>
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => setLimit(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <UIPagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Previous
+                    </Button>
+                  </PaginationItem>
+                  
+                  <span className="text-sm text-muted-foreground mx-4">
+                    Page {page} of {pagination.totalPages}
+                  </span>
+
+                  <PaginationItem>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (pagination.totalPages || 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </PaginationItem>
+                </PaginationContent>
+              </UIPagination>
+            </div>
+          )}
         </div>
 
-        {/* View Quotation Dialog */}
         {viewQuotation && (
           <ViewQuotationDialog
             quotation={viewQuotation}
@@ -275,7 +317,6 @@ export default function QuotationList() {
           />
         )}
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
