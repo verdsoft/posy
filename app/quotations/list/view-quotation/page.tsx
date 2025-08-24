@@ -55,7 +55,7 @@ export function ViewQuotationDialog({ quotation, open, onOpenChange }: ViewQuota
             </div>
             <div>
               <p className="text-sm text-gray-500">Warehouse</p>
-              <p className="font-medium">{quotation.warehouse_name || 'Unknown'}</p>
+              <p className="font-medium">{quotation.warehouse_name || 'Unknon'}</p>
             </div>
           </div>
 
