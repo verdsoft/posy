@@ -1,7 +1,6 @@
 const { createServer } = require("http");
 const next = require("next");
-const  parse = require( "url")
-
+const { parse } = require("url");
 
 const port = parseInt(process.env.PORT || "3000", 10)
 const dev = process.env.NODE_ENV !== "production"
@@ -11,7 +10,7 @@ const handle = app.getRequestHandler()
 
 app.prepare().then(() => {
   createServer((req, res) => {
-    const parsedUrl  = parse(req.url || "/", true)
+    const parsedUrl = parse(req.url || "/", true)
     handle(req, res, parsedUrl)
   }).listen(port, (err) => {
     if (err) throw err

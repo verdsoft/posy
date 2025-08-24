@@ -137,6 +137,22 @@ const menuItems = [
     ],
   },
   {
+    id: "hrm",
+    label: "HRM",
+    icon: Users,
+    roles: ['admin', 'user'],
+    submenu: [
+      { label: "Attendance", href: "/hrm/attendance" },
+      { label: "Company", href: "/hrm/company" },
+      { label: "Departments", href: "/hrm/departments" },
+      { label: "Employees", href: "/hrm/employees" },
+      { label: "Holidays", href: "/hrm/holidays" },
+      { label: "Leave Requests", href: "/hrm/leave-request" },
+      { label: "Leave Types", href: "/hrm/leave-type" },
+      { label: "Shifts", href: "/hrm/shifts" },
+    ],
+  },
+  {
     id: "settings",
     label: "Settings",
     icon: Settings,
@@ -190,6 +206,16 @@ const menuItems = [
       { label: "Supplier Report", href: "/reports/suppliers" },
       { label: "Top Selling Products", href: "/reports/top-selling" },
       { label: "Best Customers", href: "/reports/best-customers" },
+    ],
+  },
+  {
+    id: "transfer",
+    label: "Transfer",
+    icon: ArrowLeftRight,
+    roles: ['admin', 'user'],
+    submenu: [
+      { label: "Create Transfer", href: "/transfer/create" },
+      { label: "Transfer List", href: "/transfer/list" },
     ],
   },
 ]

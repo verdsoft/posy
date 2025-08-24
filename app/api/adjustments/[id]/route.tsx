@@ -33,9 +33,10 @@ export interface AdjustmentItemRow extends RowDataPacket {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   try {
+    const { id } = await context.params
     const connection = await getConnection()
 
     const [adjustments] = await connection.execute<AdjustmentRow[]>(
@@ -45,7 +46,7 @@ export async function GET(
        FROM adjustments a
        JOIN warehouses w ON a.warehouse_id = w.id
        WHERE a.id = ?`,
-      [params.id]
+      [id]
     )
 
     if (adjustments.length === 0) {
@@ -65,7 +66,7 @@ export async function GET(
        JOIN products p ON ai.product_id = p.id
        LEFT JOIN units u ON p.unit_id = u.id
        WHERE ai.adjustment_id = ?`,
-      [params.id]
+      [id]
     )
 
     return NextResponse.json({

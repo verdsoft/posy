@@ -17,38 +17,41 @@ interface QuotationItemWithProduct extends RowDataPacket {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const { searchParams } = new URL(req.url)
-  const quotationId = searchParams.get('id')
-  const conn = await getConnection()
-
-  if (!quotationId) {
-    return NextResponse.json({ error: "Quotation ID is required" }, { status: 400 })
-  }
-
+  let conn: any
   try {
+    const { searchParams } = new URL(req.url)
+    const idParam = searchParams.get('id') || searchParams.get('quotation_id')
+    if (!idParam) {
+      return NextResponse.json({ error: "Quotation ID is required" }, { status: 400 })
+    }
+
+    conn = await getConnection()
     const [items] = await conn.execute<QuotationItemWithProduct[]>(
       `SELECT 
         qi.id,
         qi.product_id,
-        p.name as product_name,
-        p.code as product_code,
+        p.name AS product_name,
+        p.code AS product_code,
         qi.quantity,
-        qi.unit_price as price,
+        qi.unit_price AS price,
         qi.discount,
         qi.tax,
         qi.subtotal,
         p.stock,
-        p.unit_name
+        u.name AS unit_name
        FROM quotation_items qi
        LEFT JOIN products p ON qi.product_id = p.id
+       LEFT JOIN units u ON p.unit_id = u.id
        WHERE qi.quotation_id = ?
        ORDER BY qi.id`,
-      [quotationId]
+      [idParam]
     )
 
     return NextResponse.json(items)
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error('Unknown error')
     return NextResponse.json({ error: err.message }, { status: 500 })
+  } finally {
+    try { conn?.release?.() } catch {}
   }
 }

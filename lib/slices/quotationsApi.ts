@@ -43,6 +43,10 @@ export const quotationsApi = createApi({
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Quotation', id }, { type: 'Quotation', id: 'LIST' }],
     }),
+    getQuotationItems: builder.query<QuotationItem[], string>({
+      query: (quotationId) => `/items?id=${quotationId}`,
+      providesTags: (result, error, quotationId) => [{ type: 'Quotation', id: quotationId }],
+    }),
   }),
 });
 
@@ -52,4 +56,5 @@ export const {
   useCreateQuotationMutation,
   useUpdateQuotationMutation,
   useDeleteQuotationMutation,
+  useGetQuotationItemsQuery,
 } = quotationsApi;

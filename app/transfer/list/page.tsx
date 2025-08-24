@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -8,21 +8,21 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, FileText, Download, Plus, Eye, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import DashboardLayout from "@/components/dashboard-layout"
-import { useAppDispatch, useAppSelector } from "@/lib/hooks"
-import { fetchTransfers } from "@/lib/slices/transfersSlice"
+import { useGetTransfersQuery, useDeleteTransferMutation } from "@/lib/slices/transfersApi"
 
 export default function TransferListPage() {
-  const dispatch = useAppDispatch()
-  const { transfers, loading } = useAppSelector((state) => state.transfers)
-
   const [searchTerm, setSearchTerm] = useState("")
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
 
-  useEffect(() => {
-    dispatch(fetchTransfers())
-  }, [dispatch])
+  const { data, isLoading } = useGetTransfersQuery({ page: currentPage, limit: rowsPerPage, search: searchTerm })
+  const transfers = data?.data || []
+  const pagination = data?.pagination
+  const [deleteTransfer, { isLoading: isDeleting }] = useDeleteTransferMutation()
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -37,18 +37,9 @@ export default function TransferListPage() {
     }
   }
 
-  const filteredTransfers = transfers.filter(
-    (transfer) =>
-      transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transfer.fromWarehouse.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transfer.toWarehouse.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const totalPages = pagination?.totalPages || 1
 
-  const totalPages = Math.ceil(filteredTransfers.length / rowsPerPage)
-  const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedTransfers = filteredTransfers.slice(startIndex, startIndex + rowsPerPage)
-
-  if (loading) {
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="p-6">
@@ -94,11 +85,24 @@ export default function TransferListPage() {
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  const doc = new jsPDF()
+                  doc.text('Transfers', 14, 16)
+                  const rows = transfers.map((t:any)=> [t.date, t.reference, t.from_warehouse_id || '-', t.to_warehouse_id || '-', t.status || 'pending'])
+                  autoTable(doc, { head: [["Date","Reference","From","To","Status"]], body: rows, startY: 20 })
+                  doc.save('transfers.pdf')
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
                   PDF
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  const worksheet = XLSX.utils.json_to_sheet(
+                    transfers.map((t:any)=> ({ Date: t.date, Reference: t.reference, From: t.from_warehouse_id || '-', To: t.to_warehouse_id || '-', Status: t.status || 'pending' }))
+                  )
+                  const workbook = XLSX.utils.book_new()
+                  XLSX.utils.book_append_sheet(workbook, worksheet, 'Transfers')
+                  XLSX.writeFile(workbook, 'transfers.xlsx')
+                }}>
                   <Download className="h-4 w-4 mr-2" />
                   EXCEL
                 </Button>
@@ -123,32 +127,29 @@ export default function TransferListPage() {
                     <th className="text-left p-4">Reference</th>
                     <th className="text-left p-4">From Warehouse</th>
                     <th className="text-left p-4">To Warehouse</th>
-                    <th className="text-left p-4">Items</th>
-                    <th className="text-left p-4">Grand Total</th>
+                    <th className="text-left p-4">Status</th>
                     <th className="text-left p-4">Status</th>
                     <th className="text-left p-4">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedTransfers.length === 0 ? (
+                  {transfers.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="text-center p-8 text-gray-500">
                         No transfers found
                       </td>
                     </tr>
                   ) : (
-                    paginatedTransfers.map((transfer) => (
+                    transfers.map((transfer: any) => (
                       <tr key={transfer.id} className="border-b hover:bg-gray-50">
                         <td className="p-4">
                           <input type="checkbox" className="rounded" />
                         </td>
                         <td className="p-4">{transfer.date}</td>
                         <td className="p-4 font-medium">{transfer.reference}</td>
-                        <td className="p-4">{transfer.fromWarehouse}</td>
-                        <td className="p-4">{transfer.toWarehouse}</td>
-                        <td className="p-4">{transfer.items}</td>
-                        <td className="p-4">${transfer.total}</td>
-                        <td className="p-4">{getStatusBadge(transfer.status)}</td>
+                        <td className="p-4">{transfer.from_warehouse_id || '-'}</td>
+                        <td className="p-4">{transfer.to_warehouse_id || '-'}</td>
+                        <td className="p-4">{getStatusBadge(transfer.status || 'pending')}</td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm">
@@ -157,7 +158,7 @@ export default function TransferListPage() {
                             <Button variant="ghost" size="sm">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={async ()=>{ await deleteTransfer(transfer.id).unwrap() }} disabled={isDeleting}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -189,15 +190,12 @@ export default function TransferListPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  {startIndex + 1} - {Math.min(startIndex + rowsPerPage, filteredTransfers.length)} of{" "}
-                  {filteredTransfers.length}
-                </span>
+                <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
                 <div className="flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    onClick={() => setCurrentPage((p)=>Math.max(1, p - 1))}
                     disabled={currentPage === 1}
                   >
                     prev
@@ -205,8 +203,8 @@ export default function TransferListPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p)=>p + 1)}
+                    disabled={currentPage >= totalPages}
                   >
                     next
                   </Button>

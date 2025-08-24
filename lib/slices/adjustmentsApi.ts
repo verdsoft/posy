@@ -3,7 +3,7 @@ import type { Adjustment, AdjustmentDetails, PaginatedAdjustmentResponse } from 
 
 export const adjustmentsApi = createApi({
   reducerPath: 'adjustmentsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/adjustments' }),
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/adjustments' }),
   tagTypes: ['Adjustment'],
   endpoints: (builder) => ({
     getAdjustments: builder.query<PaginatedAdjustmentResponse, { page?: number; limit?: number; search?: string }>({
@@ -38,6 +38,20 @@ export const adjustmentsApi = createApi({
       }),
       invalidatesTags: [{ type: 'Adjustment', id: 'LIST' }],
     }),
+    updateAdjustment: builder.mutation<{ success: boolean }, { id: string; body: {
+      warehouse_id: string;
+      date: string;
+      type: 'addition' | 'subtraction';
+      items: Array<{ product_id: string; quantity: number; type: 'addition' | 'subtraction' }>;
+      notes?: string;
+    }}>({
+      query: ({ id, body }) => ({
+        url: `/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Adjustment', id }, { type: 'Adjustment', id: 'LIST' }],
+    }),
     deleteAdjustment: builder.mutation<{ success: boolean }, string>({
       query: (id) => ({
         url: `?id=${id}`,
@@ -52,5 +66,6 @@ export const {
   useGetAdjustmentsQuery,
   useGetAdjustmentByIdQuery,
   useCreateAdjustmentMutation,
+  useUpdateAdjustmentMutation,
   useDeleteAdjustmentMutation,
 } = adjustmentsApi;

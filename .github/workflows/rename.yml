@@ -1,0 +1,78 @@
+name: Deploy Next.js to cPanel
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies with legacy peer deps
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Create deployment package
+        run: |
+          mkdir deployment
+          # Copy necessary files for production
+          cp -r .next public package.json package-lock.json next.config.js .env.production deployment/
+          # Also include any other necessary files/folders for your specific app
+          # cp -r styles components lib deployment/  # Uncomment if needed
+          cd deployment && tar -czf ../deploy.tar.gz .
+
+      - name: Deploy package to cPanel via SCP
+        uses: appleboy/scp-action@v0.1.3
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy.tar.gz"
+          target: "~/deploy.tar.gz"
+
+      - name: Extract and setup on server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to your website directory (adjust as needed)
+            cd ~/bms.verdsoft.co.zw
+            
+            # Extract deployment package
+            tar -xzf ~/deploy.tar.gz --overwrite
+            
+            # Install production dependencies with legacy peer deps
+            npm ci --production --legacy-peer-deps
+            
+            # Setup PM2 process if not already running
+            if pm2 show bms-nextjs-app; then
+              pm2 restart bms-nextjs-app
+            else
+              pm2 start npm --name "bms-nextjs-app" -- start
+              pm2 save
+              pm2 startup
+            fi
+            
+            # Clean up deployment package
+            rm ~/deploy.tar.gz
+            
+            # List contents to verify deployment (optional)
+            ls -la
