@@ -32,6 +32,16 @@ interface AdjustmentProduct {
   type: 'addition' | 'subtraction'
 }
 
+interface Warehouse {
+  id: string
+  name: string
+  phone: string
+  country: string
+  city: string
+  email: string
+  zip_code: string
+}
+
 export default function CreateAdjustment() {
   const router = useRouter()
   const [warehouse_id, setWarehouseId] = useState<string | null>(null)
@@ -44,7 +54,7 @@ export default function CreateAdjustment() {
 
   // RTK Query hooks
   const [createAdjustment, { isLoading: isCreating }] = useCreateAdjustmentMutation()
-  const [warehouses, setWarehouses] = useState<any[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
 
   // Fetch warehouses on component mount
   useEffect(() => {
@@ -52,9 +62,16 @@ export default function CreateAdjustment() {
       try {
         const response = await fetch('/api/settings/warehouses')
         const data = await response.json()
-        setWarehouses(data)
+        // Ensure data is an array before setting it
+        if (Array.isArray(data)) {
+          setWarehouses(data)
+        } else {
+          console.error('Warehouses data is not an array:', data)
+          setWarehouses([])
+        }
       } catch (error) {
         console.error('Failed to fetch warehouses:', error)
+        setWarehouses([])
       }
     }
     fetchWarehouses()

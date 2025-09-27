@@ -15,55 +15,9 @@ let notificationStore: Array<{
   data: any
 }> = []
 
-// Initialize with some test data if store is empty
+// Initialize empty notification store
 const initializeNotifications = () => {
-  if (notificationStore.length === 0) {
-    notificationStore = [
-      {
-        id: 'test-1',
-        type: 'low_stock',
-        title: 'Low Stock Alert',
-        message: 'Test Product is running low (5 remaining)',
-        priority: 'high',
-        read: false,
-        created_at: new Date().toISOString(),
-        data: {
-          product_id: 1,
-          product_name: 'Test Product',
-          current_stock: 5,
-          min_stock: 10,
-          warehouse: 'Main Warehouse'
-        }
-      },
-      {
-        id: 'test-2',
-        type: 'new_sale',
-        title: 'New Sale',
-        message: 'Sale SAL-001 completed - $150.00',
-        priority: 'info',
-        read: false,
-        created_at: new Date().toISOString(),
-        data: {
-          sale_id: 1,
-          reference: 'SAL-001',
-          customer_name: 'John Doe',
-          amount: 150
-        }
-      },
-      {
-        id: 'system-backup',
-        type: 'system',
-        title: 'Backup Reminder',
-        message: 'Weekly database backup is due. Click to run backup.',
-        priority: 'medium',
-        read: false,
-        created_at: new Date().toISOString(),
-        data: {
-          action: 'backup_database'
-        }
-      }
-    ]
-  }
+  // No fake notifications - only real data from database will be shown
 }
 
 export async function GET(req: NextRequest) {

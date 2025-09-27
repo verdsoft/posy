@@ -1,17 +1,10 @@
-import mysql from "mysql2/promise"
+// DEPRECATED: This file exists for backward compatibility only
+// All new code should use Prisma from @/lib/prisma
 
-const connection = mysql.createPool({
-  host: process.env.MYSQL_HOST,
-  port: parseInt(process.env.MYSQL_PORT || "3306"),
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-})
+export const getConnection = () => {
+  throw new Error('MySQL connection deprecated. Use Prisma instead.')
+}
 
-export const getConnection = () => connection
-
-export const getTransactionConnection = async () => {
-  return await connection.getConnection();
+export const getTransactionConnection = () => {
+  throw new Error('MySQL connection deprecated. Use Prisma instead.')
 }

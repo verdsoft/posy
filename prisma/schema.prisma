@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -13,10 +13,10 @@ model adjustment_items {
   product_id    Int
   quantity      Decimal               @db.Decimal(10, 2)
   type          adjustment_items_type
-  created_at    DateTime?             @default(now()) @db.Timestamp(0)
+  created_at    DateTime?             @default(now())
   pre_stock     String?               @db.VarChar(50)
-  adjustments   adjustments           @relation(fields: [adjustment_id], references: [id])
-  products      products              @relation(fields: [product_id], references: [id])
+  adjustments   adjustments           @relation(fields: [adjustment_id], references: [id], map: "fk_adjustment_items_adjustment_id")
+  products      products              @relation(fields: [product_id], references: [id], map: "fk_adjustment_items_product_id")
 
   @@index([adjustment_id], map: "adjustment_items_adjustment_id_fkey")
   @@index([product_id], map: "adjustment_items_product_id_fkey")
@@ -30,11 +30,11 @@ model adjustments {
   type             adjustments_type
   notes            String?            @db.Text
   created_by       Int
-  created_at       DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at       DateTime?          @db.Timestamp(0)
+  created_at       DateTime?          @default(now())
+  updated_at       DateTime?
   adjustment_items adjustment_items[]
-  users            users              @relation(fields: [created_by], references: [id])
-  warehouses       warehouses         @relation(fields: [warehouse_id], references: [id])
+  users            users              @relation(fields: [created_by], references: [id], map: "fk_adjustments_created_by")
+  warehouses       warehouses         @relation(fields: [warehouse_id], references: [id], map: "fk_adjustments_warehouse_id")
 
   @@index([created_by], map: "adjustments_created_by_fkey")
   @@index([warehouse_id], map: "adjustments_warehouse_id_fkey")
@@ -44,15 +44,15 @@ model attendance {
   id          Int               @id @default(autoincrement())
   employee_id Int
   date        DateTime          @db.Date
-  time_in     DateTime?         @db.Time(0)
-  time_out    DateTime?         @db.Time(0)
+  time_in     DateTime?
+  time_out    DateTime?
   break_time  Int?              @default(0)
   total_hours Decimal?          @default(0.00) @db.Decimal(4, 2)
   status      attendance_status @default(present)
   notes       String?           @db.Text
-  created_at  DateTime?         @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?         @db.Timestamp(0)
-  employees   employees         @relation(fields: [employee_id], references: [id])
+  created_at  DateTime?         @default(now())
+  updated_at  DateTime?
+  employees   employees         @relation(fields: [employee_id], references: [id], map: "fk_attendance_employee_id")
 
   @@index([employee_id], map: "attendance_employee_id_fkey")
 }
@@ -63,8 +63,8 @@ model brands {
   description String?       @db.Text
   image       String?       @db.VarChar(500)
   status      brands_status @default(active)
-  created_at  DateTime?     @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?     @db.Timestamp(0)
+  created_at  DateTime?     @default(now())
+  updated_at  DateTime?
   products    products[]
 }
 
@@ -74,8 +74,8 @@ model categories {
   name        String            @db.VarChar(255)
   description String?           @db.Text
   status      categories_status @default(active)
-  created_at  DateTime?         @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?         @db.Timestamp(0)
+  created_at  DateTime?         @default(now())
+  updated_at  DateTime?
   products    products[]
 }
 
@@ -90,8 +90,8 @@ model companies {
   tax_number  String?          @db.VarChar(100)
   logo        String?          @db.VarChar(500)
   status      companies_status @default(active)
-  created_at  DateTime?        @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?        @db.Timestamp(0)
+  created_at  DateTime?        @default(now())
+  updated_at  DateTime?
   departments departments[]
 }
 
@@ -102,8 +102,8 @@ model currencies {
   symbol        String            @db.VarChar(10)
   exchange_rate Decimal?          @default(1.0000) @db.Decimal(10, 4)
   status        currencies_status @default(active)
-  created_at    DateTime?         @default(now()) @db.Timestamp(0)
-  updated_at    DateTime?         @db.Timestamp(0)
+  created_at    DateTime?         @default(now())
+  updated_at    DateTime?
 }
 
 model customers {
@@ -120,8 +120,8 @@ model customers {
   total_paid    Decimal?         @default(0.00) @db.Decimal(10, 2)
   total_due     Decimal?         @default(0.00) @db.Decimal(10, 2)
   status        customers_status @default(active)
-  created_at    DateTime?        @default(now()) @db.Timestamp(0)
-  updated_at    DateTime?        @db.Timestamp(0)
+  created_at    DateTime?        @default(now())
+  updated_at    DateTime?
   invoices      invoices[]
   quotations    quotations[]
   sales         sales[]
@@ -134,9 +134,9 @@ model departments {
   company_id  Int
   description String?            @db.Text
   status      departments_status @default(active)
-  created_at  DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?          @db.Timestamp(0)
-  companies   companies          @relation(fields: [company_id], references: [id])
+  created_at  DateTime?          @default(now())
+  updated_at  DateTime?
+  companies   companies          @relation(fields: [company_id], references: [id], map: "fk_departments_company_id")
   employees   employees[]
 
   @@index([company_id], map: "departments_company_id_fkey")
@@ -155,11 +155,11 @@ model employees {
   hire_date      DateTime?        @db.Date
   address        String?          @db.Text
   status         employees_status @default(active)
-  created_at     DateTime?        @default(now()) @db.Timestamp(0)
-  updated_at     DateTime?        @db.Timestamp(0)
+  created_at     DateTime?        @default(now())
+  updated_at     DateTime?
   attendance     attendance[]
-  departments    departments      @relation(fields: [department_id], references: [id])
-  office_shifts  office_shifts    @relation(fields: [shift_id], references: [id])
+  departments    departments      @relation(fields: [department_id], references: [id], map: "fk_employees_department_id")
+  office_shifts  office_shifts    @relation(fields: [shift_id], references: [id], map: "fk_employees_shift_id")
   leave_requests leave_requests[]
 
   @@index([department_id], map: "employees_department_id_fkey")
@@ -171,8 +171,8 @@ model expense_categories {
   name        String                    @db.VarChar(255)
   description String?                   @db.Text
   status      expense_categories_status @default(active)
-  created_at  DateTime?                 @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?                 @db.Timestamp(0)
+  created_at  DateTime?                 @default(now())
+  updated_at  DateTime?
   expenses    expenses[]
 }
 
@@ -186,10 +186,10 @@ model expenses {
   attachment         String?            @db.VarChar(500)
   status             expenses_status    @default(pending)
   created_by         Int
-  created_at         DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at         DateTime?          @db.Timestamp(0)
-  expense_categories expense_categories @relation(fields: [category_id], references: [id])
-  users              users              @relation(fields: [created_by], references: [id])
+  created_at         DateTime?          @default(now())
+  updated_at         DateTime?
+  expense_categories expense_categories @relation(fields: [category_id], references: [id], map: "fk_expenses_category_id")
+  users              users              @relation(fields: [created_by], references: [id], map: "fk_expenses_created_by")
 
   @@index([category_id], map: "expenses_category_id_fkey")
   @@index([created_by], map: "expenses_created_by_fkey")
@@ -202,8 +202,8 @@ model holidays {
   end_date    DateTime        @db.Date
   description String?         @db.Text
   status      holidays_status @default(active)
-  created_at  DateTime?       @default(now()) @db.Timestamp(0)
-  updated_at  DateTime?       @db.Timestamp(0)
+  created_at  DateTime?       @default(now())
+  updated_at  DateTime?
 }
 
 model invoice_items {
@@ -215,9 +215,9 @@ model invoice_items {
   discount   Decimal?  @default(0.00) @db.Decimal(10, 2)
   tax        Decimal?  @default(0.00) @db.Decimal(10, 2)
   subtotal   Decimal   @db.Decimal(10, 2)
-  created_at DateTime? @default(now()) @db.Timestamp(0)
-  invoices   invoices  @relation(fields: [invoice_id], references: [id])
-  products   products  @relation(fields: [product_id], references: [id])
+  created_at DateTime? @default(now())
+  invoices   invoices  @relation(fields: [invoice_id], references: [id], map: "fk_invoice_items_invoice_id")
+  products   products  @relation(fields: [product_id], references: [id], map: "fk_invoice_items_product_id")
 
   @@index([invoice_id], map: "invoice_items_invoice_id_fkey")
   @@index([product_id], map: "invoice_items_product_id_fkey")
@@ -244,18 +244,18 @@ model invoices {
   payment_status          invoices_payment_status @default(unpaid)
   notes                   String?                 @db.Text
   created_by              Int
-  created_at              DateTime?               @default(now()) @db.Timestamp(0)
-  updated_at              DateTime?               @db.Timestamp(0)
+  created_at              DateTime?               @default(now())
+  updated_at              DateTime?
   // FDMS Integration fields
   is_fiscalized           Boolean                 @default(false)
   fiscal_transaction_id   BigInt?
   zimra_qr_code           String?                 @db.Text
   invoice_items  invoice_items[]
-  users          users                   @relation(fields: [created_by], references: [id])
-  customers      customers               @relation(fields: [customer_id], references: [id])
-  quotations     quotations?             @relation(fields: [quotation_id], references: [id])
-  sales          sales?                  @relation(fields: [sale_id], references: [id])
-  warehouses     warehouses              @relation(fields: [warehouse_id], references: [id])
+  users          users                   @relation(fields: [created_by], references: [id], map: "fk_invoices_created_by")
+  customers      customers               @relation(fields: [customer_id], references: [id], map: "fk_invoices_customer_id")
+  quotations     quotations?             @relation(fields: [quotation_id], references: [id], map: "fk_invoices_quotation_id")
+  sales          sales?                  @relation(fields: [sale_id], references: [id], map: "fk_invoices_sale_id")
+  warehouses     warehouses              @relation(fields: [warehouse_id], references: [id], map: "fk_invoices_warehouse_id")
 
   @@index([created_by], map: "invoices_created_by_fkey")
   @@index([customer_id], map: "invoices_customer_id_fkey")
@@ -274,12 +274,12 @@ model leave_requests {
   reason        String?               @db.Text
   status        leave_requests_status @default(pending)
   approved_by   Int
-  approved_at   DateTime?             @db.Timestamp(0)
-  created_at    DateTime?             @default(now()) @db.Timestamp(0)
-  updated_at    DateTime?             @db.Timestamp(0)
-  users         users                 @relation(fields: [approved_by], references: [id])
-  employees     employees             @relation(fields: [employee_id], references: [id])
-  leave_types   leave_types           @relation(fields: [leave_type_id], references: [id])
+  approved_at   DateTime?
+  created_at    DateTime?             @default(now())
+  updated_at    DateTime?
+  users         users                 @relation(fields: [approved_by], references: [id], map: "fk_leave_requests_approved_by")
+  employees     employees             @relation(fields: [employee_id], references: [id], map: "fk_leave_requests_employee_id")
+  leave_types   leave_types           @relation(fields: [leave_type_id], references: [id], map: "fk_leave_requests_leave_type_id")
 
   @@index([approved_by], map: "leave_requests_approved_by_fkey")
   @@index([employee_id], map: "leave_requests_employee_id_fkey")
@@ -291,19 +291,19 @@ model leave_types {
   name           String             @db.VarChar(255)
   days_allowed   Int?               @default(0)
   status         leave_types_status @default(active)
-  created_at     DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at     DateTime?          @db.Timestamp(0)
+  created_at     DateTime?          @default(now())
+  updated_at     DateTime?
   leave_requests leave_requests[]
 }
 
 model office_shifts {
   id         Int                  @id @default(autoincrement())
   name       String               @db.VarChar(255)
-  start_time DateTime             @db.Time(0)
-  end_time   DateTime             @db.Time(0)
+  start_time DateTime
+  end_time   DateTime
   status     office_shifts_status @default(active)
-  created_at DateTime?            @default(now()) @db.Timestamp(0)
-  updated_at DateTime?            @db.Timestamp(0)
+  created_at DateTime?            @default(now())
+  updated_at DateTime?
   employees  employees[]
 }
 
@@ -327,8 +327,8 @@ model organization {
   iban                String?   @db.VarChar(100)
   currency            String?   @default("USD") @db.VarChar(10)
   timezone            String?   @default("UTC") @db.VarChar(50)
-  created_at          DateTime? @default(now()) @db.Timestamp(0)
-  updated_at          DateTime? @db.Timestamp(0)
+  created_at          DateTime? @default(now())
+  updated_at          DateTime?
   currency_symbol     String?   @default("$") @db.VarChar(5)
   date_format         String?   @default("MM/DD/YYYY") @db.VarChar(20)
   fax                 String?   @db.VarChar(50)
@@ -358,14 +358,14 @@ model products {
   description           String?                 @db.Text
   image                 String?                 @db.VarChar(500)
   status                products_status         @default(active)
-  created_at            DateTime?               @default(now()) @db.Timestamp(0)
-  updated_at            DateTime?               @db.Timestamp(0)
+  created_at            DateTime?               @default(now())
+  updated_at            DateTime?
   adjustment_items      adjustment_items[]
   invoice_items         invoice_items[]
-  brands                brands                  @relation(fields: [brand_id], references: [id])
-  categories            categories              @relation(fields: [category_id], references: [id])
-  units                 units                   @relation(fields: [unit_id], references: [id])
-  warehouses            warehouses              @relation(fields: [warehouse_id], references: [id])
+  brands                brands                  @relation(fields: [brand_id], references: [id], map: "fk_products_brand_id")
+  categories            categories              @relation(fields: [category_id], references: [id], map: "fk_products_category_id")
+  units                 units                   @relation(fields: [unit_id], references: [id], map: "fk_products_unit_id")
+  warehouses            warehouses              @relation(fields: [warehouse_id], references: [id], map: "fk_products_warehouse_id")
   purchase_items        purchase_items[]
   purchase_return_items purchase_return_items[]
   quotation_items       quotation_items[]
@@ -388,9 +388,9 @@ model purchase_items {
   discount              Decimal?                @default(0.00) @db.Decimal(10, 2)
   tax                   Decimal?                @default(0.00) @db.Decimal(10, 2)
   subtotal              Decimal                 @db.Decimal(10, 2)
-  created_at            DateTime?               @default(now()) @db.Timestamp(0)
-  products              products                @relation(fields: [product_id], references: [id])
-  purchases             purchases               @relation(fields: [purchase_id], references: [id])
+  created_at            DateTime?               @default(now())
+  products              products                @relation(fields: [product_id], references: [id], map: "fk_purchase_items_product_id")
+  purchases             purchases               @relation(fields: [purchase_id], references: [id], map: "fk_purchase_items_purchase_id")
   purchase_return_items purchase_return_items[]
 
   @@index([product_id], map: "purchase_items_product_id_fkey")
@@ -407,10 +407,10 @@ model purchase_return_items {
   discount         Decimal?         @default(0.00) @db.Decimal(10, 2)
   tax              Decimal?         @default(0.00) @db.Decimal(10, 2)
   subtotal         Decimal          @db.Decimal(10, 2)
-  created_at       DateTime?        @default(now()) @db.Timestamp(0)
-  products         products         @relation(fields: [product_id], references: [id])
-  purchase_items   purchase_items   @relation(fields: [purchase_item_id], references: [id])
-  purchase_returns purchase_returns @relation(fields: [return_id], references: [id])
+  created_at       DateTime?        @default(now())
+  products         products         @relation(fields: [product_id], references: [id], map: "fk_purchase_return_items_product_id")
+  purchase_items   purchase_items   @relation(fields: [purchase_item_id], references: [id], map: "fk_purchase_return_items_purchase_item_id")
+  purchase_returns purchase_returns @relation(fields: [return_id], references: [id], map: "fk_purchase_return_items_return_id")
 
   @@index([product_id], map: "purchase_return_items_product_id_fkey")
   @@index([purchase_item_id], map: "purchase_return_items_purchase_item_id_fkey")
@@ -432,12 +432,12 @@ model purchase_returns {
   total                 Decimal                 @db.Decimal(10, 2)
   status                purchase_returns_status @default(completed)
   notes                 String?                 @db.Text
-  created_at            DateTime?               @default(now()) @db.Timestamp(0)
-  updated_at            DateTime?               @db.Timestamp(0)
+  created_at            DateTime?               @default(now())
+  updated_at            DateTime?
   purchase_return_items purchase_return_items[]
-  purchases             purchases               @relation(fields: [purchase_id], references: [id])
-  suppliers             suppliers               @relation(fields: [supplier_id], references: [id])
-  warehouses            warehouses              @relation(fields: [warehouse_id], references: [id])
+  purchases             purchases               @relation(fields: [purchase_id], references: [id], map: "fk_purchase_returns_purchase_id")
+  suppliers             suppliers               @relation(fields: [supplier_id], references: [id], map: "fk_purchase_returns_supplier_id")
+  warehouses            warehouses              @relation(fields: [warehouse_id], references: [id], map: "fk_purchase_returns_warehouse_id")
 
   @@index([purchase_id], map: "purchase_returns_purchase_id_fkey")
   @@index([supplier_id], map: "purchase_returns_supplier_id_fkey")
@@ -462,13 +462,13 @@ model purchases {
   payment_status   purchases_payment_status @default(unpaid)
   notes            String?                  @db.Text
   created_by       Int
-  created_at       DateTime?                @default(now()) @db.Timestamp(0)
-  updated_at       DateTime?                @db.Timestamp(0)
+  created_at       DateTime?                @default(now())
+  updated_at       DateTime?
   purchase_items   purchase_items[]
   purchase_returns purchase_returns[]
-  users            users                    @relation(fields: [created_by], references: [id])
-  suppliers        suppliers                @relation(fields: [supplier_id], references: [id])
-  warehouses       warehouses               @relation(fields: [warehouse_id], references: [id])
+  users            users                    @relation(fields: [created_by], references: [id], map: "fk_purchases_created_by")
+  suppliers        suppliers                @relation(fields: [supplier_id], references: [id], map: "fk_purchases_supplier_id")
+  warehouses       warehouses               @relation(fields: [warehouse_id], references: [id], map: "fk_purchases_warehouse_id")
 
   @@index([created_by], map: "purchases_created_by_fkey")
   @@index([supplier_id], map: "purchases_supplier_id_fkey")
@@ -484,9 +484,9 @@ model quotation_items {
   discount     Decimal?   @default(0.00) @db.Decimal(10, 2)
   tax          Decimal?   @default(0.00) @db.Decimal(10, 2)
   subtotal     Decimal    @db.Decimal(10, 2)
-  created_at   DateTime?  @default(now()) @db.Timestamp(0)
-  products     products   @relation(fields: [product_id], references: [id])
-  quotations   quotations @relation(fields: [quotation_id], references: [id])
+  created_at   DateTime?  @default(now())
+  products     products   @relation(fields: [product_id], references: [id], map: "fk_quotation_items_product_id")
+  quotations   quotations @relation(fields: [quotation_id], references: [id], map: "fk_quotation_items_quotation_id")
 
   @@index([product_id], map: "quotation_items_product_id_fkey")
   @@index([quotation_id], map: "quotation_items_quotation_id_fkey")
@@ -508,13 +508,13 @@ model quotations {
   status          quotations_status @default(pending)
   notes           String?           @db.Text
   created_by      Int
-  created_at      DateTime?         @default(now()) @db.Timestamp(0)
-  updated_at      DateTime?         @db.Timestamp(0)
+  created_at      DateTime?         @default(now())
+  updated_at      DateTime?
   invoices        invoices[]
   quotation_items quotation_items[]
-  users           users             @relation(fields: [created_by], references: [id])
-  customers       customers         @relation(fields: [customer_id], references: [id])
-  warehouses      warehouses        @relation(fields: [warehouse_id], references: [id])
+  users           users             @relation(fields: [created_by], references: [id], map: "fk_quotations_created_by")
+  customers       customers         @relation(fields: [customer_id], references: [id], map: "fk_quotations_customer_id")
+  warehouses      warehouses        @relation(fields: [warehouse_id], references: [id], map: "fk_quotations_warehouse_id")
 
   @@index([created_by], map: "quotations_created_by_fkey")
   @@index([customer_id], map: "quotations_customer_id_fkey")
@@ -530,9 +530,9 @@ model sale_items {
   discount           Decimal?             @default(0.00) @db.Decimal(10, 2)
   tax                Decimal?             @default(0.00) @db.Decimal(10, 2)
   subtotal           Decimal              @db.Decimal(10, 2)
-  created_at         DateTime?            @default(now()) @db.Timestamp(0)
-  products           products             @relation(fields: [product_id], references: [id])
-  sales              sales                @relation(fields: [sale_id], references: [id])
+  created_at         DateTime?            @default(now())
+  products           products             @relation(fields: [product_id], references: [id], map: "fk_sale_items_product_id")
+  sales              sales                @relation(fields: [sale_id], references: [id], map: "fk_sale_items_sale_id")
   sales_return_items sales_return_items[]
 
   @@index([product_id], map: "sale_items_product_id_fkey")
@@ -557,17 +557,17 @@ model sales {
   payment_status          sales_payment_status @default(unpaid)
   notes                   String?              @db.Text
   created_by              Int
-  created_at              DateTime?            @default(now()) @db.Timestamp(0)
-  updated_at              DateTime?            @db.Timestamp(0)
+  created_at              DateTime?            @default(now())
+  updated_at              DateTime?
   // FDMS Integration fields
   is_fiscalized           Boolean              @default(false)
   fiscal_transaction_id   BigInt?
   zimra_qr_code           String?              @db.Text
   invoices       invoices[]
   sale_items     sale_items[]
-  users          users                @relation(fields: [created_by], references: [id])
-  customers      customers            @relation(fields: [customer_id], references: [id])
-  warehouses     warehouses           @relation(fields: [warehouse_id], references: [id])
+  users          users                @relation(fields: [created_by], references: [id], map: "fk_sales_created_by")
+  customers      customers            @relation(fields: [customer_id], references: [id], map: "fk_sales_customer_id")
+  warehouses     warehouses           @relation(fields: [warehouse_id], references: [id], map: "fk_sales_warehouse_id")
   sales_returns  sales_returns[]
 
   @@index([created_by], map: "sales_created_by_fkey")
@@ -585,10 +585,10 @@ model sales_return_items {
   discount      Decimal?      @default(0.00) @db.Decimal(10, 2)
   tax           Decimal?      @default(0.00) @db.Decimal(10, 2)
   subtotal      Decimal       @db.Decimal(10, 2)
-  created_at    DateTime?     @default(now()) @db.Timestamp(0)
-  products      products      @relation(fields: [product_id], references: [id])
-  sales_returns sales_returns @relation(fields: [return_id], references: [id])
-  sale_items    sale_items    @relation(fields: [sale_item_id], references: [id])
+  created_at    DateTime?     @default(now())
+  products      products      @relation(fields: [product_id], references: [id], map: "fk_sales_return_items_product_id")
+  sales_returns sales_returns @relation(fields: [return_id], references: [id], map: "fk_sales_return_items_return_id")
+  sale_items    sale_items    @relation(fields: [sale_item_id], references: [id], map: "fk_sales_return_items_sale_item_id")
 
   @@index([product_id], map: "sales_return_items_product_id_fkey")
   @@index([return_id], map: "sales_return_items_return_id_fkey")
@@ -610,12 +610,12 @@ model sales_returns {
   total              Decimal              @db.Decimal(10, 2)
   status             sales_returns_status @default(completed)
   notes              String?              @db.Text
-  created_at         DateTime?            @default(now()) @db.Timestamp(0)
-  updated_at         DateTime?            @db.Timestamp(0)
+  created_at         DateTime?            @default(now())
+  updated_at         DateTime?
   sales_return_items sales_return_items[]
-  customers          customers            @relation(fields: [customer_id], references: [id])
-  sales              sales                @relation(fields: [sale_id], references: [id])
-  warehouses         warehouses           @relation(fields: [warehouse_id], references: [id])
+  customers          customers            @relation(fields: [customer_id], references: [id], map: "fk_sales_returns_customer_id")
+  sales              sales                @relation(fields: [sale_id], references: [id], map: "fk_sales_returns_sale_id")
+  warehouses         warehouses           @relation(fields: [warehouse_id], references: [id], map: "fk_sales_returns_warehouse_id")
 
   @@index([customer_id], map: "sales_returns_customer_id_fkey")
   @@index([sale_id], map: "sales_returns_sale_id_fkey")
@@ -640,8 +640,8 @@ model suppliers {
   total_paid       Decimal?           @default(0.00) @db.Decimal(10, 2)
   total_due        Decimal?           @default(0.00) @db.Decimal(10, 2)
   status           suppliers_status   @default(active)
-  created_at       DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at       DateTime?          @db.Timestamp(0)
+  created_at       DateTime?          @default(now())
+  updated_at       DateTime?
   purchase_returns purchase_returns[]
   purchases        purchases[]
 }
@@ -655,9 +655,9 @@ model transfer_items {
   discount    Decimal?  @default(0.00) @db.Decimal(10, 2)
   tax         Decimal?  @default(0.00) @db.Decimal(10, 2)
   subtotal    Decimal   @db.Decimal(10, 2)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  products    products  @relation(fields: [product_id], references: [id])
-  transfers   transfers @relation(fields: [transfer_id], references: [id])
+  created_at  DateTime? @default(now())
+  products    products  @relation(fields: [product_id], references: [id], map: "fk_transfer_items_product_id")
+  transfers   transfers @relation(fields: [transfer_id], references: [id], map: "fk_transfer_items_transfer_id")
 
   @@index([product_id], map: "transfer_items_product_id_fkey")
   @@index([transfer_id], map: "transfer_items_transfer_id_fkey")
@@ -678,12 +678,12 @@ model transfers {
   status                                             transfers_status @default(pending)
   notes                                              String?          @db.Text
   created_by                                         Int
-  created_at                                         DateTime?        @default(now()) @db.Timestamp(0)
-  updated_at                                         DateTime?        @db.Timestamp(0)
+  created_at                                         DateTime?        @default(now())
+  updated_at                                         DateTime?
   transfer_items                                     transfer_items[]
-  users                                              users            @relation(fields: [created_by], references: [id])
-  warehouses_transfers_from_warehouse_idTowarehouses warehouses       @relation("transfers_from_warehouse_idTowarehouses", fields: [from_warehouse_id], references: [id])
-  warehouses_transfers_to_warehouse_idTowarehouses   warehouses       @relation("transfers_to_warehouse_idTowarehouses", fields: [to_warehouse_id], references: [id])
+  users                                              users            @relation(fields: [created_by], references: [id], map: "fk_transfers_created_by")
+  warehouses_transfers_from_warehouse_idTowarehouses warehouses       @relation("transfers_from_warehouse_idTowarehouses", fields: [from_warehouse_id], references: [id], map: "fk_transfers_from_warehouse_id")
+  warehouses_transfers_to_warehouse_idTowarehouses   warehouses       @relation("transfers_to_warehouse_idTowarehouses", fields: [to_warehouse_id], references: [id], map: "fk_transfers_to_warehouse_id")
 
   @@index([created_by], map: "transfers_created_by_fkey")
   @@index([from_warehouse_id], map: "transfers_from_warehouse_id_fkey")
@@ -698,8 +698,8 @@ model units {
   operator        String?      @db.VarChar(10)
   operation_value Decimal?     @default(1.0000) @db.Decimal(10, 4)
   status          units_status @default(active)
-  created_at      DateTime?    @default(now()) @db.Timestamp(0)
-  updated_at      DateTime?    @db.Timestamp(0)
+  created_at      DateTime?    @default(now())
+  updated_at      DateTime?
   products        products[]
 }
 
@@ -711,8 +711,8 @@ model users {
   role           users_role       @default(user)
   avatar         String?          @db.VarChar(500)
   status         users_status     @default(active)
-  created_at     DateTime?        @default(now()) @db.Timestamp(0)
-  updated_at     DateTime?        @db.Timestamp(0)
+  created_at     DateTime?        @default(now())
+  updated_at     DateTime?
   adjustments    adjustments[]
   expenses       expenses[]
   invoices       invoices[]
@@ -733,8 +733,8 @@ model warehouses {
   country                                           String?            @db.VarChar(100)
   zip_code                                          String?            @db.VarChar(20)
   status                                            warehouses_status  @default(active)
-  created_at                                        DateTime?          @default(now()) @db.Timestamp(0)
-  updated_at                                        DateTime?          @db.Timestamp(0)
+  created_at                                        DateTime?          @default(now())
+  updated_at                                        DateTime?
   adjustments                                       adjustments[]
   invoices                                          invoices[]
   products                                          products[]
@@ -942,8 +942,8 @@ model zimra_config {
   api_endpoint              String?  @db.VarChar(255)
   status                    zimra_config_status @default(pending)
   is_fdms_enabled           Boolean  @default(false)
-  created_at                DateTime? @default(now()) @db.Timestamp(0)
-  updated_at                DateTime? @db.Timestamp(0)
+  created_at                DateTime? @default(now())
+  updated_at                DateTime?
 
   fiscal_devices            fiscal_devices[]
   fiscal_transactions       fiscal_transactions[]
@@ -964,11 +964,11 @@ model fiscal_devices {
   status                    fiscal_devices_status @default(Pending)
   daily_receipt_counter     Int      @default(0)
   global_receipt_counter    BigInt   @default(0)
-  fiscal_day_opened         DateTime? @db.Timestamp(0)
-  last_z_report             DateTime? @db.Timestamp(0)
-  created_at                DateTime? @default(now()) @db.Timestamp(0)
+  fiscal_day_opened         DateTime?
+  last_z_report             DateTime?
+  created_at                DateTime? @default(now())
 
-  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id])
+  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id], map: "fk_fiscal_devices_zimra_config_id")
   fiscal_transactions       fiscal_transactions[]
   offline_fiscal_queue      offline_fiscal_queue[]
 
@@ -986,7 +986,7 @@ model fiscal_transactions {
   receipt_currency          String   @default("USD") @db.VarChar(3)
   receipt_total             Decimal  @db.Decimal(21, 2)
   tax_amount                Decimal  @db.Decimal(21, 2)
-  receipt_date              DateTime @db.Timestamp(0)
+  receipt_date              DateTime
   buyer_tin                 String?  @db.VarChar(10)
   buyer_name                String?  @db.VarChar(250)
   receipt_items             Json
@@ -996,11 +996,11 @@ model fiscal_transactions {
   zimra_status              fiscal_transaction_status @default(pending)
   error_message             String?  @db.Text
   retry_count               Int      @default(0)
-  created_at                DateTime? @default(now()) @db.Timestamp(0)
-  updated_at                DateTime? @db.Timestamp(0)
+  created_at                DateTime? @default(now())
+  updated_at                DateTime?
 
-  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id])
-  fiscal_device             fiscal_devices @relation(fields: [device_id], references: [device_id])
+  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id], map: "fk_fiscal_transactions_zimra_config_id")
+  fiscal_device             fiscal_devices @relation(fields: [device_id], references: [device_id], map: "fk_fiscal_transactions_device_id")
 
   @@unique([device_id, receipt_global_no])
   @@index([zimra_config_id, receipt_date])
@@ -1014,13 +1014,13 @@ model offline_fiscal_queue {
   device_id                 String   @db.VarChar(50)
   transaction_data          Json
   status                    offline_queue_status @default(pending)
-  queued_at                 DateTime @default(now()) @db.Timestamp(0)
-  processed_at              DateTime? @db.Timestamp(0)
+  queued_at                 DateTime @default(now())
+  processed_at              DateTime?
   error_message             String?  @db.Text
   retry_count               Int      @default(0)
 
-  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id])
-  fiscal_device             fiscal_devices @relation(fields: [device_id], references: [device_id])
+  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id], map: "fk_offline_fiscal_queue_zimra_config_id")
+  fiscal_device             fiscal_devices @relation(fields: [device_id], references: [device_id], map: "fk_offline_fiscal_queue_device_id")
 
   @@index([zimra_config_id, status])
   @@index([queued_at])
@@ -1034,7 +1034,7 @@ model zimra_tax_rates {
   business_type             String?  @db.VarChar(50)
   effective_date            DateTime @db.Date
   is_active                 Boolean  @default(true)
-  created_at                DateTime? @default(now()) @db.Timestamp(0)
+  created_at                DateTime? @default(now())
 
   @@unique([tax_id, business_type, effective_date])
   @@index([is_active, effective_date])
