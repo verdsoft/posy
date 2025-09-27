@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Search, X,  Minus, Plus, RotateCcw, CreditCard, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,10 @@ import { logout } from "@/lib/slices/authSlice"
 import { useGetCategoriesQuery, useGetBrandsQuery, useGetWarehousesQuery } from "@/lib/slices/settingsApi"
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
+import { useCreateSaleMutation } from "@/lib/slices/salesApi" // Import useCreateSaleMutation
+import { useSubmitFiscalInvoiceMutation, useGetFDMSStatusQuery } from "@/lib/slices/fdmsApi"
+import { useGetOrganizationQuery } from "@/lib/slices/organizationApi"
+import { toast } from "sonner" // Import toast for notifications
 
 
 interface CartItem {
@@ -46,8 +50,6 @@ interface Category {
 export default function POSSystem() {
   // State
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedBrand, setSelectedBrand] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -63,13 +65,8 @@ export default function POSSystem() {
   const [showReceiptModal, setShowReceiptModal] = useState(false)
 
   // Customers, Warehouses, Brands state
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([
-    { id: "walkin", name: "Walk-In-Customer" }
-  ])
   const [selectedCustomer, setSelectedCustomer] = useState("walkin")
-  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([])
   const [selectedWarehouse, setSelectedWarehouse] = useState("")
-  const [brands, setBrands] = useState<{ id: string; name: string }[]>([])
 
   // Payment form states
   const [receivedAmount, setReceivedAmount] = useState("")
@@ -106,48 +103,50 @@ export default function POSSystem() {
   const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery()
   const { data: brandsData, isLoading: brandsLoading } = useGetBrandsQuery()
   const { data: warehousesData, isLoading: warehousesLoading } = useGetWarehousesQuery()
-  const { data: customersData, isLoading: customersLoading } = useGetCustomersQuery()
+  const { data: customersResponse, isLoading: customersLoading } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
   const { data: productsResponse, isLoading: productsLoading } = useGetProductsQuery({ page: 1, limit: 1000 })
+  const { data: organizationData, isLoading: organizationLoading } = useGetOrganizationQuery()
   const productsData = productsResponse?.data || []
 
-  // Set data when loaded
-  useEffect(() => {
-    if (categoriesData) {
-      setCategories([{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData])
-    }
-  }, [categoriesData])
+  // RTK Query Mutations
+  const [createSale, { isLoading: isCreatingSale }] = useCreateSaleMutation()
+  const [submitFiscalInvoice, { isLoading: isSubmittingFiscal }] = useSubmitFiscalInvoiceMutation()
 
-  useEffect(() => {
-    if (customersData) {
-      setCustomers([{ id: "walkin", name: "Walk-In-Customer" }, ...customersData])
-    }
-  }, [customersData])
+  // FDMS Status
+  const { data: fdmsStatus } = useGetFDMSStatusQuery()
 
-  useEffect(() => {
-    if (warehousesData) {
-      setWarehouses(warehousesData)
-      if (warehousesData.length > 0) setSelectedWarehouse(warehousesData[0].id)
-    }
-  }, [warehousesData])
+  const allCategories = useMemo(() => {
+    return categoriesData ? [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData] : [];
+  }, [categoriesData]);
 
-  useEffect(() => {
-    if (brandsData) {
-      setBrands(brandsData)
-    }
-  }, [brandsData])
+  const allBrands = useMemo(() => {
+    return brandsData || [];
+  }, [brandsData]);
 
+  const allWarehouses = useMemo(() => {
+    return warehousesData || [];
+  }, [warehousesData]);
+
+  const allCustomers = useMemo(() => {
+    return customersResponse?.data ? [{ id: "walkin", name: "Walk-In-Customer" }, ...customersResponse.data] : [{ id: "walkin", name: "Walk-In-Customer" }];
+  }, [customersResponse]);
+
+  // Initialize selectedWarehouse if not already set
   useEffect(() => {
-    if (productsData) {
-      setProducts(productsData)
+    if (allWarehouses.length > 0 && !selectedWarehouse) {
+      setSelectedWarehouse(allWarehouses[0].id);
     }
-  }, [productsData])
+  }, [allWarehouses, selectedWarehouse]);
 
   // Filter by category and brand
-  const filteredProducts = products.filter((product) => {
-    const categoryMatch = selectedCategory === "all" || product.category_id === selectedCategory
-    const brandMatch = selectedBrand === "all" || product.brand_id === selectedBrand
-    return categoryMatch && brandMatch
-  })
+  const filteredProducts = useMemo(() => {
+    const products = productsResponse?.data ?? []; // Ensure products is always an array
+    return products.filter(product => {
+      const categoryMatch = selectedCategory === "all" || product.category_id === selectedCategory;
+      const brandMatch = selectedBrand === "all" || product.brand_id === selectedBrand;
+      return categoryMatch && brandMatch;
+    });
+  }, [productsResponse, selectedCategory, selectedBrand]);
 
   // Cart logic
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
@@ -194,61 +193,108 @@ export default function POSSystem() {
   const handleSubmitPayment = async () => {
     setShowPaymentModal(false)
     // Prepare sale data
-    const saleData = {
-      reference: `SL-${Date.now()}`,
-      customer_id: selectedCustomer !== "walkin" ? selectedCustomer : null,
-      warehouse_id: selectedWarehouse || null,
-      date: new Date().toISOString().slice(0, 10),
-      subtotal,
-      tax_rate: 0, // If you have a tax rate field, set it here
-      tax_amount: tax,
-      discount,
-      shipping,
-      total: grandTotal,
-      paid: Number(payingAmount),
-      due: Math.max(0, grandTotal - Number(payingAmount)),
-      status: "completed",
-      payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
-      notes: paymentNote,
-      created_by: null, // Set user id if available
-      items: cartItems.map(item => ({
-        product_id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-      })),
-      payment: {
-        paymentChoice,
-        paymentNote,
-      },
-    }
-
+    const userId = typeof window !== "undefined" ? localStorage.getItem('UserId') : null;
+    
     try {
-      const res = await fetch("/api/pos/sales", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saleData),
-      })
-      if (res.ok) {
-        setShowReceiptModal(true)
-        // Optionally clear cart, etc.
-      } else {
-        alert("Failed to save sale")
+      const saleData = {
+        reference: `SL-${Date.now()}`,
+        customer_id: selectedCustomer !== "walkin" ? selectedCustomer : null,
+        warehouse_id: selectedWarehouse || null,
+        date: new Date().toISOString().slice(0, 10),
+        subtotal: Number(subtotal.toFixed(2)),
+        tax_rate: 0, // Assuming tax_rate is 0 if not explicitly set elsewhere
+        tax_amount: Number(tax.toFixed(2)),
+        discount: Number(discount.toFixed(2)),
+        shipping: Number(shipping.toFixed(2)),
+        total: Number(grandTotal.toFixed(2)),
+        paid: Number(Number(payingAmount).toFixed(2)),
+        due: Number(Math.max(0, grandTotal - Number(payingAmount)).toFixed(2)),
+        status: "completed", // Or appropriate status
+        payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
+        notes: paymentNote || null,
+        created_by: userId,
+        items: cartItems.map(item => ({
+          product_id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.price,
+          discount: 0, // Assuming discount per item is 0 if not captured
+          tax: 0, // Assuming tax per item is 0 if not captured
+          subtotal: Number((item.price * item.quantity).toFixed(2)),
+        })),
+        payment: {
+          payment_choice: paymentChoice,
+          payment_note: paymentNote,
+        },
+      };
+      
+      const createdSale = await createSale(saleData).unwrap();
+      toast.success("Sale created successfully!");
+
+      // FDMS Integration - Submit fiscal invoice
+      if (fdmsStatus?.data?.configured) {
+        try {
+          const fiscalInvoiceData = {
+            invoiceNo: saleData.reference,
+            total: saleData.total,
+            currency: 'USD', // Default currency
+            customer: selectedCustomer !== "walkin" ? {
+              name: customersData?.find(c => c.id === selectedCustomer)?.name
+            } : undefined,
+            items: cartItems.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              taxRate: 15.0, // Default tax rate for Zimbabwe
+              taxId: 1
+            })),
+            saleId: createdSale.data?.id
+          };
+
+          const fiscalResult = await submitFiscalInvoice(fiscalInvoiceData).unwrap();
+
+          if (fiscalResult.success) {
+            if (fdmsStatus.data.fdmsEnabled) {
+              toast.success("Fiscal invoice submitted to ZIMRA successfully!");
+            } else {
+              toast.info("Receipt generated (Non-FDMS mode)");
+            }
+          }
+        } catch (fiscalError: any) {
+          console.error("Failed to submit fiscal invoice:", fiscalError);
+          toast.warning("Sale completed but fiscal submission failed. Check FDMS status.");
+        }
       }
-    } catch (err) {
-      console.log(err)
-      alert("Failed to save sale")
+
+      setShowReceiptModal(true);
+      setCartItems([]); // Clear cart after successful sale
+    } catch (err: any) {
+      console.error("Failed to create sale:", err);
+      toast.error(err.data?.message || "Failed to create sale");
     }
-  }
+  };
 
   const handlePrintReceipt = () => {
     const receiptWindow = window.open("", "_blank")
     if (receiptWindow) {
+      // Get organization details or use defaults
+      const orgName = organizationData?.name || "Your Company Name"
+      const orgAddress = organizationData?.address || ""
+      const orgCity = organizationData?.city || ""
+      const orgCountry = organizationData?.country || ""
+      const orgEmail = organizationData?.email || ""
+      const orgPhone = organizationData?.phone || ""
+      const currencySymbol = organizationData?.currency_symbol || "$"
+
+      // Format full address
+      const fullAddress = [orgAddress, orgCity, orgCountry].filter(Boolean).join(", ")
+      const customerName = selectedCustomer?.name || "Walk-In Customer"
+
       receiptWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Receipt -  Global</title>
+          <title>Receipt - ${orgName}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
             .header { text-align: center; margin-bottom: 20px; }
@@ -265,13 +311,13 @@ export default function POSSystem() {
         </head>
         <body>
           <div class="header">
-            <div class="company-name"> Global</div>
+            <div class="company-name">${orgName}</div>
             <div class="company-info">
-              Date : ${new Date().toLocaleDateString()}<br>
-              Address : 53 Karigamombe Centre, Harare<br>
-              Email : Admin@.Com<br>
-              Phone : 0774882645<br>
-              Customer : Walk-In-Customer
+              Date: ${new Date().toLocaleDateString()}<br>
+              ${fullAddress ? `Address: ${fullAddress}<br>` : ''}
+              ${orgEmail ? `Email: ${orgEmail}<br>` : ''}
+              ${orgPhone ? `Phone: ${orgPhone}<br>` : ''}
+              Customer: ${customerName}
             </div>
           </div>
           <div class="divider"></div>
@@ -280,23 +326,23 @@ export default function POSSystem() {
               <span>${item.name}</span>
             </div>
             <div class="item-row">
-              <span>${item.quantity} Pcs X ${item.price}</span>
-              <span>${(item.quantity * item.price)}</span>
+              <span>${item.quantity} Pcs X ${currencySymbol}${item.price}</span>
+              <span>${currencySymbol}${(item.quantity * item.price)}</span>
             </div>
           `).join('')}
           <div class="divider"></div>
           <div class="total-section">
             <div class="item-row">
               <span>Order Tax</span>
-              <span>USD ${tax} (${tax > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
+              <span>${currencySymbol}${tax} (${tax > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
             </div>
             <div class="item-row">
               <span>Discount</span>
-              <span>USD ${discount}</span>
+              <span>${currencySymbol}${discount}</span>
             </div>
             <div class="item-row grand-total">
               <span>Grand Total</span>
-              <span>USD ${grandTotal}</span>
+              <span>${currencySymbol}${grandTotal}</span>
             </div>
           </div>
           <div class="divider"></div>
@@ -308,12 +354,12 @@ export default function POSSystem() {
             </div>
             <div class="item-row">
               <span>${paymentChoice}</span>
-              <span>${payingAmount}</span>
-              <span>${change}</span>
+              <span>${currencySymbol}${payingAmount}</span>
+              <span>${currencySymbol}${change}</span>
             </div>
           </div>
           <div class="footer">
-            <p>Thank You For Shopping With Us . Please Come Again</p>
+            <p>${organizationData?.terms_conditions || "Thank You For Shopping With Us. Please Come Again"}</p>
             <div class="barcode">
               ||||| |||| | ||| ||||<br>
               ${Date.now().toString().slice(-6)}
@@ -395,7 +441,7 @@ export default function POSSystem() {
                 <SelectValue placeholder={customersLoading ? "Loading customers..." : "Select customer"} />
               </SelectTrigger>
               <SelectContent>
-                {customers.map((customer) => (
+                {allCustomers.map((customer) => (
                   <SelectItem key={customer.id} value={customer.id}>
                     {customer.name}
                   </SelectItem>
@@ -410,7 +456,7 @@ export default function POSSystem() {
                 <SelectValue placeholder={warehousesLoading ? "Loading warehouses..." : "Select warehouse"} />
               </SelectTrigger>
               <SelectContent>
-                {warehouses.map((warehouse) => (
+                {allWarehouses.map((warehouse) => (
                   <SelectItem key={warehouse.id} value={warehouse.id}>
                     {warehouse.name}
                   </SelectItem>
@@ -595,7 +641,7 @@ export default function POSSystem() {
               <div className="col-span-5 text-center py-8 text-gray-500">
                 No products found
               </div>
-            ) : (
+            ) : (Array.isArray(filteredProducts) && filteredProducts.length > 0) ? (
               filteredProducts.map((product) => (
                 <Card
                   key={product.id}
@@ -621,7 +667,7 @@ export default function POSSystem() {
                   </CardContent>
                 </Card>
               ))
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -634,7 +680,7 @@ export default function POSSystem() {
             <DialogTitle>List of Category</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 p-4">
-            {categories.map((category) => (
+            {allCategories.map((category: Category) => (
               <Card
                 key={category.id}
                 className={`cursor-pointer transition-all ${selectedCategory === category.id ? "ring-2 ring-purple-500" : ""
@@ -677,10 +723,10 @@ export default function POSSystem() {
                 <p className="text-sm font-medium">All Brands</p>
               </CardContent>
             </Card>
-            {brands.length === 0 ? (
+            {allBrands.length === 0 ? (
               <div className="text-center text-gray-500 py-8">No brands available</div>
             ) : (
-              brands.map((brand) => (
+              allBrands.map((brand) => (
                 <Card
                   key={brand.id}
                   className={`cursor-pointer transition-all ${selectedBrand === brand.id ? "ring-2 ring-purple-500" : ""}`}
@@ -741,9 +787,28 @@ export default function POSSystem() {
                   rows={3}
                 />
               </div>
-              <Button className="bg-[#1a237e] hover:bg-[#23308c] hover:bg-purple-700" onClick={handleSubmitPayment}>
-                Submit
+              <Button
+                className="bg-[#1a237e] hover:bg-[#23308c] hover:bg-purple-700"
+                onClick={handleSubmitPayment}
+                disabled={isCreatingSale || isSubmittingFiscal}
+              >
+                {isCreatingSale || isSubmittingFiscal ? (
+                  <>Processing...</>
+                ) : (
+                  <>Submit Payment</>
+                )}
               </Button>
+
+              {/* FDMS Status Indicator */}
+              {fdmsStatus?.data?.configured && (
+                <div className="text-xs text-gray-600 text-center mt-2">
+                  {fdmsStatus.data.fdmsEnabled ? (
+                    <span className="text-green-600">✓ ZIMRA FDMS Active</span>
+                  ) : (
+                    <span className="text-orange-600">⚠ Non-FDMS Mode</span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -755,20 +820,20 @@ export default function POSSystem() {
               <div className="flex justify-between">
                 <span>Order Tax</span>
                 <span>
-                  $ {tax} ({((tax / subtotal) * 100).toFixed(0)} %)
+                  {organizationData?.currency_symbol || "$"} {tax} ({((tax / subtotal) * 100).toFixed(0)} %)
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Discount</span>
-                <span>$ {discount}</span>
+                <span>{organizationData?.currency_symbol || "$"} {discount}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>$ {shipping}</span>
+                <span>{organizationData?.currency_symbol || "$"} {shipping}</span>
               </div>
               <div className="flex justify-between font-bold text-lg  ">
                 <span>Grand Total</span>
-                <span>$ {grandTotal}</span>
+                <span>{organizationData?.currency_symbol || "$"} {grandTotal}</span>
               </div>
             </div>
           </div>
@@ -783,23 +848,23 @@ export default function POSSystem() {
           </DialogHeader>
           <div className="p-4 space-y-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold"> Global</h2>
+              <h2 className="text-xl font-bold">{organizationData?.name || "Your Company Name"}</h2>
               <div className="text-sm text-gray-600 mt-2">
-                <p>Date : {new Date().toLocaleDateString()}</p>
-                <p>Address : 53 Karigamombe Centre, Harare</p>
-                <p>Email : Admin@.Com</p>
-                <p>Phone : 0774882645</p>
-                <p>Customer : Walk-In-Customer</p>
+                <p>Date: {new Date().toLocaleDateString()}</p>
+                {organizationData?.address && <p>Address: {[organizationData.address, organizationData.city, organizationData.country].filter(Boolean).join(", ")}</p>}
+                {organizationData?.email && <p>Email: {organizationData.email}</p>}
+                {organizationData?.phone && <p>Phone: {organizationData.phone}</p>}
+                <p>Customer: {selectedCustomer === "walkin" || !selectedCustomer ? "Walk-In Customer" : customersResponse?.data?.find(c => c.id.toString() === selectedCustomer)?.name || "Walk-In Customer"}</p>
               </div>
             </div>
 
             <div className="border-t pt-4">
-              {cartItems.map((item) => (
+              {cartItems.map((item: CartItem) => (
                 <div key={item.id} className="space-y-2">
                   <p className="font-medium">{item.name}</p>
                   <div className="flex justify-between">
-                    <span>{item.quantity} Pcs X {item.price}</span>
-                    <span>{(item.quantity * item.price)}</span>
+                    <span>{item.quantity} Pcs X {organizationData?.currency_symbol || "$"}{item.price}</span>
+                    <span>{organizationData?.currency_symbol || "$"}{(item.quantity * item.price)}</span>
                   </div>
                 </div>
               ))}
@@ -808,15 +873,15 @@ export default function POSSystem() {
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between">
                 <span>Order Tax</span>
-                <span>USD {tax} ({subtotal > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
+                <span>{organizationData?.currency_symbol || "$"} {tax} ({subtotal > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
               </div>
               <div className="flex justify-between">
                 <span>Discount</span>
-                <span>USD {discount}</span>
+                <span>{organizationData?.currency_symbol || "$"} {discount}</span>
               </div>
               <div className="flex justify-between font-bold">
                 <span>Grand Total</span>
-                <span>USD {grandTotal}</span>
+                <span>{organizationData?.currency_symbol || "$"} {grandTotal}</span>
               </div>
             </div>
 
@@ -828,18 +893,17 @@ export default function POSSystem() {
                 </div>
                 <div>
                   <p className="font-medium">Amount:</p>
-                  <p>{payingAmount}</p>
+                  <p>{organizationData?.currency_symbol || "$"}{payingAmount}</p>
                 </div>
                 <div>
                   <p className="font-medium">Change:</p>
-                  <p>{change}</p>
+                  <p>{organizationData?.currency_symbol || "$"}{change}</p>
                 </div>
               </div>
             </div>
 
             <div className="text-center text-sm">
-              <p>Thank You For Shopping With Us .</p>
-              <p>Please Come Again</p>
+              <p>{organizationData?.terms_conditions || "Thank You For Shopping With Us. Please Come Again"}</p>
               <div className="mt-4 font-mono">
                 <div className="text-lg">||||| |||| | ||| ||||</div>
                 <div>{Date.now().toString().slice(-6)}</div>

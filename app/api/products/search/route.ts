@@ -1,15 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getConnection } from "@/lib/mysql"
-import type { RowDataPacket,FieldPacket} from "mysql2"
-
-// interface Product {
-//   id: number;
-//   code: string;
-//   name: string;
-//   price: number;
-//   stock: number;
-//   unit_id: number;
-// }
+import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -17,15 +7,29 @@ export async function GET(req: NextRequest) {
   if (!q) return NextResponse.json([], { status: 200 })
 
   try {
-    const conn = await getConnection()
-    const [rows]:[RowDataPacket[],FieldPacket[]] = await conn.query(
-      `SELECT id, code, name, price, stock, unit_id FROM products WHERE code LIKE ? OR name LIKE ? LIMIT 20`,
-      [`%${q}%`, `%${q}%`]
-    )
-    
-    return NextResponse.json(rows)
+    const products = await prisma.products.findMany({
+      where: {
+        OR: [
+          { code: { contains: q, mode: 'insensitive' } },
+          { name: { contains: q, mode: 'insensitive' } }
+        ],
+        status: 'active'
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        price: true,
+        stock: true,
+        warehouse_id: true
+      },
+      take: 20
+    })
+
+    return NextResponse.json(products)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
+    console.error('Error searching products:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

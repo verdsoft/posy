@@ -31,8 +31,8 @@ export default function ExpenseCategoryPage() {
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteExpenseCategoryMutation()
 
   const filteredCategories = useMemo(() => {
-    if (!categories) return []
-    return categories.filter(
+    if (!categories?.data) return []
+    return categories.data.filter(
       (cat) =>
         cat.name?.toLowerCase().includes(search.toLowerCase()) ||
         (cat.description && cat.description.toLowerCase().includes(search.toLowerCase()))
@@ -54,7 +54,7 @@ export default function ExpenseCategoryPage() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await updateCategory({ id: editForm.id, body: { name: editForm.name, description: editForm.description } }).unwrap()
+      await updateCategory({ id: editForm.id, data: { name: editForm.name, description: editForm.description } }).unwrap()
       toast.success("Category updated successfully")
       setIsEditDialogOpen(false)
     } catch (error) {
@@ -249,12 +249,29 @@ export default function ExpenseCategoryPage() {
       
       {selectedCategory && isViewDialogOpen && (
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Category Details</DialogTitle>
                 </DialogHeader>
-                <p>Name: {selectedCategory.name}</p>
-                <p>Description: {selectedCategory.description}</p>
+                <div className="space-y-4 overflow-y-auto flex-1">
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="font-medium">{selectedCategory.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Description</p>
+                    <p className="font-medium">{selectedCategory.description || 'No description'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Status</p>
+                    <p className="font-medium">{selectedCategory.status || 'Active'}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-4 border-t bg-white">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                </div>
             </DialogContent>
         </Dialog>
       )}

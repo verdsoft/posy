@@ -8,7 +8,6 @@ import transfersSlice from "./slices/transfersSlice"
 import hrmSlice from "./slices/hrmSlice"
 import reportsSlice from "./slices/reportsSlice"
 import settingsSlice from "./slices/settingsSlice"
-
 import { productsApi } from "./slices/productsApi"
 import { adjustmentsApi } from "./slices/adjustmentsApi"
 import { quotationsApi } from "./slices/quotationsApi"
@@ -25,6 +24,13 @@ import { hrmApi } from "./slices/hrmApi"
 import { transfersApi } from "./slices/transfersApi"
 import { hrmCatalogApi } from "./slices/hrmCatalogApi"
 import { hrmAttendanceApi } from "./slices/hrmAttendanceApi"
+import { invoicesApi } from "./slices/invoicesApi"
+import { organizationApi } from "./slices/organizationApi"
+import { settingsV2Api } from "./slices/settingsV2Api"
+import { authApi } from "./slices/authSlice"
+import { dashboardApi } from "./slices/dashboardApi"
+import { notificationsApi } from "./slices/notificationsApi"
+import { fdmsApi } from "./slices/fdmsApi"
 
 export const store = configureStore({
   reducer: {
@@ -53,6 +59,13 @@ export const store = configureStore({
     [transfersApi.reducerPath]: transfersApi.reducer,
     [hrmCatalogApi.reducerPath]: hrmCatalogApi.reducer,
     [hrmAttendanceApi.reducerPath]: hrmAttendanceApi.reducer,
+    [invoicesApi.reducerPath]: invoicesApi.reducer,
+    [organizationApi.reducerPath]: organizationApi.reducer,
+    [settingsV2Api.reducerPath]: settingsV2Api.reducer,
+    [authApi.reducerPath]: authApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
+    [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [fdmsApi.reducerPath]: fdmsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -66,12 +79,19 @@ export const store = configureStore({
       expensesApi.middleware,
       returnsApi.middleware,
       suppliersApi.middleware,
-      reportsApi.middleware, // Add the new middleware
-      paymentsApi.middleware
-      , hrmApi.middleware
-      , transfersApi.middleware
-      , hrmCatalogApi.middleware
-      , hrmAttendanceApi.middleware
+      reportsApi.middleware, 
+      paymentsApi.middleware,
+      hrmApi.middleware,
+      transfersApi.middleware,
+      hrmCatalogApi.middleware,
+      hrmAttendanceApi.middleware,
+      invoicesApi.middleware,
+      organizationApi.middleware,
+      settingsV2Api.middleware,
+      authApi.middleware,
+      dashboardApi.middleware,
+      notificationsApi.middleware,
+      fdmsApi.middleware
     ),
 })
 

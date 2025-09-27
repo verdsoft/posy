@@ -1,34 +1,80 @@
 import { NextResponse } from "next/server"
-import { getConnection } from "@/lib/mysql"
-import type { FieldPacket } from "mysql2"
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export async function GET() {
-  const pool = getConnection()
-  let conn
-
   try {
-    conn = await pool.getConnection()
-    const [rows]: [any[], FieldPacket[]] = await conn.query(`
-      SELECT 
-        (SELECT COUNT(*) FROM customers WHERE status = 'active') AS total_customers,
-        (SELECT COUNT(*) FROM suppliers WHERE status = 'active') AS total_suppliers,
-        (SELECT COUNT(*) FROM employees WHERE status = 'active') AS total_employees,
-        (SELECT COUNT(*) FROM products WHERE status = 'active') AS total_products,
+    // Get basic counts and totals
+    const [
+      totalCustomers,
+      totalSuppliers,
+      totalEmployees,
+      totalProducts,
+      totalSales,
+      totalPurchases,
+      totalExpenses,
+      todaysSales,
+      todaysPurchases,
+      todaysExpenses,
+    ] = await Promise.all([
+      prisma.customers.count({ where: { status: 'active' } }),
+      prisma.suppliers.count({ where: { status: 'active' } }),
+      prisma.employees.count({ where: { status: 'active' } }),
+      prisma.products.count({ where: { status: 'active' } }),
 
-        (SELECT IFNULL(SUM(total), 0) FROM sales WHERE status = 'completed') AS total_sales,
-        (SELECT IFNULL(SUM(total), 0) FROM purchases WHERE status = 'received') AS total_purchases,
-        (SELECT IFNULL(SUM(amount), 0) FROM expenses WHERE status = 'approved') AS total_expenses,
+      prisma.sales.aggregate({
+        where: { status: 'completed' },
+        _sum: { total: true }
+      }),
+      prisma.purchases.aggregate({
+        where: { status: 'received' },
+        _sum: { total: true }
+      }),
+      prisma.expenses.aggregate({
+        where: { status: 'approved' },
+        _sum: { amount: true }
+      }),
 
-        (SELECT COUNT(*) FROM sales WHERE DATE(created_at) = CURDATE()) AS todays_sales,
-        (SELECT COUNT(*) FROM purchases WHERE DATE(created_at) = CURDATE()) AS todays_purchases,
-        (SELECT COUNT(*) FROM expenses WHERE DATE(created_at) = CURDATE()) AS todays_expenses
-    `)
+      prisma.sales.count({
+        where: {
+          created_at: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      }),
+      prisma.purchases.count({
+        where: {
+          created_at: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      }),
+      prisma.expenses.count({
+        where: {
+          created_at: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      }),
+    ])
 
-    return NextResponse.json(rows[0])
+    const stats = {
+      total_customers: totalCustomers,
+      total_suppliers: totalSuppliers,
+      total_employees: totalEmployees,
+      total_products: totalProducts,
+      total_sales: totalSales._sum.total || 0,
+      total_purchases: totalPurchases._sum.total || 0,
+      total_expenses: totalExpenses._sum.amount || 0,
+      todays_sales: todaysSales,
+      todays_purchases: todaysPurchases,
+      todays_expenses: todaysExpenses,
+    }
+
+    return NextResponse.json(stats)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
   }
 }

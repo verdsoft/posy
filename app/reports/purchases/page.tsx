@@ -63,7 +63,7 @@ export default function PurchaseReport() {
         const res = await fetch('/api/purchases')
         if (!res.ok) throw new Error("Failed to fetch purchases")
         const data = await res.json()
-        setPurchases(data)
+        setPurchases(data.data || [])
       } catch (error) {
         toast.error("Failed to load purchases")
         console.error(error)
@@ -76,11 +76,11 @@ export default function PurchaseReport() {
   }, [])
 
   // Filter purchases based on search
-  const filteredPurchases = purchases.filter(purchase =>
+  const filteredPurchases = Array.isArray(purchases) ? purchases.filter(purchase =>
     purchase.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   // Handle edit purchase
   const handleEdit = async () => {
@@ -96,9 +96,9 @@ export default function PurchaseReport() {
       if (!res.ok) throw new Error("Failed to update purchase")
       
       const updatedPurchase = await res.json()
-      setPurchases(purchases.map(p => 
+      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.map(p =>
         p.id === selectedPurchase.id ? { ...p, ...updatedPurchase } : p
-      ))
+      ) : [])
       setShowEditModal(false)
       resetForm()
       toast.success("Purchase updated successfully")
@@ -119,7 +119,7 @@ export default function PurchaseReport() {
       
       if (!res.ok) throw new Error("Failed to delete purchase")
       
-      setPurchases(purchases.filter(p => p.id !== selectedPurchase.id))
+      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.filter(p => p.id !== selectedPurchase.id) : [])
       setShowDeleteModal(false)
       toast.success("Purchase deleted successfully")
     } catch (error) {
@@ -184,6 +184,84 @@ export default function PurchaseReport() {
     })
   }
 
+  // Export to PDF
+  const handleExportPDF = async () => {
+    try {
+      // Calculate summary data
+      const statusSummary = Array.from(
+        filteredPurchases.reduce((acc, purchase) => {
+          const status = purchase.status || 'unknown'
+          if (!acc.has(status)) {
+            acc.set(status, { status, count: 0, amount: 0 })
+          }
+          const existing = acc.get(status)!
+          existing.count++
+          existing.amount += Number(purchase.total || 0)
+          return acc
+        }, new Map())
+      ).map(([_, data]) => data)
+
+      const supplierSummary = Array.from(
+        filteredPurchases.reduce((acc, purchase) => {
+          const supplier = purchase.supplier_name || 'Unknown'
+          if (!acc.has(supplier)) {
+            acc.set(supplier, { supplier_name: supplier, count: 0, amount: 0 })
+          }
+          const existing = acc.get(supplier)!
+          existing.count++
+          existing.amount += Number(purchase.total || 0)
+          return acc
+        }, new Map())
+      ).map(([_, data]) => data).slice(0, 10) // Top 10 suppliers
+
+      const reportData = {
+        title: 'Purchase Report',
+        template: 'purchases-report',
+        data: filteredPurchases,
+        dateRange: dateRange,
+        filters: searchTerm ? [{ label: 'Search', value: searchTerm }] : undefined,
+        summary: [
+          { label: 'Total Purchases', value: filteredPurchases.length },
+          { label: 'Total Amount', value: filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.total || 0), 0), isCurrency: true },
+          { label: 'Total Paid', value: filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.paid || 0), 0), isCurrency: true },
+          { label: 'Total Due', value: filteredPurchases.reduce((sum, purchase) => sum + Number(purchase.due || 0), 0), isCurrency: true }
+        ],
+        showSummaryByStatus: true,
+        showSummaryBySupplier: true,
+        statusSummary,
+        supplierSummary
+      }
+
+      const response = await fetch('/api/reports/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reportData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `purchases-report-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast.success('PDF generated successfully')
+    } catch (error) {
+      console.error('PDF generation error:', error)
+      toast.error('Failed to generate PDF')
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -213,7 +291,7 @@ export default function PurchaseReport() {
               <Button variant="outline" className="text-blue-600 bg-transparent">
                 🔍 Filter
               </Button>
-              <Button variant="outline" className="text-green-600 bg-transparent">
+              <Button variant="outline" className="text-green-600 bg-transparent" onClick={handleExportPDF}>
                 📄 PDF
               </Button>
               <Button variant="outline" className="text-red-600 bg-transparent">

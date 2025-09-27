@@ -1,43 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConnection } from '@/lib/mysql';
+import { prisma } from '@/lib/prisma';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 
 export async function GET() {
-  const pool = getConnection();
-  let conn;
   try {
-    conn = await pool.getConnection();
-    const [rows]: any = await conn.query("SELECT * FROM settings WHERE `key` IN ('system_title', 'system_logo')");
-    const settings = rows.reduce((acc: any, row: any) => {
-      acc[row.key] = row.value;
+    const settingsData = await prisma.settings.findMany({
+      where: {
+        key: {
+          in: ['system_title', 'system_logo']
+        }
+      }
+    });
+
+    const settings = settingsData.reduce((acc: any, setting: any) => {
+      acc[setting.key] = setting.value;
       return acc;
     }, {});
+
     return NextResponse.json(settings);
   } catch (error) {
     console.error('Failed to fetch system settings:', error);
     return NextResponse.json({ error: 'Failed to fetch system settings.' }, { status: 500 });
-  } finally {
-    if (conn) conn.release();
   }
 }
 
 export async function POST(req: NextRequest) {
-    const pool = getConnection();
-    let conn;
     try {
         await fs.mkdir(uploadDir, { recursive: true });
         const formData = await req.formData();
 
         const systemTitle = formData.get('system_title') as string;
         const logoFile = formData.get('logo') as File | null;
-        
-        conn = await pool.getConnection();
 
         if (systemTitle) {
-            await conn.query("INSERT INTO settings (`key`, `value`) VALUES ('system_title', ?) ON DUPLICATE KEY UPDATE `value` = ?", [systemTitle, systemTitle]);
+            await prisma.settings.upsert({
+                where: { key: 'system_title' },
+                update: { value: systemTitle },
+                create: { key: 'system_title', value: systemTitle }
+            });
         }
 
         if (logoFile) {
@@ -48,16 +51,18 @@ export async function POST(req: NextRequest) {
 
             await fs.writeFile(filePath, buffer);
             const logoPath = `/uploads/${fileName}`;
-            
-            await conn.query("INSERT INTO settings (`key`, `value`) VALUES ('system_logo', ?) ON DUPLICATE KEY UPDATE `value` = ?", [logoPath, logoPath]);
+
+            await prisma.settings.upsert({
+                where: { key: 'system_logo' },
+                update: { value: logoPath },
+                create: { key: 'system_logo', value: logoPath }
+            });
         }
-        
+
         return NextResponse.json({ success: true, message: "Settings updated successfully" });
 
     } catch (error) {
         console.error('Error processing form:', error);
         return NextResponse.json({ success: false, error: 'Failed to process form' }, { status: 500 });
-    } finally {
-        if (conn) conn.release();
     }
 }

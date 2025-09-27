@@ -1,17 +1,28 @@
 on: push
-name: 🚀 Deploy website on push
+name: 🚀 Deploy Next.js app (SSR)
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Get latest code
+      - name: 🚚 Checkout code
         uses: actions/checkout@v4
 
-      - name: 📂 Sync files
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install dependencies
+        run: npm install --legacy-peer-deps --production=false
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name:  Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ftp.verdsoft.co.zw
           username: bms@bms.verdsoft.co.zw
           password: ${{ secrets.ftp_password }}
-          server-dir: /bms.verdsoft.co.zw/
+          local-dir: ./
+          server-dir: /
