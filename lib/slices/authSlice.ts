@@ -167,5 +167,3 @@ export const {
 export const { setCredentials, logout, setUser, loadFromStorage } = authSlice.actions
 export default authSlice.reducer
 
-// Export the API reducer for store configuration
-export { authApi }
