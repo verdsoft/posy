@@ -24,7 +24,7 @@ import { ViewQuotationDialog } from "./view-quotation/page"
 import { useGetQuotationsQuery, useDeleteQuotationMutation, useGetQuotationItemsQuery, useGetQuotationByIdQuery } from "@/lib/slices/quotationsApi"
 import { Quotation, QuotationItem } from "@/lib/types/quotation"
 import { toast } from "sonner"
-import { useCreateInvoiceMutation } from "@/lib/slices/invoicesApi"
+import { useCreateInvoiceMutation } from "@/lib/slices/invoicesV2Api"
 import { Invoice, InvoiceItem as InvoiceItemType } from "@/lib/types/invoice"
 import {
   AlertDialog,

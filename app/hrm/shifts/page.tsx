@@ -11,7 +11,7 @@ import { Search, Edit, Trash2 } from "lucide-react"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { useGetShiftsQuery, useGetCompaniesQuery, useCreateShiftMutation, useUpdateShiftMutation, useDeleteShiftMutation } from "@/lib/slices/hrmCatalogApi"
+import { useGetShiftsQuery, useGetCompaniesQuery, useCreateShiftMutation, useUpdateShiftMutation, useDeleteShiftMutation } from "@/lib/slices/hrmV2Api"
 
 export default function OfficeShift() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)

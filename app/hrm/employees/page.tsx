@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useGetEmployeesQuery, useCreateEmployeeMutation, useUpdateEmployeeMutation, useDeleteEmployeeMutation } from "@/lib/slices/hrmApi"
+import { useGetEmployeesQuery, useCreateEmployeeMutation, useUpdateEmployeeMutation, useDeleteEmployeeMutation } from "@/lib/slices/hrmV2Api"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,7 @@ import { Search, Filter, FileDown } from "lucide-react"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { useGetCompaniesQuery, useGetDepartmentsQuery, useGetShiftsQuery } from "@/lib/slices/hrmCatalogApi"
+import { useGetCompaniesQuery, useGetDepartmentsQuery, useGetShiftsQuery } from "@/lib/slices/hrmV2Api"
 
 export default function Employees() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)

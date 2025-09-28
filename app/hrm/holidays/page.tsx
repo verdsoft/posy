@@ -11,7 +11,7 @@ import { Search } from "lucide-react"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { useGetHolidaysQuery, useGetCompaniesQuery, useCreateHolidayMutation, useUpdateHolidayMutation, useDeleteHolidayMutation } from "@/lib/slices/hrmCatalogApi"
+import { useGetHolidaysQuery, useGetCompaniesQuery, useCreateHolidayMutation, useUpdateHolidayMutation, useDeleteHolidayMutation } from "@/lib/slices/hrmV2Api"
 
 export default function Holidays() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)

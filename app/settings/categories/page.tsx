@@ -1,44 +1,36 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Edit, Trash2 } from "lucide-react"
-import { fetchCategories } from "@/lib/api"
-import { Category } from "@/lib/types"
+import {
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  type Category
+} from "@/lib/slices/categoriesApi"
+import { toast } from "sonner"
 
 export default function Categories() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ code: "", name: "" })
-  const [editId, setEditId] = useState<string | null>(null)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
 
-  // Fetch categories
-  const loadCategories = async () => {
-    try {
-      setLoading(true)
-      const data = await fetchCategories()
-      setCategories(data)
-    } catch (error) {
-      console.error("Failed to load categories:", error)
-      setCategories([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadCategories()
-  }, [])
+  // RTK Query hooks
+  const { data: categories = [], isLoading: loading, error } = useGetCategoriesQuery()
+  const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
+  const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
+  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation()
 
   // Handle form changes
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,19 +43,13 @@ export default function Categories() {
   // Create category
   const handleCreate = async () => {
     try {
-      const res = await fetch("/api/settings/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      })
-      if (!res.ok) throw new Error("Failed to create category")
-      
-      await loadCategories() // Reload categories after creation
+      await createCategory(form).unwrap()
       setIsCreateOpen(false)
       setForm({ code: "", name: "" })
+      toast.success("Category created successfully")
     } catch (error) {
       console.error("Error creating category:", error)
-      alert("Failed to create category")
+      toast.error("Failed to create category")
     }
   }
 
@@ -80,25 +66,20 @@ export default function Categories() {
   // Update category
   const handleEdit = async () => {
     try {
-      const res = await fetch("/api/settings/categories", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, id: editId }),
-      })
-      if (!res.ok) throw new Error("Failed to update category")
-      
-      await loadCategories() // Reload categories after update
+      if (!editId) return
+      await updateCategory({ id: editId, ...form }).unwrap()
       setIsEditOpen(false)
       setEditId(null)
       setForm({ code: "", name: "" })
+      toast.success("Category updated successfully")
     } catch (error) {
       console.error("Error updating category:", error)
-      alert("Failed to update category")
+      toast.error("Failed to update category")
     }
   }
 
   // Open delete dialog
-  const openDelete = (id: string) => {
+  const openDelete = (id: number) => {
     setDeleteId(id)
     setIsDeleteOpen(true)
   }
@@ -106,25 +87,19 @@ export default function Categories() {
   // Delete category
   const handleDeleteConfirmed = async () => {
     if (!deleteId) return
-    
+
     try {
-      const res = await fetch("/api/settings/categories", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: deleteId }),
-      })
-      if (!res.ok) throw new Error("Failed to delete category")
-      
-      await loadCategories() // Reload categories after deletion
+      await deleteCategory(deleteId).unwrap()
       setIsDeleteOpen(false)
       setDeleteId(null)
+      toast.success("Category deleted successfully")
     } catch (error) {
       console.error("Error deleting category:", error)
-      alert("Failed to delete category")
+      toast.error("Failed to delete category")
     }
   }
 
-  const filteredCategories = categories.filter(
+  const filteredCategories = (Array.isArray(categories) ? categories : []).filter(
     (cat) =>
       cat.code.toLowerCase().includes(search.toLowerCase()) ||
       cat.name.toLowerCase().includes(search.toLowerCase())

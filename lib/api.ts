@@ -1,8 +1,9 @@
 // lib/api.ts
 import { Category, Brand, Unit, Warehouse, Adjustment, PaginatedResponse, AdjustmentItem } from "@/lib/types"
+import { API_URL } from "./api-url"
 
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch("/api/settings/categories")
+  const res = await fetch(`${API_URL}/settings/categories`)
   return res.json()
 }
 

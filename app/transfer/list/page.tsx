@@ -12,7 +12,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import DashboardLayout from "@/components/dashboard-layout"
-import { useGetTransfersQuery, useDeleteTransferMutation } from "@/lib/slices/transfersApi"
+import { useGetTransfersQuery, useDeleteTransferMutation } from "@/lib/slices/invoicesV2Api"
 
 export default function TransferListPage() {
   const [searchTerm, setSearchTerm] = useState("")

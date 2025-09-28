@@ -1,126 +1,195 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getConnection } from "@/lib/mysql"
-import { v4 as uuidv4 } from "uuid"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get("page") || "1", 10)
     const limit = parseInt(searchParams.get("limit") || "10", 10)
     const search = (searchParams.get("search") || "").trim()
     const offset = (page - 1) * limit
 
-    const where = search ? "WHERE reference LIKE ?" : ""
-    const params = search ? [`%${search}%`, limit, offset] : [limit, offset]
+    const whereCondition = search ? {
+      OR: [
+        { reference: { contains: search, mode: 'insensitive' as const } },
+        { warehouses_transfers_from_warehouse_idTowerehouses: { name: { contains: search, mode: 'insensitive' as const } } },
+        { warehouses_transfers_to_warehouse_idTowerehouses: { name: { contains: search, mode: 'insensitive' as const } } }
+      ]
+    } : {}
 
-    const [rows]: any = await conn.query(
-      `SELECT * FROM transfers ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      params
-    )
-
-    const [totalRows]: any = await conn.query(
-      `SELECT COUNT(*) as total FROM transfers ${search ? where : ''}`,
-      search ? [`%${search}%`] : []
-    )
+    const [transfers, total] = await Promise.all([
+      prisma.transfers.findMany({
+        where: whereCondition,
+        include: {
+          warehouses_transfers_from_warehouse_idTowerehouses: {
+            select: { id: true, name: true }
+          },
+          warehouses_transfers_to_warehouse_idTowerehouses: {
+            select: { id: true, name: true }
+          },
+          transfer_items: {
+            include: {
+              products: {
+                select: { id: true, name: true, code: true }
+              }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.transfers.count({
+        where: whereCondition
+      })
+    ])
 
     return NextResponse.json({
-      data: rows,
+      data: transfers,
       pagination: {
-        total: totalRows[0]?.total || 0,
+        total,
         page,
         limit,
-        totalPages: Math.ceil((totalRows[0]?.total || 0) / limit),
+        totalPages: Math.ceil(total / limit),
       },
     })
   } catch (error) {
+    console.error("Error fetching transfers:", error)
     return NextResponse.json({
       data: [],
-      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
-      warning: "Transfers table not available or query failed.",
-    })
-  } finally {
-    if (conn) conn.release()
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 }
+    }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const body = await req.json()
 
-    const id = uuidv4()
-    const reference = body.reference || `TR-${Date.now()}`
-    const from_warehouse_id = body.from_warehouse_id || body.fromWarehouseId
-    const to_warehouse_id = body.to_warehouse_id || body.toWarehouseId
-    const date = body.date
-    const notes = body.notes || null
-    const status = body.status || 'pending'
+    const result = await prisma.$transaction(async (tx) => {
+      // Create transfer
+      const transfer = await tx.transfers.create({
+        data: {
+          reference: body.reference,
+          from_warehouse_id: body.from_warehouse_id,
+          to_warehouse_id: body.to_warehouse_id,
+          date: new Date(body.date),
+          subtotal: parseFloat(body.subtotal || 0),
+          tax_rate: parseFloat(body.tax_rate || 0),
+          tax_amount: parseFloat(body.tax_amount || 0),
+          discount: parseFloat(body.discount || 0),
+          shipping: parseFloat(body.shipping || 0),
+          total: parseFloat(body.total || 0),
+          status: body.status || 'pending',
+          notes: body.notes || null
+        }
+      })
 
-    await conn.query(
-      `INSERT INTO transfers (id, reference, from_warehouse_id, to_warehouse_id, date, status, notes, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, reference, from_warehouse_id, to_warehouse_id, date, status, notes]
-    )
+      // Create transfer items
+      if (body.items && Array.isArray(body.items)) {
+        for (const item of body.items) {
+          await tx.transfer_items.create({
+            data: {
+              transfer_id: transfer.id,
+              product_id: item.product_id,
+              quantity: parseFloat(item.quantity),
+              unit_price: parseFloat(item.unit_price || 0),
+              discount: parseFloat(item.discount || 0),
+              tax: parseFloat(item.tax || 0),
+              subtotal: parseFloat(item.subtotal)
+            }
+          })
+        }
+      }
 
-    const items = Array.isArray(body.items) ? body.items : []
-    for (const item of items) {
-      await conn.query(
-        `INSERT INTO transfer_items (id, transfer_id, product_id, quantity, cost, created_at)
-         VALUES (UUID(), ?, ?, ?, ?, NOW())`,
-        [id, item.product_id, item.quantity || 0, item.cost || 0]
-      )
-    }
+      return transfer
+    })
 
-    return NextResponse.json({ success: true, id, reference })
+    return NextResponse.json({ success: true, data: result })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error creating transfer:", error)
+    return NextResponse.json({ error: "Failed to create transfer" }, { status: 500 })
   }
 }
 
 export async function PUT(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const body = await req.json()
-    const { id } = body
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    await conn.query(
-      `UPDATE transfers SET reference=?, from_warehouse_id=?, to_warehouse_id=?, date=?, status=?, notes=?, updated_at=NOW() WHERE id=?`,
-      [body.reference || null, body.from_warehouse_id || null, body.to_warehouse_id || null, body.date || null, body.status || 'pending', body.notes || null, id]
-    )
-    // For brevity, not updating items here. Can add if needed.
-    return NextResponse.json({ success: true })
+    if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Update transfer
+      const transfer = await tx.transfers.update({
+        where: { id: parseInt(body.id) },
+        data: {
+          reference: body.reference,
+          from_warehouse_id: body.from_warehouse_id,
+          to_warehouse_id: body.to_warehouse_id,
+          date: new Date(body.date),
+          subtotal: parseFloat(body.subtotal || 0),
+          tax_rate: parseFloat(body.tax_rate || 0),
+          tax_amount: parseFloat(body.tax_amount || 0),
+          discount: parseFloat(body.discount || 0),
+          shipping: parseFloat(body.shipping || 0),
+          total: parseFloat(body.total || 0),
+          status: body.status || 'pending',
+          notes: body.notes || null,
+          updated_at: new Date()
+        }
+      })
+
+      // Delete existing items and create new ones
+      if (body.items && Array.isArray(body.items)) {
+        await tx.transfer_items.deleteMany({
+          where: { transfer_id: transfer.id }
+        })
+
+        for (const item of body.items) {
+          await tx.transfer_items.create({
+            data: {
+              transfer_id: transfer.id,
+              product_id: item.product_id,
+              quantity: parseFloat(item.quantity),
+              unit_price: parseFloat(item.unit_price || 0),
+              discount: parseFloat(item.discount || 0),
+              tax: parseFloat(item.tax || 0),
+              subtotal: parseFloat(item.subtotal)
+            }
+          })
+        }
+      }
+
+      return transfer
+    })
+
+    return NextResponse.json({ success: true, data: result })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error updating transfer:", error)
+    return NextResponse.json({ error: "Failed to update transfer" }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    await conn.query(`DELETE FROM transfer_items WHERE transfer_id = ?`, [id])
-    await conn.query(`DELETE FROM transfers WHERE id = ?`, [id])
+
+    await prisma.$transaction(async (tx) => {
+      // Delete transfer items first
+      await tx.transfer_items.deleteMany({
+        where: { transfer_id: parseInt(id) }
+      })
+
+      // Delete transfer
+      await tx.transfers.delete({
+        where: { id: parseInt(id) }
+      })
+    })
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error deleting transfer:", error)
+    return NextResponse.json({ error: "Failed to delete transfer" }, { status: 500 })
   }
 }
-
-

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Search, Trash2 } from "lucide-react"
 import DashboardLayout from "@/components/dashboard-layout"
-import { useCreateTransferMutation } from "@/lib/slices/transfersApi"
+import { useCreateTransferMutation } from "@/lib/slices/invoicesV2Api"
 
 interface TransferItem {
   id: string

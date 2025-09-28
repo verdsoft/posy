@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Loader2, Search, Minus, Plus, X } from "lucide-react"
 import { toast } from "sonner"
 import type React from "react"
-import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation, useGetInvoiceItemsQuery } from '@/lib/slices/invoicesApi'
+import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation, useGetInvoiceItemsQuery } from '@/lib/slices/invoicesV2Api'
 import { useGetProductsQuery } from '@/lib/slices/productsApi'
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetWarehousesQuery } from "@/lib/slices/settingsApi"

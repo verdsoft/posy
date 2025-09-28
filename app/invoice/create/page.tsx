@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from "uuid"
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetWarehousesQuery } from "@/lib/slices/settingsApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
-import { useCreateInvoiceMutation } from "@/lib/slices/invoicesApi"
+import { useCreateInvoiceMutation } from "@/lib/slices/invoicesV2Api"
 import { useSubmitFiscalInvoiceMutation, useGetFDMSStatusQuery } from "@/lib/slices/fdmsApi"
 
 import { InvoiceItem } from "@/lib/types/prisma"

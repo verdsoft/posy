@@ -1,99 +1,114 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getConnection } from "@/lib/mysql"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get("page") || "1", 10)
     const limit = parseInt(searchParams.get("limit") || "10", 10)
-    const search = (searchParams.get("search") || "").trim()
+    const employee_id = searchParams.get("employee_id")
+    const status = searchParams.get("status")
     const offset = (page - 1) * limit
 
-    const where = search ? "WHERE employee_name LIKE ? OR leave_type LIKE ?" : ""
-    const params = search ? [`%${search}%`, `%${search}%`, limit, offset] : [limit, offset]
+    let whereCondition: any = {}
+    if (employee_id) whereCondition.employee_id = parseInt(employee_id)
+    if (status) whereCondition.status = status
 
-    const [rows]: any = await conn.query(
-      `SELECT * FROM leave_requests ${where} ORDER BY start_date DESC LIMIT ? OFFSET ?`,
-      params
-    )
-
-    const [totalRows]: any = await conn.query(
-      `SELECT COUNT(*) as total FROM leave_requests ${search ? where : ''}`,
-      search ? [`%${search}%`, `%${search}%`] : []
-    )
+    const [leaveRequests, total] = await Promise.all([
+      prisma.leave_requests.findMany({
+        where: whereCondition,
+        include: {
+          employees: {
+            select: { id: true, name: true, employee_id: true }
+          },
+          leave_types: {
+            select: { id: true, name: true }
+          }
+        },
+        orderBy: { created_at: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.leave_requests.count({
+        where: whereCondition
+      })
+    ])
 
     return NextResponse.json({
-      data: rows,
+      data: leaveRequests,
       pagination: {
-        total: totalRows[0]?.total || 0,
+        total,
         page,
         limit,
-        totalPages: Math.ceil((totalRows[0]?.total || 0) / limit),
+        totalPages: Math.ceil(total / limit),
       },
     })
-  } catch {
+  } catch (error) {
+    console.error("Error fetching leave requests:", error)
     return NextResponse.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } })
-  } finally {
-    if (conn) conn.release()
   }
 }
 
 export async function POST(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const body = await req.json()
-    await conn.query(
-      `INSERT INTO leave_requests (employee_name, company_id, department_id, leave_type, start_date, finish_date, reason, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [body.employee_name || null, body.company_id || null, body.department_id || null, body.leave_type || null, body.start_date || null, body.finish_date || null, body.reason || null, body.status || 'pending']
-    )
-    return NextResponse.json({ success: true })
-  } catch {
-    return NextResponse.json({ error: 'failed' }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+
+    const leaveRequest = await prisma.leave_requests.create({
+      data: {
+        employee_id: body.employee_id,
+        leave_type_id: body.leave_type_id,
+        start_date: new Date(body.start_date),
+        end_date: new Date(body.end_date),
+        reason: body.reason || null,
+        status: body.status || 'pending'
+      }
+    })
+
+    return NextResponse.json({ success: true, data: leaveRequest })
+  } catch (error: any) {
+    console.error("Error creating leave request:", error)
+    return NextResponse.json({ error: "Failed to create leave request" }, { status: 500 })
   }
 }
 
 export async function PUT(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const body = await req.json()
     if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    await conn.query(
-      `UPDATE leave_requests SET employee_name=?, company_id=?, department_id=?, leave_type=?, start_date=?, finish_date=?, reason=?, status=?, updated_at=NOW() WHERE id=?`,
-      [body.employee_name || null, body.company_id || null, body.department_id || null, body.leave_type || null, body.start_date || null, body.finish_date || null, body.reason || null, body.status || 'pending', body.id]
-    )
-    return NextResponse.json({ success: true })
-  } catch {
-    return NextResponse.json({ error: 'failed' }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+
+    const leaveRequest = await prisma.leave_requests.update({
+      where: { id: parseInt(body.id) },
+      data: {
+        employee_id: body.employee_id,
+        leave_type_id: body.leave_type_id,
+        start_date: new Date(body.start_date),
+        end_date: new Date(body.end_date),
+        reason: body.reason || null,
+        status: body.status || 'pending',
+        updated_at: new Date()
+      }
+    })
+
+    return NextResponse.json({ success: true, data: leaveRequest })
+  } catch (error: any) {
+    console.error("Error updating leave request:", error)
+    return NextResponse.json({ error: "Failed to update leave request" }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  const pool = getConnection()
-  let conn: any
   try {
-    conn = await pool.getConnection()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    await conn.query(`DELETE FROM leave_requests WHERE id = ?`, [id])
+
+    await prisma.leave_requests.delete({
+      where: { id: parseInt(id) }
+    })
+
     return NextResponse.json({ success: true })
-  } catch {
-    return NextResponse.json({ error: 'failed' }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+  } catch (error: any) {
+    console.error("Error deleting leave request:", error)
+    return NextResponse.json({ error: "Failed to delete leave request" }, { status: 500 })
   }
 }
-
-

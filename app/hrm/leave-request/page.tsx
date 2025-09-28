@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Search } from "lucide-react"
-import { useGetLeaveRequestsQuery, useGetCompaniesQuery, useGetDepartmentsQuery, useCreateLeaveRequestMutation, useUpdateLeaveRequestMutation, useDeleteLeaveRequestMutation, useGetLeaveTypesQuery } from "@/lib/slices/hrmCatalogApi"
-import { useGetEmployeesQuery } from "@/lib/slices/hrmApi"
+import { useGetLeaveRequestsQuery, useGetCompaniesQuery, useGetDepartmentsQuery, useCreateLeaveRequestMutation, useUpdateLeaveRequestMutation, useDeleteLeaveRequestMutation, useGetLeaveTypesQuery, useGetEmployeesQuery } from "@/lib/slices/hrmV2Api"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
