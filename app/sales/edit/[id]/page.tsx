@@ -10,6 +10,10 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
 import type React from "react"
+import { useGetSaleByIdQuery, useUpdateSaleMutation } from "@/lib/slices/salesApi"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
+import { useGetProductsQuery } from "@/lib/slices/productsApi"
 
 interface Product {
     id: string
@@ -34,10 +38,7 @@ export default function EditSale() {
     const router = useRouter()
     const { id } = useParams()
     const [cartItems, setCartItems] = useState<CartItem[]>([])
-    const [products, setProducts] = useState<Product[]>([])
     const [searchTerm, setSearchTerm] = useState("")
-    const [customers, setCustomers] = useState<{ id: string, name: string }[]>([])
-    const [warehouses, setWarehouses] = useState<{ id: string, name: string }[]>([])
     const [selectedCustomer, setSelectedCustomer] = useState("")
     const [selectedWarehouse, setSelectedWarehouse] = useState("")
     const [taxRate, setTaxRate] = useState(0)
@@ -46,83 +47,46 @@ export default function EditSale() {
     const [status, setStatus] = useState("completed")
     const [paymentStatus, setPaymentStatus] = useState("pending")
     const [notes, setNotes] = useState("")
-    const [isLoading, setIsLoading] = useState(false)
-    const [saleData, setSaleData] = useState<any>(null)
 
-    // Fetch sale data and initial data
+    // RTK Query hooks
+    const { data: saleData, isLoading: isSaleLoading } = useGetSaleByIdQuery(id as string, { skip: !id })
+    const { data: customersData } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
+    const { data: warehousesData } = useGetWarehousesQuery()
+    const { data: productsData } = useGetProductsQuery({ page: 1, limit: 100, search: searchTerm })
+    const [updateSale, { isLoading: isUpdating }] = useUpdateSaleMutation()
+
+    const customers = customersData?.data || []
+    const warehouses = warehousesData || []
+    const products = productsData?.data || []
+
+    // Load sale data when it's fetched
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setIsLoading(true)
+        if (saleData) {
+            setSelectedCustomer(String(saleData.customer_id || ""))
+            setSelectedWarehouse(String(saleData.warehouse_id || ""))
+            setTaxRate(Number(saleData.tax_rate) || 0)
+            setDiscount(Number(saleData.discount) || 0)
+            setShipping(Number(saleData.shipping) || 0)
+            setStatus(saleData.status || "completed")
+            setPaymentStatus(saleData.payment_status || "pending")
+            setNotes(saleData.notes || "")
 
-                // Fetch sale data
-                const saleRes = await fetch(`/api/pos/sales/${id}`)
-                if (!saleRes.ok) throw new Error("Failed to fetch sale")
-                const saleData = await saleRes.json()
-                setSaleData(saleData)
-
-                // Set form values from sale data
-                setSelectedCustomer(saleData.customer_id)
-                setSelectedWarehouse(saleData.warehouse_id)
-                setTaxRate(saleData.tax_rate)
-                setDiscount(saleData.discount)
-                setShipping(saleData.shipping)
-                setStatus(saleData.status)
-                setPaymentStatus(saleData.payment_status)
-                setNotes(saleData.notes || "")
-
-                // Convert sale items to cart items
-                const items = saleData.items.map((item: any) => ({
-                    id: item.id,
-                    product_id: item.product_id,
-                    name: item.product_name || `Product ${item.product_id}`,
-                    price: item.price,
-                    quantity: item.quantity,
-                    discount: item.discount || 0,
-                    tax: item.tax || 0,
-                    subtotal: item.subtotal
+            // Convert sale items to cart items
+            if (saleData.sale_items && Array.isArray(saleData.sale_items)) {
+                const items = saleData.sale_items.map((item: any) => ({
+                    id: String(item.id),
+                    product_id: String(item.product_id),
+                    name: item.products?.name || `Product ${item.product_id}`,
+                    price: Number(item.price) || 0,
+                    quantity: Number(item.quantity) || 0,
+                    discount: Number(item.discount) || 0,
+                    tax: Number(item.tax) || 0,
+                    subtotal: Number(item.subtotal) || 0
                 }))
                 setCartItems(items)
-
-                // Fetch customers
-                const customersRes = await fetch('/api/customers')
-                const customersData = await customersRes.json()
-                setCustomers(customersData)
-
-                // Fetch warehouses
-                const warehousesRes = await fetch('/api/settings/warehouses')
-                const warehousesData = await warehousesRes.json()
-                setWarehouses(warehousesData)
-
-            } catch (error) {
-                toast.error("Failed to load data")
-                console.error(error)
-            } finally {
-                setIsLoading(false)
             }
         }
-
-        fetchData()
-    }, [id])
-
-    // Search products
-    useEffect(() => {
-        const searchProducts = async () => {
-            if (searchTerm.trim()) {
-                try {
-                    const res = await fetch(`/api/products?search=${searchTerm}`)
-                    const data = await res.json()
-                    setProducts(data)
-                } catch (error) {
-                    toast.error("Failed to search products")
-                    console.error(error)
-                }
-            }
-        }
-
-        const timer = setTimeout(searchProducts, 300)
-        return () => clearTimeout(timer)
-    }, [searchTerm])
+    }, [saleData])
 
     // Calculate totals
     const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
@@ -205,55 +169,40 @@ export default function EditSale() {
             return
         }
 
-        setIsLoading(true)
-
         try {
-            const saleData = {
-                customer_id: selectedCustomer,
-                warehouse_id: selectedWarehouse,
+            const updateData = {
+                customer_id: Number(selectedCustomer),
+                warehouse_id: Number(selectedWarehouse),
                 date: new Date().toISOString().slice(0, 10),
-                subtotal,
-                tax_rate: taxRate,
-                tax_amount: taxAmount,
-                discount,
-                shipping,
-                total,
+                subtotal: Number(subtotal),
+                tax_rate: Number(taxRate),
+                tax_amount: Number(taxAmount),
+                discount: Number(discount),
+                shipping: Number(shipping),
+                total: Number(total),
                 status,
                 payment_status: paymentStatus,
                 notes,
                 items: cartItems.map(item => ({
-                    product_id: item.product_id,
-                    quantity: item.quantity,
-                    price: item.price,
-                    discount: item.discount,
-                    tax: item.tax,
-                    subtotal: item.subtotal
+                    product_id: Number(item.product_id),
+                    quantity: Number(item.quantity),
+                    price: Number(item.price),
+                    discount: Number(item.discount),
+                    tax: Number(item.tax),
+                    subtotal: Number(item.subtotal)
                 }))
             }
 
-            const response = await fetch(`/api/pos/sales/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(saleData)
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to update sale')
-            }
-
+            await updateSale({ id: id as string, data: updateData }).unwrap()
             toast.success("Sale updated successfully")
             router.push('/sales/list')
         } catch (error) {
             toast.error("Failed to update sale")
             console.error(error)
-        } finally {
-            setIsLoading(false)
         }
     }
 
-    if (isLoading && !saleData) {
+    if (isSaleLoading) {
         return (
             <DashboardLayout>
                 <div className="p-6">
@@ -477,7 +426,7 @@ export default function EditSale() {
                                         />
 
                                         <Button
-                                            className="bg-purple-600 hover:bg-purple-700"
+                                            className="bg-[#1a237e] hover:bg-purple-700"
                                             onClick={handleSubmit}
                                             disabled={isLoading}
                                         >

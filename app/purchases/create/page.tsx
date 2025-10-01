@@ -13,6 +13,10 @@ import { useForm, Controller } from "react-hook-form"
 import { toast } from "sonner"
 
 import type React from "react"
+import { useCreatePurchaseMutation } from "@/lib/slices/purchasesApi"
+import { useGetSuppliersQuery } from "@/lib/slices/suppliersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
+import { useGetProductsQuery } from "@/lib/slices/productsApi"
 
 interface Product {
   id: string
@@ -49,14 +53,19 @@ interface FormValues {
 }
 
 export default function CreatePurchase() {
-  
+
   const [searchQuery, setSearchQuery] = useState("")
-  // const [setProducts] = useState<Product[]>([])
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [selectedProducts, setSelectedProducts] = useState<PurchaseItem[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [suppliers, setSuppliers] = useState<{id: number, name: string}[]>([])
-  const [warehouses, setWarehouses] = useState<{id: number, name: string}[]>([])
+
+  // RTK Query hooks
+  const { data: suppliersData } = useGetSuppliersQuery({ page: 1, limit: 1000, search: "" })
+  const { data: warehousesData } = useGetWarehousesQuery()
+  const { data: productsData } = useGetProductsQuery({ page: 1, limit: 10, search: searchQuery }, { skip: searchQuery.length < 2 })
+  const [createPurchase, { isLoading }] = useCreatePurchaseMutation()
+
+  const suppliers = suppliersData?.data || []
+  const warehouses = warehousesData || []
+  const filteredProducts = productsData?.data?.slice(0, 5) || []
 
   const {
     register,
@@ -80,60 +89,6 @@ export default function CreatePurchase() {
     }
   })
 
-  // Fetch suppliers and warehouses on mount
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setIsLoading(true)
-        const [suppliersRes, warehousesRes] = await Promise.all([
-          fetch('/api/v2/suppliers?limit=1000'),
-          fetch('/api/settings/warehouses')
-        ])
-        
-        if (!suppliersRes.ok || !warehousesRes.ok) {
-          throw new Error('Failed to fetch initial data')
-        }
-        
-        const suppliersData = await suppliersRes.json()
-        const warehousesData = await warehousesRes.json()
-
-        setSuppliers(suppliersData.data || suppliersData)
-        setWarehouses(warehousesData.data || warehousesData)
-      } catch (error) {
-        toast.error("Failed to load initial data")
-        console.error(error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchInitialData()
-    
-  }, [])
-
-  // Search products with debounce
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.length < 2) {
-        setFilteredProducts([])
-        return
-      }
-
-      try {
-        const res = await fetch(`/api/products?search=${searchQuery}&limit=10`)
-        if (!res.ok) throw new Error('Failed to search products')
-        const data = await res.json()
-        // Handle both paginated and direct array responses
-        const products = data.data || data
-        setFilteredProducts(products.slice(0, 5))
-      } catch (error) {
-        toast.error("Failed to search products")
-        console.error(error)
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [searchQuery])
 
   // Calculate totals
   const subtotal = selectedProducts.reduce((sum, item) => sum + item.subtotal, 0)
@@ -146,29 +101,28 @@ export default function CreatePurchase() {
   
 
   // Add product to purchase items
-  const addProduct = (product: Product) => {
-    const existingItem = selectedProducts.find(item => item.product_id === product.id)
-    
+  const addProduct = (product: any) => {
+    const existingItem = selectedProducts.find(item => item.product_id === String(product.id))
+
     if (existingItem) {
       updateItemQuantity(existingItem.id, existingItem.quantity + 1)
     } else {
       const newItem: PurchaseItem = {
         id: Date.now().toString(),
-        product_id: product.id,
+        product_id: String(product.id),
         product_name: product.name,
         product_code: product.code,
         quantity: 1,
-        unit_cost: product.cost,
+        unit_cost: Number(product.cost) || 0,
         discount: 0,
         tax: 0,
-        subtotal: product.cost
-        
+        subtotal: Number(product.cost) || 0
+
       }
       setSelectedProducts([...selectedProducts, newItem])
     }
-    
+
     setSearchQuery("")
-    setFilteredProducts([])
   }
 
   // Remove item from purchase
@@ -216,51 +170,37 @@ export default function CreatePurchase() {
     }
 
     const user_id = localStorage.getItem('UserId');
-    if (!user_id) throw new Error("User authentication required");
+    if (!user_id) {
+      toast.error("User authentication required")
+      return
+    }
 
-    setIsLoading(true)
-    
     try {
       const payload = {
         ...data,
-        supplier_id: parseInt(data.supplier_id),
-        warehouse_id: parseInt(data.warehouse_id),
-        subtotal,
-        tax_amount,
-        total,
+        supplier_id: Number(data.supplier_id),
+        warehouse_id: Number(data.warehouse_id),
+        subtotal: Number(subtotal),
+        tax_amount: Number(tax_amount),
+        total: Number(total),
         paid: 0,
-        due: total,
+        due: Number(total),
         items: selectedProducts.map(item => ({
-          product_id: parseInt(item.product_id),
-          quantity: item.quantity,
-          unit_cost: item.unit_cost,
-          discount: item.discount,
-          tax: item.tax,
-          subtotal: item.subtotal
+          product_id: Number(item.product_id),
+          quantity: Number(item.quantity),
+          unit_cost: Number(item.unit_cost),
+          discount: Number(item.discount),
+          tax: Number(item.tax),
+          subtotal: Number(item.subtotal)
         })),
-        created_by: parseInt(user_id),
+        created_by: Number(user_id),
       }
 
-      const response = await fetch('/api/v2/purchases', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create purchase')
-      }
-
-      // const result = await response.json()
+      await createPurchase(payload).unwrap()
       toast.success("Purchase created successfully")
-      // router.push(`/dashboard/purchases/${result.id}`)
     } catch (error) {
       toast.error("Failed to create purchase")
       console.error(error)
-    } finally {
-      setIsLoading(false)
     }
   }
 

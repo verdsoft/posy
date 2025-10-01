@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,19 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Edit, Trash2 } from "lucide-react"
-
-type Unit = {
-  id: number
-  name: string
-  short_name: string
-  base_unit: string
-  operator: string
-  operation_value: number
-}
+import type React from "react"
+import {
+  useGetUnitsQuery,
+  useCreateUnitMutation,
+  useUpdateUnitMutation,
+  useDeleteUnitMutation,
+  type Unit
+} from "@/lib/slices/unitsApi"
+import { toast } from "sonner"
 
 export default function Units() {
-  const [units, setUnits] = useState<Unit[]>([])
-  const [loading, setLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [form, setForm] = useState({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
@@ -29,17 +27,11 @@ export default function Units() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-  const fetchUnits = async () => {
-    setLoading(true)
-    const res = await fetch("/api/settings/units")
-    const data = await res.json()
-    setUnits(data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchUnits()
-  }, [])
+  // RTK Query hooks
+  const { data: units = [], isLoading: loading } = useGetUnitsQuery()
+  const [createUnit, { isLoading: isCreating }] = useCreateUnitMutation()
+  const [updateUnit, { isLoading: isUpdating }] = useUpdateUnitMutation()
+  const [deleteUnit, { isLoading: isDeleting }] = useDeleteUnitMutation()
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value, type } = e.target
@@ -69,20 +61,17 @@ export default function Units() {
       operation_value: Number(form.operation_value) || 1,
     }
     if (!payload.name || !payload.short_name || !payload.operator) {
-      alert("Please fill all required fields.")
+      toast.error("Please fill all required fields.")
       return
     }
-    const res = await fetch("/api/settings/units", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    if (res.ok) {
-      await fetchUnits()
+    try {
+      await createUnit(payload).unwrap()
       setIsCreateOpen(false)
       setForm({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
-    } else {
-      alert("Failed to create unit")
+      toast.success("Unit created successfully")
+    } catch (error) {
+      console.error("Error creating unit:", error)
+      toast.error("Failed to create unit")
     }
   }
 
@@ -99,6 +88,7 @@ export default function Units() {
   }
 
   const handleEdit = async () => {
+    if (!editId) return
     const payload = {
       id: editId,
       name: safeTrim(form.name),
@@ -108,21 +98,18 @@ export default function Units() {
       operation_value: Number(form.operation_value) || 1,
     }
     if (!payload.name || !payload.short_name || !payload.operator) {
-      alert("Please fill all required fields.")
+      toast.error("Please fill all required fields.")
       return
     }
-    const res = await fetch("/api/settings/units", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    if (res.ok) {
-      await fetchUnits()
+    try {
+      await updateUnit(payload).unwrap()
       setIsEditOpen(false)
       setEditId(null)
       setForm({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
-    } else {
-      alert("Failed to update unit")
+      toast.success("Unit updated successfully")
+    } catch (error) {
+      console.error("Error updating unit:", error)
+      toast.error("Failed to update unit")
     }
   }
 
@@ -133,21 +120,18 @@ export default function Units() {
 
   const handleDeleteConfirmed = async () => {
     if (!deleteId) return
-    const res = await fetch("/api/settings/units", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: deleteId }),
-    })
-    if (res.ok) {
-      await fetchUnits()
+    try {
+      await deleteUnit(deleteId).unwrap()
       setIsDeleteOpen(false)
       setDeleteId(null)
-    } else {
-      alert("Failed to delete unit")
+      toast.success("Unit deleted successfully")
+    } catch (error) {
+      console.error("Error deleting unit:", error)
+      toast.error("Failed to delete unit")
     }
   }
 
-  const filteredUnits = units.filter(
+  const filteredUnits = (Array.isArray(units) ? units : []).filter(
     (u) =>
       (u.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (u.short_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -181,7 +165,7 @@ export default function Units() {
               </div>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -229,7 +213,7 @@ export default function Units() {
                       <Input id="operation_value" type="number" value={form.operation_value} onChange={handleFormChange} placeholder="Enter operation value" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleCreate}
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate}
                         disabled={!safeTrim(form.name) || !safeTrim(form.short_name) || !safeTrim(form.operator) || !form.operation_value}>
                         Submit
                       </Button>
@@ -287,7 +271,7 @@ export default function Units() {
                       <Input id="operation_value" type="number" value={form.operation_value} onChange={handleFormChange} placeholder="Enter operation value" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleEdit}
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit}
                         disabled={!safeTrim(form.name) || !safeTrim(form.short_name) || !safeTrim(form.operator) || !form.operation_value}>
                         Save
                       </Button>

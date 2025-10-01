@@ -1,37 +1,36 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Edit, Trash2 } from "lucide-react"
-
-
+import type React from "react"
+import {
+  useGetWarehousesQuery,
+  useCreateWarehouseMutation,
+  useUpdateWarehouseMutation,
+  useDeleteWarehouseMutation,
+  type Warehouse
+} from "@/lib/slices/warehousesApi"
+import { toast } from "sonner"
 
 export default function Warehouses() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [warehouses, setWarehouses] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
   const [editId, setEditId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-
-  const fetchWarehouses = async () => {
-    setLoading(true)
-    const res = await fetch("/api/settings/warehouses")
-    const data = await res.json()
-    setWarehouses(data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchWarehouses()
-  }, [])
-
+  // RTK Query hooks
+  const { data: warehouses = [], isLoading: loading } = useGetWarehousesQuery()
+  const [createWarehouse, { isLoading: isCreating }] = useCreateWarehouseMutation()
+  const [updateWarehouse, { isLoading: isUpdating }] = useUpdateWarehouseMutation()
+  const [deleteWarehouse, { isLoading: isDeleting }] = useDeleteWarehouseMutation()
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({
@@ -40,10 +39,6 @@ export default function Warehouses() {
     }))
   }
 
-
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-
   const openDelete = (id: number) => {
     setDeleteId(id)
     setIsDeleteOpen(true)
@@ -51,36 +46,30 @@ export default function Warehouses() {
 
   const handleDeleteConfirmed = async () => {
     if (!deleteId) return
-    const res = await fetch("/api/settings/warehouses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: deleteId }),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
+    try {
+      await deleteWarehouse(deleteId).unwrap()
       setIsDeleteOpen(false)
       setDeleteId(null)
-    } else {
-      alert("Failed to delete warehouse")
+      toast.success("Warehouse deleted successfully")
+    } catch (error) {
+      console.error("Error deleting warehouse:", error)
+      toast.error("Failed to delete warehouse")
     }
   }
 
   const handleCreate = async () => {
-    const res = await fetch("/api/settings/warehouses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
+    try {
+      await createWarehouse(form).unwrap()
       setIsCreateOpen(false)
       setForm({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
-    } else {
-      alert("Failed to create warehouse")
+      toast.success("Warehouse created successfully")
+    } catch (error) {
+      console.error("Error creating warehouse:", error)
+      toast.error("Failed to create warehouse")
     }
   }
 
-  const openEdit = (warehouse: any) => {
+  const openEdit = (warehouse: Warehouse) => {
     setEditId(warehouse.id)
     setForm({
       name: warehouse.name ?? "",
@@ -94,37 +83,20 @@ export default function Warehouses() {
   }
 
   const handleEdit = async () => {
-    const res = await fetch("/api/settings/warehouses", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, id: editId }),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
+    try {
+      if (!editId) return
+      await updateWarehouse({ id: editId, ...form }).unwrap()
       setIsEditOpen(false)
       setEditId(null)
       setForm({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
-    } else {
-      alert("Failed to update warehouse")
+      toast.success("Warehouse updated successfully")
+    } catch (error) {
+      console.error("Error updating warehouse:", error)
+      toast.error("Failed to update warehouse")
     }
   }
 
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this warehouse?")) return
-    const res = await fetch("/api/settings/warehouses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
-    } else {
-      alert("Failed to delete warehouse")
-    }
-  }
-
-  const filteredWarehouses = warehouses.filter(
+  const filteredWarehouses = (Array.isArray(warehouses) ? warehouses : []).filter(
   (w) =>
     w.name.toLowerCase().includes(search.toLowerCase()) ||
     w.phone.toLowerCase().includes(search.toLowerCase()) ||
@@ -193,7 +165,7 @@ export default function Warehouses() {
                       <Input id="zip_code" value={form.zip_code} onChange={handleFormChange} placeholder="Enter zip code" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleCreate}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate}>
                         Submit
                       </Button>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
@@ -234,7 +206,7 @@ export default function Warehouses() {
                       <Input id="zip_code" value={form.zip_code} onChange={handleFormChange} placeholder="Enter zip code" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleEdit}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit}>
                         Save
                       </Button>
                       <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">

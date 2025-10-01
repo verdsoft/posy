@@ -1,23 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Edit, Trash2 } from "lucide-react"
-
-type Currency = {
-  id: number
-  code: string
-  name: string
-  symbol: string
-}
+import type React from "react"
+import {
+  useGetCurrenciesQuery,
+  useCreateCurrencyMutation,
+  useUpdateCurrencyMutation,
+  useDeleteCurrencyMutation,
+  type Currency
+} from "@/lib/slices/currenciesApi"
+import { toast } from "sonner"
 
 export default function Currencies() {
-  const [currencies, setCurrencies] = useState<Currency[]>([])
-  const [loading, setLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [form, setForm] = useState({ code: "", name: "", symbol: "" })
@@ -26,17 +26,11 @@ export default function Currencies() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-  const fetchCurrencies = async () => {
-    setLoading(true)
-    const res = await fetch("/api/settings/currencies")
-    const data = await res.json()
-    setCurrencies(data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchCurrencies()
-  }, [])
+  // RTK Query hooks
+  const { data: currencies = [], isLoading: loading } = useGetCurrenciesQuery()
+  const [createCurrency, { isLoading: isCreating }] = useCreateCurrencyMutation()
+  const [updateCurrency, { isLoading: isUpdating }] = useUpdateCurrencyMutation()
+  const [deleteCurrency, { isLoading: isDeleting }] = useDeleteCurrencyMutation()
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({
@@ -46,17 +40,14 @@ export default function Currencies() {
   }
 
   const handleCreate = async () => {
-    const res = await fetch("/api/settings/currencies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    })
-    if (res.ok) {
-      await fetchCurrencies()
+    try {
+      await createCurrency(form).unwrap()
       setIsCreateOpen(false)
       setForm({ code: "", name: "", symbol: "" })
-    } else {
-      alert("Failed to create currency")
+      toast.success("Currency created successfully")
+    } catch (error) {
+      console.error("Error creating currency:", error)
+      toast.error("Failed to create currency")
     }
   }
 
@@ -67,18 +58,16 @@ export default function Currencies() {
   }
 
   const handleEdit = async () => {
-    const res = await fetch("/api/settings/currencies", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, id: editId }),
-    })
-    if (res.ok) {
-      await fetchCurrencies()
+    try {
+      if (!editId) return
+      await updateCurrency({ id: editId, ...form }).unwrap()
       setIsEditOpen(false)
       setEditId(null)
       setForm({ code: "", name: "", symbol: "" })
-    } else {
-      alert("Failed to update currency")
+      toast.success("Currency updated successfully")
+    } catch (error) {
+      console.error("Error updating currency:", error)
+      toast.error("Failed to update currency")
     }
   }
 
@@ -89,21 +78,18 @@ export default function Currencies() {
 
   const handleDeleteConfirmed = async () => {
     if (!deleteId) return
-    const res = await fetch("/api/settings/currencies", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: deleteId }),
-    })
-    if (res.ok) {
-      await fetchCurrencies()
+    try {
+      await deleteCurrency(deleteId).unwrap()
       setIsDeleteOpen(false)
       setDeleteId(null)
-    } else {
-      alert("Failed to delete currency")
+      toast.success("Currency deleted successfully")
+    } catch (error) {
+      console.error("Error deleting currency:", error)
+      toast.error("Failed to delete currency")
     }
   }
 
-  const filteredCurrencies = currencies.filter(
+  const filteredCurrencies = (Array.isArray(currencies) ? currencies : []).filter(
     (c) =>
       c.code.toLowerCase().includes(search.toLowerCase()) ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -137,7 +123,7 @@ export default function Currencies() {
               </div>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -157,7 +143,7 @@ export default function Currencies() {
                       <Input id="symbol" value={form.symbol} onChange={handleFormChange} placeholder="Enter currency symbol" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim()}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim()}>
                         Submit
                       </Button>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
@@ -186,7 +172,7 @@ export default function Currencies() {
                       <Input id="symbol" value={form.symbol} onChange={handleFormChange} placeholder="Enter currency symbol" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim()}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim()}>
                         Save
                       </Button>
                       <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">

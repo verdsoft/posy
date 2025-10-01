@@ -10,6 +10,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type React from "react"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
+import { useGetSalesQuery, useGetSaleByIdQuery } from "@/lib/slices/salesApi"
+import { useCreateSalesReturnMutation } from "@/lib/slices/returnsApi"
 
 interface Product {
   id: string
@@ -35,11 +39,7 @@ interface CartItem {
 export default function CreateSalesReturn() {
   const router = useRouter()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [customers, setCustomers] = useState<{id: string, name: string}[]>([])
-  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
-  const [sales, setSales] = useState<{id: string, reference: string}[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState("")
   const [selectedWarehouse, setSelectedWarehouse] = useState("")
   const [selectedSale, setSelectedSale] = useState("")
@@ -48,56 +48,38 @@ export default function CreateSalesReturn() {
   const [shipping, setShipping] = useState(0)
   const [status, setStatus] = useState("completed")
   const [notes, setNotes] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [saleItems, setSaleItems] = useState<any[]>([])
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Fetch customers
-        const customersRes = await fetch('/api/customers')
-        const customersData = await customersRes.json()
-        setCustomers(customersData)
-        
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        const warehousesData = await warehousesRes.json()
-        setWarehouses(warehousesData)
-        
-        // Fetch recent sales
-        const salesRes = await fetch('/api/pos/sales')
-        const salesData = await salesRes.json()
-        console.log('Sales data:', salesData) // Debug log
-        setSales(salesData || [])
-        
-        if (!salesData || salesData.length === 0) {
-          toast.error("No sales found. Please create some sales first.")
-        }
-        
-      } catch (error) {
-        toast.error("Failed to load initial data")
-        console.error(error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchData()
-  }, [])
+  // RTK Query hooks
+  const { data: customersData } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
+  const { data: warehousesData } = useGetWarehousesQuery()
+  const { data: salesData, isLoading: isSalesLoading } = useGetSalesQuery({ page: 1, limit: 100, search: "" })
+  const { data: saleData } = useGetSaleByIdQuery(selectedSale, { skip: !selectedSale })
+  const [createSalesReturn, { isLoading }] = useCreateSalesReturnMutation()
 
-  // Fetch sale items when sale is selected
+  const customers = customersData?.data || []
+  const warehouses = warehousesData || []
+  const sales = salesData?.data || []
+
+  // Load sale items when sale is selected
   useEffect(() => {
-    const fetchSaleItems = async () => {
-      if (!selectedSale) return
-      
-      try {
-        const res = await fetch(`/api/pos/sales/${selectedSale}`)
-        if (!res.ok) {
-          if (res.status === 404) {
-            toast.error("Sale not found")
+    if (saleData) {
+      const items = saleData.sale_items || []
+      setSaleItems(items)
+      setSelectedCustomer(String(saleData.customer_id || ""))
+      setSelectedWarehouse(String(saleData.warehouse_id || ""))
+      setTaxRate(Number(saleData.tax_rate) || 0)
+      setDiscount(Number(saleData.discount) || 0)
+      setShipping(Number(saleData.shipping) || 0)
+    }
+  }, [saleData])
+
+  // Show warning if no sales available
+  useEffect(() => {
+    if (!isSalesLoading && sales.length === 0) {
+      toast.error("No sales found. Please create some sales first.")
+    }
+  }, [sales, isSalesLoading])
             return
           }
           throw new Error("Failed to fetch sale items")
@@ -263,25 +245,12 @@ export default function CreateSalesReturn() {
         }))
       }
 
-      const response = await fetch('/api/sales-returns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(returnData)
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create sales return')
-      }
-
+      await createSalesReturn(returnData).unwrap()
       toast.success("Sales return created successfully")
       router.push('/sales-return/list')
     } catch (error) {
       toast.error("Failed to create sales return")
       console.error(error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -566,7 +535,7 @@ export default function CreateSalesReturn() {
               </div>
 
               <Button 
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-[#1a237e] hover:bg-purple-700"
                 onClick={handleSubmit}
                 disabled={isLoading}
               >

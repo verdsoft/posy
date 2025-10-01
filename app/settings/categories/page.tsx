@@ -104,6 +104,7 @@ export default function Categories() {
       cat.code.toLowerCase().includes(search.toLowerCase()) ||
       cat.name.toLowerCase().includes(search.toLowerCase())
   )
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -133,7 +134,7 @@ export default function Categories() {
               {/* Create Dialog */}
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-blue-700 hover:bg-purple-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-blue-700">Create</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -149,7 +150,7 @@ export default function Categories() {
                       <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter category name" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleCreate}>Submit</Button>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate}>Submit</Button>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">Cancel</Button>
                     </div>
                   </div>
@@ -172,7 +173,7 @@ export default function Categories() {
                       <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter category name" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleEdit}>Save</Button>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit}>Save</Button>
                       <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">Cancel</Button>
                     </div>
                   </div>

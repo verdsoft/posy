@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Image as ImageIcon, Upload, X } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { toast } from "sonner"
 
 import { useGetProductByIdQuery, useUpdateProductMutation } from '@/lib/slices/productsApi'
 
@@ -45,7 +45,6 @@ export default function EditProduct() {
   const [newImage, setNewImage] = useState<File | null>(null)
   const router = useRouter()
   const params = useParams()
-  const { toast } = useToast()
   const productId = params.id as string
   const fileInputRef = useRef<HTMLInputElement>(null)
 

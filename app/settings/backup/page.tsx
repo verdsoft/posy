@@ -65,7 +65,7 @@ export default function BackupDatabase() {
                   Click the download icon to save a backup to your computer. Backups are stored in <code>public/storage/backups/</code>.
                 </AlertDescription>
               </Alert>
-              <Button onClick={handleCreateBackup} className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap" disabled={isCreating}>
+              <Button onClick={handleCreateBackup} className="bg-[#1a237e] hover:bg-purple-700 whitespace-nowrap" disabled={isCreating}>
                 {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isCreating ? 'Generating...' : 'Generate Backup'}
                 </Button>

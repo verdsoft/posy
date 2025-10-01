@@ -11,6 +11,9 @@ import { Search, Plus, Minus, X } from "lucide-react"
 import { searchProducts } from "@/lib/api"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+import { useCreateQuotationMutation } from "@/lib/slices/quotationsApi"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
 
 interface Product {
   id: string
@@ -42,9 +45,7 @@ interface QuotationItem {
 }
 
 export default function CreateQuotation() {
-  
-  const [ loading,setLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [customerId, setCustomerId] = useState("")
   const [warehouseId, setWarehouseId] = useState("")
@@ -57,8 +58,15 @@ export default function CreateQuotation() {
   const [orderTax, setOrderTax] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [shipping, setShipping] = useState<number>(0);
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+
+  // RTK Query hooks
+  const { data: customersData, isLoading: isLoadingCustomers } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
+  const { data: warehousesData, isLoading: isLoadingWarehouses } = useGetWarehousesQuery()
+  const [createQuotation, { isLoading: isSubmitting }] = useCreateQuotationMutation()
+
+  const customers = customersData?.data || []
+  const warehouses = warehousesData || []
+  const loading = isLoadingCustomers || isLoadingWarehouses
 
 
   const subtotal = useMemo(() => {
@@ -91,34 +99,6 @@ export default function CreateQuotation() {
     );
   };
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-
-        // Fetch customers
-        const customersRes = await fetch('/api/customers')
-        if (customersRes.ok) {
-          const customersData = await customersRes.json()
-          setCustomers(customersData.data || [])
-        }
-
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        if (warehousesRes.ok) {
-          const warehousesData = await warehousesRes.json()
-          setWarehouses(warehousesData)
-        }
-      } catch (error) {
-        console.error("Failed to load data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
 
 
 
@@ -241,34 +221,12 @@ const handleSubmit = async () => {
       }))
     };
 
-    console.log("Formatted Payload:", payload);
-
-    const response = await fetch('/api/quotations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    console.log("5 - After fetch, before response check");
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log("API Error Response:", errorText);
-      
-    }
- toast.success("Quotation created successfully");
-    console.log("6 - After response check");
-  
-    console.log("API", response);
-   
-
+    await createQuotation(payload).unwrap()
+    toast.success("Quotation created successfully")
   } catch (error: unknown) {
     console.error("Full Error:", error);
     const message = error instanceof Error ? error.message : "An unexpected error occurred";
     toast.error(message);
-  } finally {
-    setIsSubmitting(false);
-    console.log("7 - Final cleanup");
   }
 };
 

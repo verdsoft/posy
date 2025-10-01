@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useGetPurchaseReturnsQuery, useUpdatePurchaseReturnMutation, useDeletePurchaseReturnMutation } from "@/lib/slices/returnsApi"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -38,14 +39,19 @@ interface PurchaseReturn {
 }
 
 export default function PurchaseReturnsReport() {
-  const [purchaseReturns, setPurchaseReturns] = useState<PurchaseReturn[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedReturn, setSelectedReturn] = useState<PurchaseReturn | null>(null)
+
+  // RTK Query hooks
+  const { data: purchaseReturnsData, isLoading: loading } = useGetPurchaseReturnsQuery({ page: 1, limit: 10000, search: searchTerm })
+  const [updatePurchaseReturn] = useUpdatePurchaseReturnMutation()
+  const [deletePurchaseReturn] = useDeletePurchaseReturnMutation()
+
+  const purchaseReturns = purchaseReturnsData?.data || []
   const [formData, setFormData] = useState({
     reference: "",
     supplier_id: "",
@@ -64,25 +70,6 @@ export default function PurchaseReturnsReport() {
     notes: ""
   })
 
-  // Fetch purchase returns
-  useEffect(() => {
-    const fetchPurchaseReturns = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/purchases-return')
-        if (!res.ok) throw new Error("Failed to fetch purchase returns")
-        const data = await res.json()
-        setPurchaseReturns(data.data || [])
-      } catch (error) {
-        toast.error("Failed to load purchase returns")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchPurchaseReturns()
-  }, [])
 
   // Filter purchase returns based on search
   const filteredReturns = Array.isArray(purchaseReturns) ? purchaseReturns.filter(returnItem =>
@@ -94,20 +81,9 @@ export default function PurchaseReturnsReport() {
   // Handle edit purchase return
   const handleEdit = async () => {
     if (!selectedReturn) return
-    
+
     try {
-      const res = await fetch('/api/purchases-return', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id: selectedReturn.id })
-      })
-      
-      if (!res.ok) throw new Error("Failed to update purchase return")
-      
-      const updatedReturn = await res.json()
-      setPurchaseReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.map(r =>
-        r.id === selectedReturn.id ? { ...r, ...updatedReturn } : r
-      ) : [])
+      await updatePurchaseReturn({ id: selectedReturn.id, data: formData }).unwrap()
       setShowEditModal(false)
       resetForm()
       toast.success("Purchase return updated successfully")
@@ -120,15 +96,9 @@ export default function PurchaseReturnsReport() {
   // Handle delete purchase return
   const handleDelete = async () => {
     if (!selectedReturn) return
-    
+
     try {
-      const res = await fetch(`/api/purchases-return?id=${selectedReturn.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete purchase return")
-      
-      setPurchaseReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.filter(r => r.id !== selectedReturn.id) : [])
+      await deletePurchaseReturn(selectedReturn.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Purchase return deleted successfully")
     } catch (error) {
@@ -585,7 +555,7 @@ export default function PurchaseReturnsReport() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={!formData.reference || !formData.date}
                 >

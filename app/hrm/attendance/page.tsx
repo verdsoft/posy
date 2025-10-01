@@ -39,7 +39,7 @@ export default function Attendances() {
               </div>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -71,7 +71,7 @@ export default function Attendances() {
                       <Input id="timeOut" type="time" />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1">Submit</Button>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1">Submit</Button>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
                         Cancel
                       </Button>

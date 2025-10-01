@@ -27,8 +27,18 @@ export const categoriesApi = createApi({
   endpoints: (builder) => ({
     getCategories: builder.query<Category[], void>({
       query: () => '',
+      transformResponse: (response: Category[] | { data?: Category[] }) => {
+        // Handle both array and object with data property
+        if (Array.isArray(response)) {
+          return response
+        }
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+          return response.data
+        }
+        return []
+      },
       providesTags: (result) =>
-        result
+        result && Array.isArray(result)
           ? [
               ...result.map(({ id }) => ({ type: 'Category' as const, id })),
               { type: 'Category', id: 'LIST' },
@@ -42,6 +52,16 @@ export const categoriesApi = createApi({
         body: categoryData,
       }),
       invalidatesTags: [{ type: 'Category', id: 'LIST' }],
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(
+            categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
+              draft.push(data)
+            })
+          )
+        } catch {}
+      },
     }),
     updateCategory: builder.mutation<Category, UpdateCategoryInput>({
       query: ({ id, ...categoryData }) => ({
@@ -53,6 +73,19 @@ export const categoriesApi = createApi({
         { type: 'Category', id },
         { type: 'Category', id: 'LIST' },
       ],
+      async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(
+            categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
+              const index = draft.findIndex((cat) => cat.id === id)
+              if (index !== -1) {
+                draft[index] = data
+              }
+            })
+          )
+        } catch {}
+      },
     }),
     deleteCategory: builder.mutation<void, number>({
       query: (id) => ({
@@ -64,6 +97,21 @@ export const categoriesApi = createApi({
         { type: 'Category', id },
         { type: 'Category', id: 'LIST' },
       ],
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
+            const index = draft.findIndex((cat) => cat.id === id)
+            if (index !== -1) {
+              draft.splice(index, 1)
+            }
+          })
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patchResult.undo()
+        }
+      },
     }),
   }),
 })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +32,7 @@ export default function SupplierList() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedSupplier, setSelectedSupplier] = useState<any>(null)
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -42,10 +42,10 @@ export default function SupplierList() {
     address: ""
   })
 
-  const { data, isLoading, isError, refetch } = useGetSuppliersQuery({ page, limit, search: searchTerm })
+  const { data, isLoading, isError } = useGetSuppliersQuery({ page, limit, search: searchTerm })
+  const [createSupplier, { isLoading: isCreating }] = useCreateSupplierMutation()
   const [updateSupplier, { isLoading: isUpdating }] = useUpdateSupplierMutation()
   const [deleteSupplier, { isLoading: isDeleting }] = useDeleteSupplierMutation()
-  const [createSupplier, { isLoading: isCreating }] = useCreateSupplierMutation()
 
   const suppliers = data?.data || [];
   const pagination = data?.pagination;
@@ -56,7 +56,6 @@ export default function SupplierList() {
       setShowCreateModal(false)
       resetForm()
       toast.success("Supplier created successfully")
-      refetch()
     } catch (error) {
       toast.error("Failed to create supplier")
       console.error(error)
@@ -67,11 +66,10 @@ export default function SupplierList() {
     if (!selectedSupplier) return
     
     try {
-      await updateSupplier({ id: selectedSupplier.id, ...formData }).unwrap()
+      await updateSupplier({ id: selectedSupplier.id, data: formData }).unwrap()
       setShowEditModal(false)
       resetForm()
       toast.success("Supplier updated successfully")
-      refetch()
     } catch (error) {
       toast.error("Failed to update supplier")
       console.error(error)
@@ -92,7 +90,7 @@ export default function SupplierList() {
     }
   }
 
-  const openEditModal = (supplier: any) => {
+  const openEditModal = (supplier: Supplier) => {
     setSelectedSupplier(supplier)
     setFormData({
       name: supplier.name || "",
@@ -105,12 +103,12 @@ export default function SupplierList() {
     setShowEditModal(true)
   }
 
-  const openViewModal = (supplier: any) => {
+  const openViewModal = (supplier: Supplier) => {
     setSelectedSupplier(supplier)
     setShowViewModal(true)
   }
 
-  const openDeleteModal = (supplier: any) => {
+  const openDeleteModal = (supplier: Supplier) => {
     setSelectedSupplier(supplier)
     setShowDeleteModal(true)
   }
@@ -210,7 +208,7 @@ export default function SupplierList() {
                 EXCEL
               </Button>
               <Button 
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-[#1a237e] hover:bg-purple-700"
                 onClick={() => setShowCreateModal(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,17 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Search, Edit, Trash2, ImageIcon } from "lucide-react"
-
-type Brand = {
-  id: number
-  name: string
-  description: string
-  image?: string | null // Not handled in this demo
-}
+import type React from "react"
+import {
+  useGetBrandsQuery,
+  useCreateBrandMutation,
+  useUpdateBrandMutation,
+  useDeleteBrandMutation,
+  type Brand
+} from "@/lib/slices/brandsApi"
+import { toast } from "sonner"
 
 export default function Brands() {
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [loading, setLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [form, setForm] = useState({ name: "", description: "" })
@@ -27,17 +27,11 @@ export default function Brands() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-  const fetchBrands = async () => {
-    setLoading(true)
-    const res = await fetch("/api/settings/brands")
-    const data = await res.json()
-    setBrands(data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchBrands()
-  }, [])
+  // RTK Query hooks
+  const { data: brands = [], isLoading: loading } = useGetBrandsQuery()
+  const [createBrand, { isLoading: isCreating }] = useCreateBrandMutation()
+  const [updateBrand, { isLoading: isUpdating }] = useUpdateBrandMutation()
+  const [deleteBrand, { isLoading: isDeleting }] = useDeleteBrandMutation()
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({
@@ -47,17 +41,14 @@ export default function Brands() {
   }
 
   const handleCreate = async () => {
-    const res = await fetch("/api/settings/brands", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    })
-    if (res.ok) {
-      await fetchBrands()
+    try {
+      await createBrand(form).unwrap()
       setIsCreateOpen(false)
       setForm({ name: "", description: "" })
-    } else {
-      alert("Failed to create brand")
+      toast.success("Brand created successfully")
+    } catch (error) {
+      console.error("Error creating brand:", error)
+      toast.error("Failed to create brand")
     }
   }
 
@@ -68,18 +59,16 @@ export default function Brands() {
   }
 
   const handleEdit = async () => {
-    const res = await fetch("/api/settings/brands", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, id: editId }),
-    })
-    if (res.ok) {
-      await fetchBrands()
+    try {
+      if (!editId) return
+      await updateBrand({ id: editId, ...form }).unwrap()
       setIsEditOpen(false)
       setEditId(null)
       setForm({ name: "", description: "" })
-    } else {
-      alert("Failed to update brand")
+      toast.success("Brand updated successfully")
+    } catch (error) {
+      console.error("Error updating brand:", error)
+      toast.error("Failed to update brand")
     }
   }
 
@@ -90,21 +79,18 @@ export default function Brands() {
 
   const handleDeleteConfirmed = async () => {
     if (!deleteId) return
-    const res = await fetch("/api/settings/brands", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: deleteId }),
-    })
-    if (res.ok) {
-      await fetchBrands()
+    try {
+      await deleteBrand(deleteId).unwrap()
       setIsDeleteOpen(false)
       setDeleteId(null)
-    } else {
-      alert("Failed to delete brand")
+      toast.success("Brand deleted successfully")
+    } catch (error) {
+      console.error("Error deleting brand:", error)
+      toast.error("Failed to delete brand")
     }
   }
 
-  const filteredBrands = brands.filter(
+  const filteredBrands = (Array.isArray(brands) ? brands : []).filter(
     (b) =>
       b.name.toLowerCase().includes(search.toLowerCase()) ||
       b.description.toLowerCase().includes(search.toLowerCase())
@@ -137,7 +123,7 @@ export default function Brands() {
               </div>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -153,7 +139,7 @@ export default function Brands() {
                       <Textarea id="description" value={form.description} onChange={handleFormChange} placeholder="Enter brand description" rows={3} />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.name.trim()}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.name.trim()}>
                         Submit
                       </Button>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
@@ -178,7 +164,7 @@ export default function Brands() {
                       <Textarea id="description" value={form.description} onChange={handleFormChange} placeholder="Enter brand description" rows={3} />
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.name.trim()}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.name.trim()}>
                         Save
                       </Button>
                       <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">

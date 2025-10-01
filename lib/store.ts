@@ -32,6 +32,10 @@ import { dashboardApi } from "./slices/dashboardApi"
 import { notificationsApi } from "./slices/notificationsApi"
 import { fdmsApi } from "./slices/fdmsApi"
 import { categoriesApi } from "./slices/categoriesApi"
+import { brandsApi } from "./slices/brandsApi"
+import { currenciesApi } from "./slices/currenciesApi"
+import { unitsApi } from "./slices/unitsApi"
+import { warehousesApi } from "./slices/warehousesApi"
 import { hrmV2Api } from "./slices/hrmV2Api"
 import { invoicesV2Api } from "./slices/invoicesV2Api"
 
@@ -70,6 +74,10 @@ export const store = configureStore({
     [notificationsApi.reducerPath]: notificationsApi.reducer,
     [fdmsApi.reducerPath]: fdmsApi.reducer,
     [categoriesApi.reducerPath]: categoriesApi.reducer,
+    [brandsApi.reducerPath]: brandsApi.reducer,
+    [currenciesApi.reducerPath]: currenciesApi.reducer,
+    [unitsApi.reducerPath]: unitsApi.reducer,
+    [warehousesApi.reducerPath]: warehousesApi.reducer,
     [hrmV2Api.reducerPath]: hrmV2Api.reducer,
     [invoicesV2Api.reducerPath]: invoicesV2Api.reducer,
   },
@@ -99,6 +107,10 @@ export const store = configureStore({
       notificationsApi.middleware,
       fdmsApi.middleware,
       categoriesApi.middleware,
+      brandsApi.middleware,
+      currenciesApi.middleware,
+      unitsApi.middleware,
+      warehousesApi.middleware,
       hrmV2Api.middleware,
       invoicesV2Api.middleware
     ),

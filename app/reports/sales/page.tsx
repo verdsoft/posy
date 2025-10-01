@@ -585,7 +585,7 @@ export default function SaleReport() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={!formData.reference || !formData.date}
                 >

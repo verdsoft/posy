@@ -396,7 +396,7 @@ export default function CreateTransferPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+            <Button type="submit" className="bg-[#1a237e] hover:bg-purple-700" disabled={isLoading}>
               {isLoading ? 'Submitting...' : 'Submit'}
             </Button>
           </div>

@@ -14,6 +14,8 @@ import type React from "react"
 import { useForm, Controller } from "react-hook-form"
 import { useCreateSaleMutation } from "@/lib/slices/salesApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
 
 interface Product {
   id: string
@@ -51,9 +53,6 @@ export default function CreateSale() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [customers, setCustomers] = useState<{id: string, name: string}[]>([])
-  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
-
   const {
     register,
     handleSubmit,
@@ -77,29 +76,12 @@ export default function CreateSale() {
   // RTK Query hooks
   const [createSale, { isLoading: isCreating }] = useCreateSaleMutation()
   const { data: productsResponse, isLoading: isProductsLoading } = useGetProductsQuery({ page: 1, limit: 1000 })
-  const products = productsResponse?.data || []
+  const { data: customersResponse } = useGetCustomersQuery({ page: 1, limit: 1000 })
+  const { data: warehousesData } = useGetWarehousesQuery()
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch customers
-        const customersRes = await fetch('/api/customers')
-        const customersData = await customersRes.json()
-        setCustomers(customersData.data || [])
-        
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        const warehousesData = await warehousesRes.json()
-        setWarehouses(warehousesData)
-      } catch (error) {
-        toast.error("Failed to load initial data")
-        console.error(error)
-      }
-    }
-    
-    fetchData()
-  }, [])
+  const products = productsResponse?.data || []
+  const customers = customersResponse?.data || []
+  const warehouses = warehousesData || []
 
   // Filter products based on search query
   const filteredProducts = searchQuery.length > 0 

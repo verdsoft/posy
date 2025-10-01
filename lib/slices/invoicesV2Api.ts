@@ -112,6 +112,14 @@ export const invoicesV2Api = createApi({
             ]
           : [{ type: 'Invoice', id: 'LIST' }],
     }),
+    getInvoiceById: builder.query<Invoice, string>({
+      query: (id) => `/invoices/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Invoice', id }],
+    }),
+    getInvoiceItems: builder.query<InvoiceItem[], string>({
+      query: (id) => `/invoices/${id}/items`,
+      providesTags: (result, error, id) => [{ type: 'Invoice', id }],
+    }),
     createInvoice: builder.mutation<{ success: boolean; data: Invoice }, Omit<Invoice, 'id'> & { items: Omit<InvoiceItem, 'id' | 'invoice_id'>[] }>({
       query: (invoiceData) => ({
         url: '/invoices',
@@ -194,6 +202,8 @@ export const invoicesV2Api = createApi({
 export const {
   // Invoices
   useGetInvoicesQuery,
+  useGetInvoiceByIdQuery,
+  useGetInvoiceItemsQuery,
   useCreateInvoiceMutation,
   useUpdateInvoiceMutation,
   useDeleteInvoiceMutation,

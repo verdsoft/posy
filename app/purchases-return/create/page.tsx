@@ -10,6 +10,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type React from "react"
+import { useGetSuppliersQuery } from "@/lib/slices/suppliersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
+import { useGetPurchasesQuery, useGetPurchaseByIdQuery } from "@/lib/slices/purchasesApi"
+import { useCreatePurchaseReturnMutation } from "@/lib/slices/returnsApi"
 
 interface Product {
   id: string
@@ -35,11 +39,7 @@ interface CartItem {
 export default function CreatePurchaseReturn() {
   const router = useRouter()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [suppliers, setSuppliers] = useState<{id: string, name: string}[]>([])
-  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
-  const [purchases, setPurchases] = useState<{id: string, reference: string}[]>([])
   const [selectedSupplier, setSelectedSupplier] = useState("")
   const [selectedWarehouse, setSelectedWarehouse] = useState("")
   const [selectedPurchase, setSelectedPurchase] = useState("")
@@ -48,56 +48,38 @@ export default function CreatePurchaseReturn() {
   const [shipping, setShipping] = useState(0)
   const [status, setStatus] = useState("completed")
   const [notes, setNotes] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [purchaseItems, setPurchaseItems] = useState<any[]>([])
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Fetch suppliers
-        const suppliersRes = await fetch('/api/v2/suppliers')
-        const suppliersData = await suppliersRes.json()
-        setSuppliers(suppliersData.data || [])
-        
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        const warehousesData = await warehousesRes.json()
-        setWarehouses(warehousesData)
-        
-        // Fetch recent purchases
-        const purchasesRes = await fetch('/api/purchases')
-        const purchasesData = await purchasesRes.json()
-        console.log('Purchases data:', purchasesData) // Debug log
-        setPurchases(purchasesData.data || [])
-        
-        if (!purchasesData.data || purchasesData.data.length === 0) {
-          toast.error("No purchases found. Please create some purchases first.")
-        }
-        
-      } catch (error) {
-        toast.error("Failed to load initial data")
-        console.error(error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchData()
-  }, [])
+  // RTK Query hooks
+  const { data: suppliersData } = useGetSuppliersQuery({ page: 1, limit: 1000, search: "" })
+  const { data: warehousesData } = useGetWarehousesQuery()
+  const { data: purchasesData, isLoading: isPurchasesLoading } = useGetPurchasesQuery({ page: 1, limit: 100, search: "" })
+  const { data: purchaseData } = useGetPurchaseByIdQuery(selectedPurchase, { skip: !selectedPurchase })
+  const [createPurchaseReturn, { isLoading }] = useCreatePurchaseReturnMutation()
 
-  // Fetch purchase items when purchase is selected
+  const suppliers = suppliersData?.data || []
+  const warehouses = warehousesData || []
+  const purchases = purchasesData?.data || []
+
+  // Load purchase items when purchase is selected
   useEffect(() => {
-    const fetchPurchaseItems = async () => {
-      if (!selectedPurchase) return
-      
-      try {
-        const res = await fetch(`/api/purchases/${selectedPurchase}`)
-        if (!res.ok) {
-          if (res.status === 404) {
-            toast.error("Purchase not found")
+    if (purchaseData) {
+      const items = purchaseData.purchase_items || []
+      setPurchaseItems(items)
+      setSelectedSupplier(String(purchaseData.supplier_id || ""))
+      setSelectedWarehouse(String(purchaseData.warehouse_id || ""))
+      setTaxRate(Number(purchaseData.tax_rate) || 0)
+      setDiscount(Number(purchaseData.discount) || 0)
+      setShipping(Number(purchaseData.shipping) || 0)
+    }
+  }, [purchaseData])
+
+  // Show warning if no purchases available
+  useEffect(() => {
+    if (!isPurchasesLoading && purchases.length === 0) {
+      toast.error("No purchases found. Please create some purchases first.")
+    }
+  }, [purchases, isPurchasesLoading])
             return
           }
           throw new Error("Failed to fetch purchase items")
@@ -263,25 +245,12 @@ export default function CreatePurchaseReturn() {
         }))
       }
 
-      const response = await fetch('/api/purchases-return', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(returnData)
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create purchase return')
-      }
-
+      await createPurchaseReturn(returnData).unwrap()
       toast.success("Purchase return created successfully")
       router.push('/purchases-return/list')
     } catch (error) {
       toast.error("Failed to create purchase return")
       console.error(error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -566,7 +535,7 @@ export default function CreatePurchaseReturn() {
               </div>
 
               <Button 
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-[#1a237e] hover:bg-purple-700"
                 onClick={handleSubmit}
                 disabled={isLoading}
               >

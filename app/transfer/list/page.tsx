@@ -107,7 +107,7 @@ export default function TransferListPage() {
                   EXCEL
                 </Button>
                 <Link href="/transfer/create">
-                  <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Button className="bg-[#1a237e] hover:bg-purple-700">
                     <Plus className="h-4 w-4 mr-2" />
                     Create
                   </Button>

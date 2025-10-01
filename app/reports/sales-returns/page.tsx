@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useGetSalesReturnsQuery, useUpdateSalesReturnMutation, useDeleteSalesReturnMutation } from "@/lib/slices/returnsApi"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -38,14 +39,19 @@ interface SalesReturn {
 }
 
 export default function SalesReturnsReport() {
-  const [salesReturns, setSalesReturns] = useState<SalesReturn[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedReturn, setSelectedReturn] = useState<SalesReturn | null>(null)
+
+  // RTK Query hooks
+  const { data: salesReturnsData, isLoading: loading } = useGetSalesReturnsQuery({ page: 1, limit: 10000, search: searchTerm })
+  const [updateSalesReturn] = useUpdateSalesReturnMutation()
+  const [deleteSalesReturn] = useDeleteSalesReturnMutation()
+
+  const salesReturns = salesReturnsData?.data || []
   const [formData, setFormData] = useState({
     reference: "",
     customer_id: "",
@@ -64,25 +70,6 @@ export default function SalesReturnsReport() {
     notes: ""
   })
 
-  // Fetch sales returns
-  useEffect(() => {
-    const fetchSalesReturns = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/sales-returns')
-        if (!res.ok) throw new Error("Failed to fetch sales returns")
-        const data = await res.json()
-        setSalesReturns(data.data || [])
-      } catch (error) {
-        toast.error("Failed to load sales returns")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchSalesReturns()
-  }, [])
 
   // Filter sales returns based on search
   const filteredReturns = Array.isArray(salesReturns) ? salesReturns.filter(returnItem =>
@@ -94,20 +81,9 @@ export default function SalesReturnsReport() {
   // Handle edit sales return
   const handleEdit = async () => {
     if (!selectedReturn) return
-    
+
     try {
-      const res = await fetch('/api/sales-returns', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id: selectedReturn.id })
-      })
-      
-      if (!res.ok) throw new Error("Failed to update sales return")
-      
-      const updatedReturn = await res.json()
-      setSalesReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.map(r =>
-        r.id === selectedReturn.id ? { ...r, ...updatedReturn } : r
-      ) : [])
+      await updateSalesReturn({ id: selectedReturn.id, data: formData }).unwrap()
       setShowEditModal(false)
       resetForm()
       toast.success("Sales return updated successfully")
@@ -120,15 +96,9 @@ export default function SalesReturnsReport() {
   // Handle delete sales return
   const handleDelete = async () => {
     if (!selectedReturn) return
-    
+
     try {
-      const res = await fetch(`/api/sales-returns?id=${selectedReturn.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete sales return")
-      
-      setSalesReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.filter(r => r.id !== selectedReturn.id) : [])
+      await deleteSalesReturn(selectedReturn.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Sales return deleted successfully")
     } catch (error) {
@@ -585,7 +555,7 @@ export default function SalesReturnsReport() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={!formData.reference || !formData.date}
                 >

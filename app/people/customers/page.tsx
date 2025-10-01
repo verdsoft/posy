@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ export default function CustomerList() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -39,7 +39,7 @@ export default function CustomerList() {
     address: ""
   })
 
-  const { data, isLoading, isError, refetch } = useGetCustomersQuery({ page, limit, search: searchTerm })
+  const { data, isLoading, isError } = useGetCustomersQuery({ page, limit, search: searchTerm })
   const [createCustomer, { isLoading: isCreating }] = useCreateCustomerMutation()
   const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation()
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation()
@@ -53,7 +53,6 @@ export default function CustomerList() {
       setShowCreateModal(false)
       resetForm()
       toast.success("Customer created successfully")
-      refetch()
     } catch (error) {
       toast.error("Failed to create customer")
       console.error(error)
@@ -68,7 +67,6 @@ export default function CustomerList() {
       setShowEditModal(false)
       resetForm()
       toast.success("Customer updated successfully")
-      refetch()
     } catch (error) {
       toast.error("Failed to update customer")
       console.error(error)
@@ -82,14 +80,13 @@ export default function CustomerList() {
       await deleteCustomer(selectedCustomer.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Customer deleted successfully")
-      refetch()
     } catch (error) {
       toast.error("Failed to delete customer")
       console.error(error)
     }
   }
 
-  const openEditModal = (customer: any) => {
+  const openEditModal = (customer: Customer) => {
     setSelectedCustomer(customer)
     setFormData({
       name: customer.name || "",
@@ -102,12 +99,12 @@ export default function CustomerList() {
     setShowEditModal(true)
   }
 
-  const openViewModal = (customer: any) => {
+  const openViewModal = (customer: Customer) => {
     setSelectedCustomer(customer)
     setShowViewModal(true)
   }
 
-  const openDeleteModal = (customer: any) => {
+  const openDeleteModal = (customer: Customer) => {
     setSelectedCustomer(customer)
     setShowDeleteModal(true)
   }
@@ -207,7 +204,7 @@ export default function CustomerList() {
                 EXCEL
               </Button>
               <Button 
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-[#1a237e] hover:bg-purple-700"
                 onClick={() => setShowCreateModal(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -404,7 +401,7 @@ export default function CustomerList() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleCreate}
                   disabled={isCreating || !formData.name || !formData.email}
                 >
@@ -478,7 +475,7 @@ export default function CustomerList() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={isUpdating || !formData.name || !formData.email}
                 >
