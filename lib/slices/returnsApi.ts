@@ -3,7 +3,7 @@ import { PurchaseReturn, PaginatedPurchaseReturnsResponse, SalesReturn, Paginate
 
 export const returnsApi = createApi({
   reducerPath: "returnsApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2" }),
   tagTypes: ["SalesReturn", "PurchaseReturn"],
   endpoints: (builder) => ({
     // Sales Return endpoints
@@ -35,7 +35,7 @@ export const returnsApi = createApi({
 
     // Purchase Return endpoints
     getPurchaseReturns: builder.query<PaginatedPurchaseReturnsResponse, { page: number; limit: number; search: string }>({
-    query: ({ page, limit, search }) => `/purchases-return?page=${page}&limit=${limit}&search=${search}`,
+    query: ({ page, limit, search }) => `/purchases-returns?page=${page}&limit=${limit}&search=${search}`,
     providesTags: (result) =>
         result
             ? [
@@ -46,7 +46,7 @@ export const returnsApi = createApi({
 }),
     createPurchaseReturn: builder.mutation<PurchaseReturn, Partial<PurchaseReturn>>({
       query: (body) => ({
-        url: "purchases-return",
+        url: "purchases-returns",
         method: "POST",
         body,
       }),
@@ -54,7 +54,7 @@ export const returnsApi = createApi({
     }),
     deletePurchaseReturn: builder.mutation<void, string>({
       query: (id) => ({
-        url: `purchases-return?id=${id}`,
+        url: `purchases-returns?id=${id}`,
         method: "DELETE",
       }),
       invalidatesTags: (result, error, id) => [{ type: 'PurchaseReturn', id }],

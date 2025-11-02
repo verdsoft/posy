@@ -22,7 +22,7 @@ export interface UpdateCategoryInput {
 
 export const categoriesApi = createApi({
   reducerPath: 'categoriesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}/settings/categories` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2/settings/categories" }),
   tagTypes: ['Category'],
   endpoints: (builder) => ({
     getCategories: builder.query<Category[], void>({

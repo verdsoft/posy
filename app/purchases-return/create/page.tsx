@@ -49,13 +49,15 @@ export default function CreatePurchaseReturn() {
   const [status, setStatus] = useState("completed")
   const [notes, setNotes] = useState("")
   const [purchaseItems, setPurchaseItems] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([]) // Added missing state
+  const [isLoading, setIsLoading] = useState(false) // Added missing state
 
   // RTK Query hooks
   const { data: suppliersData } = useGetSuppliersQuery({ page: 1, limit: 1000, search: "" })
   const { data: warehousesData } = useGetWarehousesQuery()
   const { data: purchasesData, isLoading: isPurchasesLoading } = useGetPurchasesQuery({ page: 1, limit: 100, search: "" })
   const { data: purchaseData } = useGetPurchaseByIdQuery(selectedPurchase, { skip: !selectedPurchase })
-  const [createPurchaseReturn, { isLoading }] = useCreatePurchaseReturnMutation()
+  const [createPurchaseReturn, { isLoading: isCreatingReturn }] = useCreatePurchaseReturnMutation()
 
   const suppliers = suppliersData?.data || []
   const warehouses = warehousesData || []
@@ -71,6 +73,9 @@ export default function CreatePurchaseReturn() {
       setTaxRate(Number(purchaseData.tax_rate) || 0)
       setDiscount(Number(purchaseData.discount) || 0)
       setShipping(Number(purchaseData.shipping) || 0)
+      
+      // Clear cart when purchase changes
+      setCartItems([])
     }
   }, [purchaseData])
 
@@ -81,24 +86,29 @@ export default function CreatePurchaseReturn() {
     }
   }, [purchases, isPurchasesLoading])
 
-  // Search products
+  // Search products - FIXED: Use purchase items instead of external API
   useEffect(() => {
-    const searchProducts = async () => {
-      if (searchTerm.trim()) {
-        try {
-          const res = await fetch(`/api/products?search=${searchTerm}`)
-          const data = await res.json()
-          setProducts(data)
-        } catch (error) {
-          toast.error("Failed to search products")
-          console.error(error)
-        }
+    const searchProducts = () => {
+      if (searchTerm.trim() && purchaseItems.length > 0) {
+        const filtered = purchaseItems.filter(item => 
+          item.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.product_code?.toLowerCase().includes(searchTerm.toLowerCase())
+        ).map(item => ({
+          id: item.product_id,
+          name: item.product_name || `Product ${item.product_id}`,
+          code: item.product_code || 'N/A',
+          cost: Number(item.unit_cost) || 0,
+          quantity: Number(item.quantity) || 0
+        }))
+        setProducts(filtered)
+      } else {
+        setProducts([])
       }
     }
     
     const timer = setTimeout(searchProducts, 300)
     return () => clearTimeout(timer)
-  }, [searchTerm])
+  }, [searchTerm, purchaseItems])
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
@@ -110,6 +120,15 @@ export default function CreatePurchaseReturn() {
     // Find if this product exists in the original purchase
     const purchaseItem = purchaseItems.find(item => item.product_id === product.id)
     const maxQty = purchaseItem ? purchaseItem.quantity : 0
+    
+    // Check if we've already returned the maximum quantity
+    const existingItem = cartItems.find(item => item.product_id === product.id)
+    const alreadyReturnedQty = existingItem ? existingItem.quantity : 0
+    
+    if (alreadyReturnedQty >= maxQty) {
+      toast.error(`Maximum return quantity (${maxQty}) reached for this product`)
+      return
+    }
     
     setCartItems(prev => {
       const existingItem = prev.find(item => item.product_id === product.id)
@@ -142,6 +161,10 @@ export default function CreatePurchaseReturn() {
         ]
       }
     })
+    
+    // Clear search after adding
+    setSearchTerm("")
+    setProducts([])
   }
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -226,6 +249,8 @@ export default function CreatePurchaseReturn() {
     } catch (error) {
       toast.error("Failed to create purchase return")
       console.error(error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -322,8 +347,15 @@ export default function CreatePurchaseReturn() {
                 className="pl-10" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={!selectedPurchase}
               />
             </div>
+            
+            {!selectedPurchase && (
+              <p className="text-sm text-gray-500 mt-1">
+                Please select a purchase first to search products
+              </p>
+            )}
             
             {/* Product search results */}
             {searchTerm && products.length > 0 && (
@@ -382,7 +414,7 @@ export default function CreatePurchaseReturn() {
                             min="0"
                             step="0.01"
                             value={item.cost}
-                            onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
+                            onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value) || 0)}
                             className="w-24"
                           />
                         </td>
@@ -404,7 +436,7 @@ export default function CreatePurchaseReturn() {
                               min="1"
                               max={item.maxQuantity}
                               value={item.quantity}
-                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
+                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
                               className="w-16 text-center"
                             />
                             <Button
@@ -417,7 +449,7 @@ export default function CreatePurchaseReturn() {
                             </Button>
                           </div>
                         </td>
-                        <td className="p-3 border">${item.subtotal}</td>
+                        <td className="p-3 border">${item.subtotal.toFixed(2)}</td>
                         <td className="p-3 border">
                           <Button 
                             variant="ghost" 
@@ -512,9 +544,9 @@ export default function CreatePurchaseReturn() {
               <Button 
                 className="bg-[#1a237e] hover:bg-purple-700"
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || isCreatingReturn}
               >
-                {isLoading ? "Processing..." : "Submit"}
+                {(isLoading || isCreatingReturn) ? "Processing..." : "Submit"}
               </Button>
             </div>
 
@@ -523,23 +555,23 @@ export default function CreatePurchaseReturn() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${subtotal}</span>
+                    <span>${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Order Tax</span>
-                    <span>${taxAmount} = (${taxRate}%)</span>
+                    <span>${taxAmount.toFixed(2)} = (${taxRate}%)</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Discount</span>
-                    <span>${discount}</span>
+                    <span>${discount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>${shipping}</span>
+                    <span>${shipping.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Grand Total</span>
-                    <span>${total}</span>
+                    <span>${total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

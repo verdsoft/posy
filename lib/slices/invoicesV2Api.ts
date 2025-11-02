@@ -97,7 +97,7 @@ export interface QueryParams {
 
 export const invoicesV2Api = createApi({
   reducerPath: 'invoicesV2Api',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2" }),
   tagTypes: ['Invoice', 'Transfer'],
   endpoints: (builder) => ({
     // Invoices

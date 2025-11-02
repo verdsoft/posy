@@ -20,7 +20,7 @@ export interface PaginatedPaymentsResponse extends PaginatedResponse<Payment> {}
 
 export const paymentsApi = createApi({
     reducerPath: 'paymentsApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/payments' }),
+    baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/payments' }),
     tagTypes: ['Payment'],
     endpoints: (builder) => ({
         getSalesPayments: builder.query<PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }>({

@@ -72,7 +72,7 @@ describe('Adjustment List Page', () => {
   it('should handle empty data', async () => {
     const { useGetAdjustmentsQuery } = require('@/lib/slices/adjustmentsApi');
     useGetAdjustmentsQuery.mockReturnValue({
-      data: { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } },
+      data: { data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } },
       isLoading: false,
       isError: false,
     });

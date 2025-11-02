@@ -25,7 +25,7 @@ export interface UpdateCurrencyInput {
 
 export const currenciesApi = createApi({
   reducerPath: 'currenciesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}/settings/currencies` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2/settings/currencies" }),
   tagTypes: ['Currency'],
   endpoints: (builder) => ({
     getCurrencies: builder.query<Currency[], void>({

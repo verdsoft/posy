@@ -14,7 +14,7 @@ export interface ProfitLossData {
 
 export const reportsApi = createApi({
     reducerPath: 'reportsApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/reports' }),
+    baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/reports' }),
     tagTypes: ['Report', 'CustomerReport', 'SupplierReport'],
     endpoints: (builder) => ({
         getProfitLoss: builder.query<ProfitLossData, { from: string; to: string }>({

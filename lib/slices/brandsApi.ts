@@ -23,7 +23,7 @@ export interface UpdateBrandInput {
 
 export const brandsApi = createApi({
   reducerPath: 'brandsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}/settings/brands` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2/settings/brands" }),
   tagTypes: ['Brand'],
   endpoints: (builder) => ({
     getBrands: builder.query<Brand[], void>({

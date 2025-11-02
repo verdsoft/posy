@@ -122,7 +122,7 @@ export interface QueryParams {
 
 export const hrmV2Api = createApi({
   reducerPath: 'hrmV2Api',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}/hrm` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2/hrm" }),
   tagTypes: ['Company', 'Department', 'Employee', 'Shift', 'Holiday', 'LeaveType', 'Attendance', 'LeaveRequest'],
   endpoints: (builder) => ({
     // Companies

@@ -58,83 +58,89 @@ export interface OrganizationPDF {
   language?: string | null
 }
 
-// Quotation types with relations
+// Quotation types with relations - FIXED to match your schema
 export type Quotation = Prisma.quotationsGetPayload<{
   include: {
-    customer: { select: { name: true } }
-    warehouse: { select: { name: true } }
-    items: true
+    customers: { select: { name: true } }
+    warehouses: { select: { name: true } }
+    quotation_items: true
   }
 }>
 
 export type QuotationWithCustomer = Prisma.quotationsGetPayload<{
   include: {
-    customer: true
-    warehouse: true
+    customers: true
+    warehouses: true
   }
 }>
 
 export type QuotationItem = Prisma.quotation_itemsGetPayload<{
   include: {
-    product: { select: { name: true, code: true } }
+    products: { select: { name: true, code: true } }
   }
 }>
 
 export type CreateQuotationInput = {
-  reference: string
-  customer_id: number
-  warehouse_id: number
-  valid_until?: Date
-  notes?: string
+  reference?: string
+  customer_id: number | string
+  warehouse_id: number | string
+  date?: string
+  valid_until?: string
   subtotal?: number
+  tax_rate?: number
   tax_amount?: number
+  discount?: number
+  shipping?: number
   total: number
+  status?: QuotationStatus
+  notes?: string
+  created_by?: number | string
   items: CreateQuotationItemInput[]
 }
 
 export type CreateQuotationItemInput = {
-  product_id: number
+  product_id: number | string
   quantity: number
   unit_price: number
-  subtotal: number
   discount?: number
   tax?: number
+  subtotal: number
 }
 
 export type UpdateQuotationInput = Partial<CreateQuotationInput>
 
-// Invoice types with relations
+// Invoice types with relations - FIXED to match your schema
 export type Invoice = Prisma.invoicesGetPayload<{
   include: {
-    customer: { select: { name: true } }
-    warehouse: { select: { name: true } }
-    sale: { select: { reference: true } }
-    quotation: { select: { reference: true } }
-    items: true
+    customers: { select: { name: true } }
+    warehouses: { select: { name: true } }
+    sales: { select: { reference: true } }
+    quotations: { select: { reference: true } }
+    invoice_items: true
   }
 }>
 
 export type InvoiceWithCustomer = Prisma.invoicesGetPayload<{
   include: {
-    customer: true
-    warehouse: true
-    sale: true
-    quotation: true
+    customers: true
+    warehouses: true
+    sales: true
+    quotations: true
   }
 }>
 
 export type InvoiceItem = Prisma.invoice_itemsGetPayload<{
   include: {
-    product: { select: { name: true, code: true } }
+    products: { select: { name: true, code: true } }
   }
 }>
 
 export type CreateInvoiceInput = {
-  reference: string
-  customer_id: number
-  warehouse_id: number
-  sale_id?: number
-  quotation_id?: number
+  reference?: string
+  customer_id: number | string
+  warehouse_id: number | string
+  sale_id?: number | string
+  quotation_id?: number | string
   date: string
   due_date?: string
   subtotal?: number
@@ -148,9 +154,9 @@ export type CreateInvoiceInput = {
   status?: InvoiceStatus
   payment_status?: PaymentStatus
   notes?: string
-  created_by?: number
+  created_by?: number | string
   items: {
-    product_id: number
+    product_id: number | string
     quantity: number
     unit_price: number
     discount?: number
@@ -166,13 +172,13 @@ export type Customer = Prisma.customersGetPayload<object>
 export type CreateCustomerInput = Prisma.customersCreateInput
 export type UpdateCustomerInput = Prisma.customersUpdateInput
 
-// Product types
+// Product types - FIXED to match your schema
 export type Product = Prisma.productsGetPayload<{
   include: {
-    category: { select: { name: true } }
-    brand: { select: { name: true } }
-    unit: { select: { name: true, short_name: true } }
-    warehouse: { select: { name: true } }
+    categories: { select: { name: true } }
+    brands: { select: { name: true } }
+    units: { select: { name: true, short_name: true } }
+    warehouses: { select: { name: true } }
   }
 }>
 
@@ -180,14 +186,14 @@ export type ProductBasic = Prisma.productsGetPayload<object>
 export type CreateProductInput = Prisma.productsCreateInput
 export type UpdateProductInput = Prisma.productsUpdateInput
 
-// Sale types
+// Sale types - FIXED to match your schema
 export type Sale = Prisma.salesGetPayload<{
   include: {
     customers: { select: { name: true, email: true } }
     warehouses: { select: { name: true } }
     sale_items: {
       include: {
-        product: { select: { name: true, sku: true } }
+        products: { select: { name: true, code: true } }
       }
     }
   }
@@ -195,35 +201,40 @@ export type Sale = Prisma.salesGetPayload<{
 
 export type SaleItem = Prisma.sale_itemsGetPayload<{
   include: {
-    product: { select: { name: true, code: true } }
+    products: { select: { name: true, code: true } }
   }
 }>
 
 export type CreateSaleInput = {
-  reference: string
-  customer_id?: number
-  warehouse_id: number
-  notes?: string
+  reference?: string
+  customer_id?: number | string
+  warehouse_id: number | string
+  date?: string
   subtotal?: number
+  tax_rate?: number
   tax_amount?: number
-  total: number
-  payment_status: PaymentStatus
-  status: SaleStatus
-  items: CreateSaleItemInput[]
-}
-
-export type CreateSaleItemInput = {
-  product_id: number
-  quantity: number
-  unit_price: number
-  subtotal: number
   discount?: number
-  tax?: number
+  shipping?: number
+  total: number
+  paid?: number
+  due?: number
+  status?: SaleStatus
+  payment_status?: PaymentStatus
+  notes?: string
+  created_by?: number | string
+  items: {
+    product_id: number | string
+    quantity: number
+    unit_price: number
+    discount?: number
+    tax?: number
+    subtotal?: number
+  }[]
 }
 
 export type UpdateSaleInput = Partial<CreateSaleInput>
 
-// Purchase types
+// Purchase types - FIXED to match your schema
 export type Purchase = Prisma.purchasesGetPayload<{
   include: {
     suppliers: { select: { name: true } }
@@ -243,31 +254,36 @@ export type PurchaseItem = Prisma.purchase_itemsGetPayload<{
 }>
 
 export type CreatePurchaseInput = {
-  reference: string
-  supplier_id: number
-  warehouse_id: number
-  notes?: string
+  reference?: string
+  supplier_id: number | string
+  warehouse_id: number | string
+  date?: string
   subtotal?: number
+  tax_rate?: number
   tax_amount?: number
-  total: number
-  payment_status: PaymentStatus
-  status: PurchaseStatus
-  items: CreatePurchaseItemInput[]
-}
-
-export type CreatePurchaseItemInput = {
-  product_id: number
-  quantity: number
-  unit_price: number
-  subtotal: number
   discount?: number
-  tax?: number
+  shipping?: number
+  total: number
+  paid?: number
+  due?: number
+  status?: PurchaseStatus
+  payment_status?: PaymentStatus
+  notes?: string
+  created_by?: number | string
+  items: {
+    product_id: number | string
+    quantity: number
+    unit_cost: number
+    discount?: number
+    tax?: number
+    subtotal?: number
+  }[]
 }
 
 export type UpdatePurchaseInput = Partial<CreatePurchaseInput>
 
 // Supplier types
-export type Supplier = Prisma.suppliersGetPayload<{}>
+export type Supplier = Prisma.suppliersGetPayload<object>
 export type CreateSupplierInput = Prisma.suppliersCreateInput
 export type UpdateSupplierInput = Prisma.suppliersUpdateInput
 
@@ -295,13 +311,13 @@ export type UpdateWarehouseInput = Prisma.warehousesUpdateInput
 // User types
 export type User = Prisma.usersGetPayload<object>
 
-// Adjustment types
+// Adjustment types - FIXED to match your schema
 export type Adjustment = Prisma.adjustmentsGetPayload<{
   include: {
-    warehouse: { select: { name: true } }
-    items: {
+    warehouses: { select: { name: true } }
+    adjustment_items: {
       include: {
-        product: { select: { name: true, code: true } }
+        products: { select: { name: true, code: true } }
       }
     }
   }
@@ -309,47 +325,86 @@ export type Adjustment = Prisma.adjustmentsGetPayload<{
 
 export type AdjustmentItem = Prisma.adjustment_itemsGetPayload<{
   include: {
-    product: { select: { name: true, code: true } }
+    products: { select: { name: true, code: true } }
   }
 }>
 
 export type CreateAdjustmentInput = {
-  reference: string
-  warehouse_id: number
+  reference?: string
+  warehouse_id: number | string
+  date?: string
   type: AdjustmentType
   notes?: string
+  created_by?: number | string
   items: CreateAdjustmentItemInput[]
 }
 
 export type CreateAdjustmentItemInput = {
-  product_id: number
+  product_id: number | string
   quantity: number
+  type: AdjustmentType
 }
 
 export type UpdateAdjustmentInput = Partial<CreateAdjustmentInput>
 
-// Expense types
+// Expense types - FIXED to match your schema
 export type Expense = Prisma.expensesGetPayload<{
   include: {
-    category: { select: { name: true } }
+    expense_categories: { select: { name: true } }
   }
 }>
 
-export type CreateExpenseInput = Prisma.expensesCreateInput
-export type UpdateExpenseInput = Prisma.expensesUpdateInput
+export type CreateExpenseInput = {
+  reference?: string
+  category_id: number | string
+  amount: number
+  date?: string
+  description?: string
+  attachment?: string
+  status?: ExpenseStatus
+  created_by?: number | string
+}
 
-// Transfer types
+export type UpdateExpenseInput = Partial<CreateExpenseInput>
+
+// Transfer types - FIXED to match your schema
 export type Transfer = Prisma.transfersGetPayload<{
   include: {
-    fromWarehouse: { select: { name: true } }
-    toWarehouse: { select: { name: true } }
-    items: {
+    warehouses_transfers_from_warehouse_idTowarehouses: { select: { name: true } }
+    warehouses_transfers_to_warehouse_idTowarehouses: { select: { name: true } }
+    transfer_items: {
       include: {
-        product: { select: { name: true, code: true } }
+        products: { select: { name: true, code: true } }
       }
     }
   }
 }>
+
+export type CreateTransferInput = {
+  reference?: string
+  from_warehouse_id: number | string
+  to_warehouse_id: number | string
+  date?: string
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
+  total: number
+  status?: TransferStatus
+  notes?: string
+  created_by?: number | string
+  items: {
+    product_id: number | string
+    quantity: number
+    unit_cost: number
+    discount?: number
+    tax?: number
+    subtotal?: number
+  }[]
+}
+
+export type UpdateTransferInput = Partial<CreateTransferInput>
 
 // Pagination response type
 export interface PaginatedResponse<T> {
@@ -378,26 +433,26 @@ export type ApiError = {
 
 // Search types
 export interface SearchParams {
-  page?: number
-  limit?: number
+  page?: number | string
+  limit?: number | string
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }
 
 export interface QuotationSearchParams extends SearchParams {
-  customer_id?: number
-  warehouse_id?: number
+  customer_id?: number | string
+  warehouse_id?: number | string
   status?: QuotationStatus
   date_from?: string
   date_to?: string
 }
 
 export interface InvoiceSearchParams extends SearchParams {
-  customer_id?: number
-  warehouse_id?: number
-  sale_id?: number
-  quotation_id?: number
+  customer_id?: number | string
+  warehouse_id?: number | string
+  sale_id?: number | string
+  quotation_id?: number | string
   status?: InvoiceStatus
   payment_status?: PaymentStatus
   date_from?: string
@@ -407,16 +462,16 @@ export interface InvoiceSearchParams extends SearchParams {
 }
 
 export interface ProductSearchParams extends SearchParams {
-  category_id?: number
-  brand_id?: number
-  warehouse_id?: number
+  category_id?: number | string
+  brand_id?: number | string
+  warehouse_id?: number | string
   status?: Status
   low_stock?: boolean
 }
 
 export interface SaleSearchParams extends SearchParams {
-  customer_id?: number
-  warehouse_id?: number
+  customer_id?: number | string
+  warehouse_id?: number | string
   status?: SaleStatus
   payment_status?: PaymentStatus
   date_from?: string
@@ -424,8 +479,8 @@ export interface SaleSearchParams extends SearchParams {
 }
 
 export interface PurchaseSearchParams extends SearchParams {
-  supplier_id?: number
-  warehouse_id?: number
+  supplier_id?: number | string
+  warehouse_id?: number | string
   status?: PurchaseStatus
   payment_status?: PaymentStatus
   date_from?: string
@@ -445,15 +500,95 @@ export interface SupplierSearchParams extends SearchParams {
 }
 
 export interface AdjustmentSearchParams extends SearchParams {
-  warehouse_id?: number
+  warehouse_id?: number | string
   type?: AdjustmentType
   date_from?: string
   date_to?: string
 }
 
 export interface ExpenseSearchParams extends SearchParams {
-  category_id?: number
+  category_id?: number | string
   status?: ExpenseStatus
   date_from?: string
   date_to?: string
 }
+
+// Purchase Return types - FIXED to match your schema
+export interface CreatePurchaseReturnInput {
+  reference?: string
+  purchase_id: number | string
+  supplier_id: number | string
+  warehouse_id: number | string
+  date?: string
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
+  total: number
+  status?: string
+  notes?: string
+  items: PurchaseReturnItemInput[]
+}
+
+export interface UpdatePurchaseReturnInput {
+  purchase_id?: number | string
+  supplier_id?: number | string
+  warehouse_id?: number | string
+  date?: string
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
+  total?: number
+  status?: string
+  notes?: string
+}
+
+export interface PurchaseReturnItemInput {
+  product_id: number | string
+  purchase_item_id?: number | string
+  quantity: number
+  unit_cost: number
+  discount?: number
+  tax?: number
+  subtotal?: number
+}
+
+export interface PurchaseReturnSearchParams {
+  id?: string
+  page?: string
+  limit?: string
+  search?: string
+  purchase_id?: string
+  supplier_id?: string
+  warehouse_id?: string
+  status?: string
+  date_from?: string
+  date_to?: string
+  sortBy?: string
+  sortOrder?: string
+}
+
+// Purchase Return Prisma types
+export type PurchaseReturn = Prisma.purchase_returnsGetPayload<{
+  include: {
+    suppliers: { select: { name: true } }
+    warehouses: { select: { name: true } }
+    purchases: { select: { reference: true } }
+    purchase_return_items: {
+      include: {
+        products: { select: { name: true, code: true } }
+        purchase_items: true
+      }
+    }
+  }
+}>
+
+export type PurchaseReturnItem = Prisma.purchase_return_itemsGetPayload<{
+  include: {
+    products: { select: { name: true, code: true } }
+    purchase_items: true
+  }
+}>

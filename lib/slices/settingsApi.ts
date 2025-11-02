@@ -37,7 +37,7 @@ export interface SystemSettings {
 
 export const settingsApi = createApi({
   reducerPath: 'settingsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/settings' }),
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/settings' }),
   tagTypes: ['Category', 'Brand', 'Warehouse', 'Unit', 'Backup', 'SystemSettings'],
   endpoints: (builder) => ({
     getSystemSettings: builder.query<SystemSettings, void>({

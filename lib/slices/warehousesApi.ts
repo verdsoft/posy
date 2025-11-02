@@ -35,7 +35,7 @@ export interface UpdateWarehouseInput {
 
 export const warehousesApi = createApi({
   reducerPath: 'warehousesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}/settings/warehouses` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2/settings/warehouses" }),
   tagTypes: ['Warehouse'],
   endpoints: (builder) => ({
     getWarehouses: builder.query<Warehouse[], void>({

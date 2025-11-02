@@ -31,7 +31,7 @@ export interface UpdateUnitInput {
 
 export const unitsApi = createApi({
   reducerPath: 'unitsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${API_URL}/settings/units` }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2/settings/units" }),
   tagTypes: ['Unit'],
   endpoints: (builder) => ({
     getUnits: builder.query<Unit[], void>({
