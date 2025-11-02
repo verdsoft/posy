@@ -146,6 +146,150 @@ export function createMockUser(overrides?: any) {
 }
 
 /**
+ * Create mock sale data
+ */
+export function createMockSale(overrides?: any) {
+  return {
+    id: 1,
+    reference: 'SALE-001',
+    customer_id: 1,
+    warehouse_id: 1,
+    date: '2025-01-01',
+    tax_rate: 10,
+    tax_amount: 10,
+    discount: 0,
+    shipping: 5,
+    total: 115,
+    paid: 0,
+    due: 115,
+    status: 'completed',
+    payment_status: 'unpaid',
+    notes: 'Test sale',
+    customer_name: 'Test Customer',
+    warehouse_name: 'Main Warehouse',
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Create mock purchase data
+ */
+export function createMockPurchase(overrides?: any) {
+  return {
+    id: 1,
+    reference: 'PO-001',
+    supplier_id: 1,
+    warehouse_id: 1,
+    date: '2025-01-01',
+    tax_rate: 10,
+    tax_amount: 10,
+    discount: 0,
+    shipping: 5,
+    total: 115,
+    paid: 0,
+    due: 115,
+    status: 'received',
+    payment_status: 'unpaid',
+    notes: 'Test purchase',
+    supplier_name: 'Test Supplier',
+    warehouse_name: 'Main Warehouse',
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Create mock quotation data
+ */
+export function createMockQuotation(overrides?: any) {
+  return {
+    id: 1,
+    reference: 'QUO-001',
+    customer_id: 1,
+    warehouse_id: 1,
+    date: '2025-01-01',
+    valid_until: '2025-01-31',
+    tax_rate: 10,
+    tax_amount: 10,
+    discount: 0,
+    shipping: 5,
+    total: 115,
+    status: 'pending',
+    notes: 'Test quotation',
+    customer_name: 'Test Customer',
+    warehouse_name: 'Main Warehouse',
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Create mock supplier data
+ */
+export function createMockSupplier(overrides?: any) {
+  return {
+    id: 1,
+    name: 'Test Supplier',
+    email: 'supplier@test.com',
+    phone: '123-456-7890',
+    address: '123 Supplier St',
+    city: 'Test City',
+    country: 'Test Country',
+    tax_number: 'TAX123',
+    total_purchases: 5000,
+    total_paid: 3000,
+    total_due: 2000,
+    status: 'active',
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Create mock adjustment data
+ */
+export function createMockAdjustment(overrides?: any) {
+  return {
+    id: 1,
+    reference: 'ADJ-001',
+    warehouse_id: 1,
+    date: '2025-01-01',
+    type: 'addition',
+    reason: 'Stock count adjustment',
+    notes: 'Test adjustment',
+    warehouse_name: 'Main Warehouse',
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * Create mock transfer data
+ */
+export function createMockTransfer(overrides?: any) {
+  return {
+    id: 1,
+    reference: 'TRN-001',
+    from_warehouse_id: 1,
+    to_warehouse_id: 2,
+    date: '2025-01-01',
+    status: 'pending',
+    notes: 'Test transfer',
+    from_warehouse_name: 'Main Warehouse',
+    to_warehouse_name: 'Secondary Warehouse',
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
  * Create paginated response mock
  */
 export function createMockPaginatedResponse<T>(

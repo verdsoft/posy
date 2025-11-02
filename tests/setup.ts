@@ -57,6 +57,13 @@ jest.mock('next/link', () => {
   };
 });
 
+// Mock DateRangePicker component
+jest.mock('@/components/date-range-picker', () => ({
+  DateRangePicker: ({ onDateChange }: { onDateChange: (range: any) => void }) => {
+    return null;
+  },
+}));
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
