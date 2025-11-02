@@ -25,6 +25,14 @@ export const returnsApi = createApi({
       }),
       invalidatesTags: ["SalesReturn"],
     }),
+    updateSalesReturn: builder.mutation<SalesReturn, Partial<SalesReturn>>({
+      query: (body) => ({
+        url: `sales-returns?id=${body.id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'SalesReturn', id }, { type: 'SalesReturn', id: 'LIST' }],
+    }),
     deleteSalesReturn: builder.mutation<void, string>({
       query: (id) => ({
         url: `sales-returns/${id}`,
@@ -52,6 +60,14 @@ export const returnsApi = createApi({
       }),
       invalidatesTags: ["PurchaseReturn"],
     }),
+    updatePurchaseReturn: builder.mutation<PurchaseReturn, Partial<PurchaseReturn>>({
+      query: (body) => ({
+        url: `purchases-returns?id=${body.id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'PurchaseReturn', id }, { type: 'PurchaseReturn', id: 'LIST' }],
+    }),
     deletePurchaseReturn: builder.mutation<void, string>({
       query: (id) => ({
         url: `purchases-returns?id=${id}`,
@@ -65,8 +81,10 @@ export const returnsApi = createApi({
 export const {
   useGetSalesReturnsQuery,
   useCreateSalesReturnMutation,
+  useUpdateSalesReturnMutation,
   useDeleteSalesReturnMutation,
   useGetPurchaseReturnsQuery,
   useCreatePurchaseReturnMutation,
+  useUpdatePurchaseReturnMutation,
   useDeletePurchaseReturnMutation,
 } = returnsApi

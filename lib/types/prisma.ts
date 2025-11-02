@@ -592,3 +592,83 @@ export type PurchaseReturnItem = Prisma.purchase_return_itemsGetPayload<{
     purchase_items: true
   }
 }>
+
+// Sales Return types - FIXED to match your schema
+export interface CreateSalesReturnInput {
+  reference?: string
+  sale_id: number | string
+  customer_id: number | string
+  warehouse_id: number | string
+  date?: string
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
+  total: number
+  status?: string
+  notes?: string
+  items: SalesReturnItemInput[]
+}
+
+export interface UpdateSalesReturnInput {
+  sale_id?: number | string
+  customer_id?: number | string
+  warehouse_id?: number | string
+  date?: string
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
+  total?: number
+  status?: string
+  notes?: string
+}
+
+export interface SalesReturnItemInput {
+  product_id: number | string
+  sale_item_id?: number | string
+  quantity: number
+  unit_price: number
+  discount?: number
+  tax?: number
+  subtotal?: number
+}
+
+export interface SalesReturnSearchParams {
+  id?: string
+  page?: string
+  limit?: string
+  search?: string
+  sale_id?: string
+  customer_id?: string
+  warehouse_id?: string
+  status?: string
+  date_from?: string
+  date_to?: string
+  sortBy?: string
+  sortOrder?: string
+}
+
+// Sales Return Prisma types
+export type SalesReturn = Prisma.sales_returnsGetPayload<{
+  include: {
+    customers: { select: { name: true } }
+    warehouses: { select: { name: true } }
+    sales: { select: { reference: true } }
+    sales_return_items: {
+      include: {
+        products: { select: { name: true, code: true } }
+        sale_items: true
+      }
+    }
+  }
+}>
+
+export type SalesReturnItem = Prisma.sales_return_itemsGetPayload<{
+  include: {
+    products: { select: { name: true, code: true } }
+    sale_items: true
+  }
+}>

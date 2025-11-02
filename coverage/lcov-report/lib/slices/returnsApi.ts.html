@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">63.88% </span>
+                <span class="strong">62.22% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>46/72</span>
+                <span class='fraction'>56/90</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10% </span>
+                <span class="strong">7.14% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/10</span>
+                <span class='fraction'>1/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">63.88% </span>
+                <span class="strong">62.22% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>46/72</span>
+                <span class='fraction'>56/90</span>
             </div>
         
             
@@ -135,7 +135,25 @@
 <a name='L70'></a><a href='#L70'>70</a>
 <a name='L71'></a><a href='#L71'>71</a>
 <a name='L72'></a><a href='#L72'>72</a>
-<a name='L73'></a><a href='#L73'>73</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -167,6 +185,14 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -194,6 +220,16 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -234,6 +270,14 @@ export const returnsApi = createApi({
 <span class="cstat-no" title="statement not covered" >      }),</span>
       invalidatesTags: ["SalesReturn"],
     }),
+    updateSalesReturn: builder.mutation&lt;SalesReturn, Partial&lt;SalesReturn&gt;&gt;({
+      query: <span class="fstat-no" title="function not covered" >(body) =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        url: `sales-returns?id=${body.id}`,</span>
+<span class="cstat-no" title="statement not covered" >        method: "PUT",</span>
+<span class="cstat-no" title="statement not covered" >        body,</span>
+<span class="cstat-no" title="statement not covered" >      }),</span>
+      invalidatesTags: <span class="fstat-no" title="function not covered" >(result, error, { id }) =&gt; [{ type: 'SalesReturn', id }, { type: 'SalesReturn', id: 'LIST' }],</span>
+    }),
     deleteSalesReturn: builder.mutation&lt;void, string&gt;({
       query: <span class="fstat-no" title="function not covered" >(id) =&gt; ({</span>
 <span class="cstat-no" title="statement not covered" >        url: `sales-returns/${id}`,</span>
@@ -261,6 +305,14 @@ export const returnsApi = createApi({
 <span class="cstat-no" title="statement not covered" >      }),</span>
       invalidatesTags: ["PurchaseReturn"],
     }),
+    updatePurchaseReturn: builder.mutation&lt;PurchaseReturn, Partial&lt;PurchaseReturn&gt;&gt;({
+      query: <span class="fstat-no" title="function not covered" >(body) =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        url: `purchases-returns?id=${body.id}`,</span>
+<span class="cstat-no" title="statement not covered" >        method: "PUT",</span>
+<span class="cstat-no" title="statement not covered" >        body,</span>
+<span class="cstat-no" title="statement not covered" >      }),</span>
+      invalidatesTags: <span class="fstat-no" title="function not covered" >(result, error, { id }) =&gt; [{ type: 'PurchaseReturn', id }, { type: 'PurchaseReturn', id: 'LIST' }],</span>
+    }),
     deletePurchaseReturn: builder.mutation&lt;void, string&gt;({
       query: <span class="fstat-no" title="function not covered" >(id) =&gt; ({</span>
 <span class="cstat-no" title="statement not covered" >        url: `purchases-returns?id=${id}`,</span>
@@ -274,9 +326,11 @@ export const returnsApi = createApi({
 export const {
   useGetSalesReturnsQuery,
   useCreateSalesReturnMutation,
+  useUpdateSalesReturnMutation,
   useDeleteSalesReturnMutation,
   useGetPurchaseReturnsQuery,
   useCreatePurchaseReturnMutation,
+  useUpdatePurchaseReturnMutation,
   useDeletePurchaseReturnMutation,
 } = returnsApi
 &nbsp;</pre></td></tr></table></pre>
@@ -286,7 +340,7 @@ export const {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-02T18:23:41.573Z
+                at 2025-11-02T18:36:20.775Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
