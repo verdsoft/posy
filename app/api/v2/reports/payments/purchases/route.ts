@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const from = searchParams.get('from') || '1970-01-01';
-    const to = searchParams.get('to') || new Date().toISOString().split('T')[0');
+    const to = searchParams.get('to') || new Date().toISOString().split('T')[0];
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const offset = (page - 1) * limit;
