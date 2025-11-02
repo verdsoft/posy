@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80.64% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>50/62</span>
+                <span class='fraction'>0/62</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">11.11% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/9</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80.64% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>50/62</span>
+                <span class='fraction'>0/62</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -125,130 +125,130 @@
 <a name='L60'></a><a href='#L60'>60</a>
 <a name='L61'></a><a href='#L61'>61</a>
 <a name='L62'></a><a href='#L62'>62</a>
-<a name='L63'></a><a href='#L63'>63</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<a name='L63'></a><a href='#L63'>63</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { PaginatedResponse } from '../types';
-&nbsp;
-export interface Payment {
-    id: string;
-    date: string;
-    reference: string;
-    amount: number;
-    payment_method: string;
-    sale_id?: string;
-    purchase_id?: string;
-    sale_return_id?: string;
-    purchase_return_id?: string;
-    customer_name?: string;
-    supplier_name?: string;
-    notes?: string;
-}
-&nbsp;
-export interface PaginatedPaymentsResponse extends PaginatedResponse&lt;Payment&gt; {}
-&nbsp;
-export const paymentsApi = createApi({
-    reducerPath: 'paymentsApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/payments' }),
-    tagTypes: ['Payment'],
-    endpoints: (builder) =&gt; ({
-        getSalesPayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to, page, limit, searchTerm }) =&gt; `sales?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
-            providesTags: <span class="fstat-no" title="function not covered" >(result) =&gt;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';</span></span></span>
+<span class="cstat-no" title="statement not covered" >import { PaginatedResponse } from '../types';</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export interface Payment {</span>
+<span class="cstat-no" title="statement not covered" >    id: string;</span>
+<span class="cstat-no" title="statement not covered" >    date: string;</span>
+<span class="cstat-no" title="statement not covered" >    reference: string;</span>
+<span class="cstat-no" title="statement not covered" >    amount: number;</span>
+<span class="cstat-no" title="statement not covered" >    payment_method: string;</span>
+<span class="cstat-no" title="statement not covered" >    sale_id?: string;</span>
+<span class="cstat-no" title="statement not covered" >    purchase_id?: string;</span>
+<span class="cstat-no" title="statement not covered" >    sale_return_id?: string;</span>
+<span class="cstat-no" title="statement not covered" >    purchase_return_id?: string;</span>
+<span class="cstat-no" title="statement not covered" >    customer_name?: string;</span>
+<span class="cstat-no" title="statement not covered" >    supplier_name?: string;</span>
+<span class="cstat-no" title="statement not covered" >    notes?: string;</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export interface PaginatedPaymentsResponse extends PaginatedResponse&lt;Payment&gt; {}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const paymentsApi = createApi({</span>
+<span class="cstat-no" title="statement not covered" >    reducerPath: 'paymentsApi',</span>
+<span class="cstat-no" title="statement not covered" >    baseQuery: fetchBaseQuery({ baseUrl: '/api/payments' }),</span>
+<span class="cstat-no" title="statement not covered" >    tagTypes: ['Payment'],</span>
+<span class="cstat-no" title="statement not covered" >    endpoints: (builder) =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        getSalesPayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to, page, limit, searchTerm }) =&gt; `sales?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: (result) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                result</span>
 <span class="cstat-no" title="statement not covered" >                    ? [...result.data.map(({ id }) =&gt; ({ type: 'Payment' as const, id })), { type: 'Payment', id: 'LIST' }]</span>
 <span class="cstat-no" title="statement not covered" >                    : [{ type: 'Payment', id: 'LIST' }],</span>
-        }),
-        getPurchasePayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to, page, limit, searchTerm }) =&gt; `purchases?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
-            providesTags: <span class="fstat-no" title="function not covered" >(result) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >        getPurchasePayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to, page, limit, searchTerm }) =&gt; `purchases?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: (result) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                result</span>
 <span class="cstat-no" title="statement not covered" >                    ? [...result.data.map(({ id }) =&gt; ({ type: 'Payment' as const, id })), { type: 'Payment', id: 'LIST' }]</span>
 <span class="cstat-no" title="statement not covered" >                    : [{ type: 'Payment', id: 'LIST' }],</span>
-        }),
-        getSalesReturnPayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to, page, limit, searchTerm }) =&gt; `sales-returns?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
-            providesTags: <span class="fstat-no" title="function not covered" >(result) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >        getSalesReturnPayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to, page, limit, searchTerm }) =&gt; `sales-returns?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: (result) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                result</span>
 <span class="cstat-no" title="statement not covered" >                    ? [...result.data.map(({ id }) =&gt; ({ type: 'Payment' as const, id })), { type: 'Payment', id: 'LIST' }]</span>
 <span class="cstat-no" title="statement not covered" >                    : [{ type: 'Payment', id: 'LIST' }],</span>
-        }),
-        getPurchaseReturnPayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to, page, limit, searchTerm }) =&gt; `purchase-returns?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
-            providesTags: <span class="fstat-no" title="function not covered" >(result) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >        getPurchaseReturnPayments: builder.query&lt;PaginatedPaymentsResponse, { from: string; to: string; page: number; limit: number; searchTerm: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to, page, limit, searchTerm }) =&gt; `purchase-returns?from=${from}&amp;to=${to}&amp;page=${page}&amp;limit=${limit}&amp;search=${searchTerm}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: (result) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                result</span>
 <span class="cstat-no" title="statement not covered" >                    ? [...result.data.map(({ id }) =&gt; ({ type: 'Payment' as const, id })), { type: 'Payment', id: 'LIST' }]</span>
 <span class="cstat-no" title="statement not covered" >                    : [{ type: 'Payment', id: 'LIST' }],</span>
-        }),
-    }),
-});
-&nbsp;
-export const { 
-    useGetSalesPaymentsQuery, 
-    useGetPurchasePaymentsQuery, 
-    useGetSalesReturnPaymentsQuery, 
-    useGetPurchaseReturnPaymentsQuery 
-} = paymentsApi;
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >    }),</span>
+<span class="cstat-no" title="statement not covered" >});</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const { </span>
+<span class="cstat-no" title="statement not covered" >    useGetSalesPaymentsQuery, </span>
+<span class="cstat-no" title="statement not covered" >    useGetPurchasePaymentsQuery, </span>
+<span class="cstat-no" title="statement not covered" >    useGetSalesReturnPaymentsQuery, </span>
+<span class="cstat-no" title="statement not covered" >    useGetPurchaseReturnPaymentsQuery </span>
+<span class="cstat-no" title="statement not covered" >} = paymentsApi;</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -256,7 +256,7 @@ export const {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-02T09:49:27.974Z
+                at 2025-11-02T10:24:19.374Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

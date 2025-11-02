@@ -59,7 +59,9 @@ describe('Invoice List Page', () => {
   it('should render invoice list page', () => {
     render(<InvoiceList />);
 
-    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    // Should have multiple "Invoices" texts (sidebar + page header)
+    const invoicesElements = screen.getAllByText('Invoices');
+    expect(invoicesElements.length).toBeGreaterThan(0);
   });
 
   it('should display search input', () => {

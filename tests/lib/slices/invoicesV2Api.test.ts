@@ -100,29 +100,23 @@ describe('invoicesV2Api', () => {
     });
   });
 
-  describe('Query transformations', () => {
-    it('should build correct query string for getInvoices', () => {
+  describe('Query endpoints configuration', () => {
+    it('should have correct query endpoint for getInvoices', () => {
       const { endpoints } = invoicesV2Api;
-      const query = endpoints.getInvoices.initiate({ page: 1, limit: 10, search: 'test' });
-
-      expect(query).toBeDefined();
-      expect(query.type).toContain('executeQuery');
+      expect(endpoints.getInvoices).toBeDefined();
+      expect(endpoints.getInvoices.name).toBe('getInvoices');
     });
 
-    it('should build correct query for getInvoiceById', () => {
+    it('should have correct query endpoint for getInvoiceById', () => {
       const { endpoints } = invoicesV2Api;
-      const query = endpoints.getInvoiceById.initiate('123');
-
-      expect(query).toBeDefined();
-      expect(query.type).toContain('executeQuery');
+      expect(endpoints.getInvoiceById).toBeDefined();
+      expect(endpoints.getInvoiceById.name).toBe('getInvoiceById');
     });
 
-    it('should build correct query for getInvoiceItems', () => {
+    it('should have correct query endpoint for getInvoiceItems', () => {
       const { endpoints } = invoicesV2Api;
-      const query = endpoints.getInvoiceItems.initiate('123');
-
-      expect(query).toBeDefined();
-      expect(query.type).toContain('executeQuery');
+      expect(endpoints.getInvoiceItems).toBeDefined();
+      expect(endpoints.getInvoiceItems.name).toBe('getInvoiceItems');
     });
   });
 

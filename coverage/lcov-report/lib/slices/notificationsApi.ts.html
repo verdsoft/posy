@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">82.66% </span>
+                <span class="strong">89.33% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>62/75</span>
+                <span class='fraction'>67/75</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>2/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">25% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/4</span>
+                <span class='fraction'>2/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">82.66% </span>
+                <span class="strong">89.33% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>62/75</span>
+                <span class='fraction'>67/75</span>
             </div>
         
             
@@ -179,32 +179,32 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -254,12 +254,12 @@ export const notificationsApi = createApi({
   tagTypes: ['Notifications'],
   endpoints: (builder) =&gt; ({
     getNotifications: builder.query&lt;NotificationsResponse, NotificationParams&gt;({
-      query: <span class="fstat-no" title="function not covered" >(params) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >        const searchParams = new URLSearchParams()</span>
-<span class="cstat-no" title="statement not covered" >        if (params.limit) searchParams.append('limit', params.limit.toString())</span>
-<span class="cstat-no" title="statement not covered" >        if (params.unread_only) searchParams.append('unread_only', params.unread_only.toString())</span>
-<span class="cstat-no" title="statement not covered" >        return `?${searchParams.toString()}`</span>
-<span class="cstat-no" title="statement not covered" >      },</span>
+      query: (params) =&gt; {
+        const searchParams = new URLSearchParams()
+        if (params.limit) searchParams.append('limit', params.limit.toString())
+        if (params.unread_only) <span class="branch-0 cbranch-no" title="branch not covered" >searchParams.append('unread_only', params.unread_only.toString())</span>
+        return `?${searchParams.toString()}`
+      },
       providesTags: ['Notifications'],
     }),
     markNotificationRead: builder.mutation&lt;{ success: boolean; message: string }, MarkReadParams&gt;({
@@ -292,7 +292,7 @@ export const {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-02T09:49:27.974Z
+                at 2025-11-02T10:24:19.374Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

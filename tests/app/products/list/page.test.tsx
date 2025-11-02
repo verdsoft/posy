@@ -28,8 +28,15 @@ jest.mock('@/lib/slices/productsApi', () => ({
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({
     push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    refresh: jest.fn(),
+    forward: jest.fn(),
   })),
   usePathname: jest.fn(() => '/products/list'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+  redirect: jest.fn(),
 }));
 
 describe('Products List Page', () => {

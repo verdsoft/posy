@@ -17,13 +17,40 @@ jest.mock('@/lib/slices/dashboardApi', () => ({
     isLoading: false,
     isError: false,
   })),
+  useGetTopProductsQuery: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+  })),
+  useGetLowStockProductsQuery: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+  })),
+  useGetRecentTransactionsQuery: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+  })),
+  useGetSalesChartQuery: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+  })),
 }));
 
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({
     push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    refresh: jest.fn(),
+    forward: jest.fn(),
   })),
   usePathname: jest.fn(() => '/dashboard'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+  redirect: jest.fn(),
 }));
 
 describe('Dashboard Page', () => {

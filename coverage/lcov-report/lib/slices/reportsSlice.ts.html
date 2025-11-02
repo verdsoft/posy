@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">82.97% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>39/47</span>
+                <span class='fraction'>0/47</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">82.97% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>39/47</span>
+                <span class='fraction'>0/47</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -110,100 +110,100 @@
 <a name='L45'></a><a href='#L45'>45</a>
 <a name='L46'></a><a href='#L46'>46</a>
 <a name='L47'></a><a href='#L47'>47</a>
-<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
-&nbsp;
-interface ReportData {
-  [key: string]: any
-}
-&nbsp;
-interface ReportsState {
-  salesReport: ReportData | null
-  purchaseReport: ReportData | null
-  profitLoss: ReportData | null
-  loading: boolean
-  error: string | null
-}
-&nbsp;
-const initialState: ReportsState = {
-  salesReport: null,
-  purchaseReport: null,
-  profitLoss: null,
-  loading: false,
-  error: null,
-}
-&nbsp;
-export const fetchSalesReport = createAsyncThunk(
-  "reports/fetchSalesReport",
-  async (dateRange: { from: string; to: string }) =&gt; {
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"</span></span></span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >interface ReportData {</span>
+<span class="cstat-no" title="statement not covered" >  [key: string]: any</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >interface ReportsState {</span>
+<span class="cstat-no" title="statement not covered" >  salesReport: ReportData | null</span>
+<span class="cstat-no" title="statement not covered" >  purchaseReport: ReportData | null</span>
+<span class="cstat-no" title="statement not covered" >  profitLoss: ReportData | null</span>
+<span class="cstat-no" title="statement not covered" >  loading: boolean</span>
+<span class="cstat-no" title="statement not covered" >  error: string | null</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const initialState: ReportsState = {</span>
+<span class="cstat-no" title="statement not covered" >  salesReport: null,</span>
+<span class="cstat-no" title="statement not covered" >  purchaseReport: null,</span>
+<span class="cstat-no" title="statement not covered" >  profitLoss: null,</span>
+<span class="cstat-no" title="statement not covered" >  loading: false,</span>
+<span class="cstat-no" title="statement not covered" >  error: null,</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const fetchSalesReport = createAsyncThunk(</span>
+<span class="cstat-no" title="statement not covered" >  "reports/fetchSalesReport",</span>
+<span class="cstat-no" title="statement not covered" >  async (dateRange: { from: string; to: string }) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    await new Promise((resolve) =&gt; setTimeout(resolve, 1000))</span>
 <span class="cstat-no" title="statement not covered" >    return { totalSales: 50000, totalOrders: 125 }</span>
 <span class="cstat-no" title="statement not covered" >  },</span>
-)
-&nbsp;
-const reportsSlice = createSlice({
-  name: "reports",
-  initialState,
-  reducers: {},
-  extraReducers: (builder) =&gt; {
-    builder
-      .addCase(fetchSalesReport.pending, (state) =&gt; {
+<span class="cstat-no" title="statement not covered" >)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const reportsSlice = createSlice({</span>
+<span class="cstat-no" title="statement not covered" >  name: "reports",</span>
+<span class="cstat-no" title="statement not covered" >  initialState,</span>
+<span class="cstat-no" title="statement not covered" >  reducers: {},</span>
+<span class="cstat-no" title="statement not covered" >  extraReducers: (builder) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    builder</span>
+<span class="cstat-no" title="statement not covered" >      .addCase(fetchSalesReport.pending, (state) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        state.loading = true</span>
 <span class="cstat-no" title="statement not covered" >      })</span>
-      .addCase(fetchSalesReport.fulfilled, (state, action) =&gt; {
+<span class="cstat-no" title="statement not covered" >      .addCase(fetchSalesReport.fulfilled, (state, action) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        state.loading = false</span>
 <span class="cstat-no" title="statement not covered" >        state.salesReport = action.payload</span>
 <span class="cstat-no" title="statement not covered" >      })</span>
-  },
-})
-&nbsp;
-export default reportsSlice.reducer
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" >})</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export default reportsSlice.reducer</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -211,7 +211,7 @@ export default reportsSlice.reducer
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-02T09:49:27.974Z
+                at 2025-11-02T10:24:19.374Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

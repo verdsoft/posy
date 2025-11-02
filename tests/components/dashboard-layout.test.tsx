@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation';
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
   usePathname: jest.fn(() => '/dashboard'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+  redirect: jest.fn(),
 }));
 
 // Mock settings API
@@ -31,6 +33,8 @@ describe('DashboardLayout', () => {
     replace: jest.fn(),
     prefetch: jest.fn(),
     back: jest.fn(),
+    refresh: jest.fn(),
+    forward: jest.fn(),
   };
 
   beforeEach(() => {

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">63.49% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>40/63</span>
+                <span class='fraction'>0/63</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">63.49% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>40/63</span>
+                <span class='fraction'>0/63</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -126,33 +126,7 @@
 <a name='L61'></a><a href='#L61'>61</a>
 <a name='L62'></a><a href='#L62'>62</a>
 <a name='L63'></a><a href='#L63'>63</a>
-<a name='L64'></a><a href='#L64'>64</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L64'></a><a href='#L64'>64</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -171,51 +145,77 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
-&nbsp;
-interface Transfer {
-  id: string
-  reference: string
-  fromWarehouse: string
-  toWarehouse: string
-  date: string
-  items: number
-  total: number
-  status: "pending" | "completed" | "cancelled"
-  createdAt: string
-}
-&nbsp;
-interface TransfersState {
-  transfers: Transfer[]
-  loading: boolean
-  error: string | null
-}
-&nbsp;
-const initialState: TransfersState = {
-  transfers: [],
-  loading: false,
-  error: null,
-}
-&nbsp;
-export const fetchTransfers = createAsyncThunk("transfers/fetchTransfers", async () =&gt; {
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"</span></span></span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >interface Transfer {</span>
+<span class="cstat-no" title="statement not covered" >  id: string</span>
+<span class="cstat-no" title="statement not covered" >  reference: string</span>
+<span class="cstat-no" title="statement not covered" >  fromWarehouse: string</span>
+<span class="cstat-no" title="statement not covered" >  toWarehouse: string</span>
+<span class="cstat-no" title="statement not covered" >  date: string</span>
+<span class="cstat-no" title="statement not covered" >  items: number</span>
+<span class="cstat-no" title="statement not covered" >  total: number</span>
+<span class="cstat-no" title="statement not covered" >  status: "pending" | "completed" | "cancelled"</span>
+<span class="cstat-no" title="statement not covered" >  createdAt: string</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >interface TransfersState {</span>
+<span class="cstat-no" title="statement not covered" >  transfers: Transfer[]</span>
+<span class="cstat-no" title="statement not covered" >  loading: boolean</span>
+<span class="cstat-no" title="statement not covered" >  error: string | null</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const initialState: TransfersState = {</span>
+<span class="cstat-no" title="statement not covered" >  transfers: [],</span>
+<span class="cstat-no" title="statement not covered" >  loading: false,</span>
+<span class="cstat-no" title="statement not covered" >  error: null,</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const fetchTransfers = createAsyncThunk("transfers/fetchTransfers", async () =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  await new Promise((resolve) =&gt; setTimeout(resolve, 1000))</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >  const mockTransfers: Transfer[] = [</span>
@@ -234,24 +234,24 @@ export const fetchTransfers = createAsyncThunk("transfers/fetchTransfers", async
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >  return mockTransfers</span>
 <span class="cstat-no" title="statement not covered" >})</span>
-&nbsp;
-const transfersSlice = createSlice({
-  name: "transfers",
-  initialState,
-  reducers: {},
-  extraReducers: (builder) =&gt; {
-    builder
-      .addCase(fetchTransfers.pending, (state) =&gt; {
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const transfersSlice = createSlice({</span>
+<span class="cstat-no" title="statement not covered" >  name: "transfers",</span>
+<span class="cstat-no" title="statement not covered" >  initialState,</span>
+<span class="cstat-no" title="statement not covered" >  reducers: {},</span>
+<span class="cstat-no" title="statement not covered" >  extraReducers: (builder) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    builder</span>
+<span class="cstat-no" title="statement not covered" >      .addCase(fetchTransfers.pending, (state) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        state.loading = true</span>
 <span class="cstat-no" title="statement not covered" >      })</span>
-      .addCase(fetchTransfers.fulfilled, (state, action) =&gt; {
+<span class="cstat-no" title="statement not covered" >      .addCase(fetchTransfers.fulfilled, (state, action) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        state.loading = false</span>
 <span class="cstat-no" title="statement not covered" >        state.transfers = action.payload</span>
 <span class="cstat-no" title="statement not covered" >      })</span>
-  },
-})
-&nbsp;
-export default transfersSlice.reducer
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" >})</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export default transfersSlice.reducer</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -259,7 +259,7 @@ export default transfersSlice.reducer
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-02T09:49:27.974Z
+                at 2025-11-02T10:24:19.374Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

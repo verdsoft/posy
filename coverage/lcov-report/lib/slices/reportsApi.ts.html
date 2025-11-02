@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">74.46% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>35/47</span>
+                <span class='fraction'>0/47</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">16.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/6</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">74.46% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>35/47</span>
+                <span class='fraction'>0/47</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -110,100 +110,100 @@
 <a name='L45'></a><a href='#L45'>45</a>
 <a name='L46'></a><a href='#L46'>46</a>
 <a name='L47'></a><a href='#L47'>47</a>
-<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { Customer, Supplier, PaginatedResponse } from '@/lib/types';
-&nbsp;
-export interface ProfitLossData {
-    sales: { count: number; total: number };
-    purchases: { count: number; total: number };
-    salesReturns: { count: number; total: number };
-    purchaseReturns: { count: number; total: number };
-    expenses: { total: number };
-    payments: { received: number; sent: number };
-    profit: number;
-    paymentsNet: number;
-}
-&nbsp;
-export const reportsApi = createApi({
-    reducerPath: 'reportsApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/reports' }),
-    tagTypes: ['Report', 'CustomerReport', 'SupplierReport'],
-    endpoints: (builder) =&gt; ({
-        getProfitLoss: builder.query&lt;ProfitLossData, { from: string; to: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to }) =&gt; `profit-loss?from=${from}&amp;to=${to}`,</span>
-            providesTags: ['Report'],
-        }),
-        getCustomers: builder.query&lt;PaginatedResponse&lt;Customer&gt;, { from: string, to: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to }) =&gt; `customers?from=${from}&amp;to=${to}`,</span>
-            providesTags: <span class="fstat-no" title="function not covered" >(result) =&gt;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';</span></span></span>
+<span class="cstat-no" title="statement not covered" >import { Customer, Supplier, PaginatedResponse } from '@/lib/types';</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export interface ProfitLossData {</span>
+<span class="cstat-no" title="statement not covered" >    sales: { count: number; total: number };</span>
+<span class="cstat-no" title="statement not covered" >    purchases: { count: number; total: number };</span>
+<span class="cstat-no" title="statement not covered" >    salesReturns: { count: number; total: number };</span>
+<span class="cstat-no" title="statement not covered" >    purchaseReturns: { count: number; total: number };</span>
+<span class="cstat-no" title="statement not covered" >    expenses: { total: number };</span>
+<span class="cstat-no" title="statement not covered" >    payments: { received: number; sent: number };</span>
+<span class="cstat-no" title="statement not covered" >    profit: number;</span>
+<span class="cstat-no" title="statement not covered" >    paymentsNet: number;</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const reportsApi = createApi({</span>
+<span class="cstat-no" title="statement not covered" >    reducerPath: 'reportsApi',</span>
+<span class="cstat-no" title="statement not covered" >    baseQuery: fetchBaseQuery({ baseUrl: '/api/reports' }),</span>
+<span class="cstat-no" title="statement not covered" >    tagTypes: ['Report', 'CustomerReport', 'SupplierReport'],</span>
+<span class="cstat-no" title="statement not covered" >    endpoints: (builder) =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        getProfitLoss: builder.query&lt;ProfitLossData, { from: string; to: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to }) =&gt; `profit-loss?from=${from}&amp;to=${to}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: ['Report'],</span>
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >        getCustomers: builder.query&lt;PaginatedResponse&lt;Customer&gt;, { from: string, to: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to }) =&gt; `customers?from=${from}&amp;to=${to}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: (result) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                result</span>
 <span class="cstat-no" title="statement not covered" >                    ? [</span>
 <span class="cstat-no" title="statement not covered" >                        ...result.data.map(({ id }) =&gt; ({ type: 'CustomerReport' as const, id })),</span>
 <span class="cstat-no" title="statement not covered" >                        { type: 'CustomerReport', id: 'LIST' },</span>
 <span class="cstat-no" title="statement not covered" >                    ]</span>
 <span class="cstat-no" title="statement not covered" >                    : [{ type: 'CustomerReport', id: 'LIST' }],</span>
-        }),
-        getSuppliers: builder.query&lt;PaginatedResponse&lt;Supplier&gt;, { from: string, to: string }&gt;({
-            query: <span class="fstat-no" title="function not covered" >({ from, to }) =&gt; `suppliers?from=${from}&amp;to=${to}`,</span>
-            providesTags: <span class="fstat-no" title="function not covered" >(result) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >        getSuppliers: builder.query&lt;PaginatedResponse&lt;Supplier&gt;, { from: string, to: string }&gt;({</span>
+<span class="cstat-no" title="statement not covered" >            query: ({ from, to }) =&gt; `suppliers?from=${from}&amp;to=${to}`,</span>
+<span class="cstat-no" title="statement not covered" >            providesTags: (result) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >                result</span>
 <span class="cstat-no" title="statement not covered" >                    ? [</span>
 <span class="cstat-no" title="statement not covered" >                        ...result.data.map(({ id }) =&gt; ({ type: 'SupplierReport' as const, id })),</span>
 <span class="cstat-no" title="statement not covered" >                        { type: 'SupplierReport', id: 'LIST' },</span>
 <span class="cstat-no" title="statement not covered" >                    ]</span>
 <span class="cstat-no" title="statement not covered" >                    : [{ type: 'SupplierReport', id: 'LIST' }],</span>
-        }),
-    }),
-});
-&nbsp;
-export const { useGetProfitLossQuery, useGetCustomersQuery, useGetSuppliersQuery } = reportsApi;
+<span class="cstat-no" title="statement not covered" >        }),</span>
+<span class="cstat-no" title="statement not covered" >    }),</span>
+<span class="cstat-no" title="statement not covered" >});</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const { useGetProfitLossQuery, useGetCustomersQuery, useGetSuppliersQuery } = reportsApi;</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -211,7 +211,7 @@ export const { useGetProfitLossQuery, useGetCustomersQuery, useGetSuppliersQuery
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-02T09:49:27.974Z
+                at 2025-11-02T10:24:19.374Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -4,6 +4,32 @@
  */
 
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+// Polyfill TextEncoder/TextDecoder for jsdom
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder as any;
+
+// Mock fetch for RTK Query
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: async () => ({}),
+    text: async () => '',
+    blob: async () => new Blob(),
+    arrayBuffer: async () => new ArrayBuffer(0),
+    clone: () => ({ ok: true }),
+    headers: new Headers(),
+    redirected: false,
+    status: 200,
+    statusText: 'OK',
+    type: 'basic',
+    url: '',
+    body: null,
+    bodyUsed: false,
+    formData: async () => new FormData(),
+  } as Response)
+) as jest.Mock;
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
@@ -64,6 +90,20 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: jest.fn((key: string) => {
+    if (key === 'token') return 'test-token';
+    return null;
+  }),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+  length: 0,
+  key: jest.fn(),
+};
+global.localStorage = localStorageMock as Storage;
 
 // Suppress console errors in tests (optional)
 const originalError = console.error;
