@@ -80,31 +80,6 @@ export default function CreateSalesReturn() {
       toast.error("No sales found. Please create some sales first.")
     }
   }, [sales, isSalesLoading])
-            return
-          }
-          throw new Error("Failed to fetch sale items")
-        }
-        const data = await res.json()
-        setSaleItems(data.items || [])
-        
-        // Set customer from sale
-        if (data.customer_id) {
-          setSelectedCustomer(data.customer_id)
-        }
-        
-        // Set warehouse from sale
-        if (data.warehouse_id) {
-          setSelectedWarehouse(data.warehouse_id)
-        }
-        
-      } catch (error) {
-        toast.error("Failed to load sale items")
-        console.error(error)
-      }
-    }
-    
-    fetchSaleItems()
-  }, [selectedSale])
 
   // Search products
   useEffect(() => {

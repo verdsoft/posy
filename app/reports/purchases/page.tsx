@@ -75,7 +75,6 @@ export default function PurchaseReport() {
 
     try {
       await updatePurchase({ id: selectedPurchase.id, data: formData }).unwrap()
-      ) : [])
       setShowEditModal(false)
       resetForm()
       toast.success("Purchase updated successfully")

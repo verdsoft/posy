@@ -80,31 +80,6 @@ export default function CreatePurchaseReturn() {
       toast.error("No purchases found. Please create some purchases first.")
     }
   }, [purchases, isPurchasesLoading])
-            return
-          }
-          throw new Error("Failed to fetch purchase items")
-        }
-        const data = await res.json()
-        setPurchaseItems(data.items || [])
-        
-        // Set supplier from purchase
-        if (data.supplier_id) {
-          setSelectedSupplier(data.supplier_id)
-        }
-        
-        // Set warehouse from purchase
-        if (data.warehouse_id) {
-          setSelectedWarehouse(data.warehouse_id)
-        }
-        
-      } catch (error) {
-        toast.error("Failed to load purchase items")
-        console.error(error)
-      }
-    }
-    
-    fetchPurchaseItems()
-  }, [selectedPurchase])
 
   // Search products
   useEffect(() => {

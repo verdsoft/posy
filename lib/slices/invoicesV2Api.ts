@@ -7,22 +7,25 @@ export interface Invoice {
   reference: string
   customer_id: number
   warehouse_id: number
-  sale_id?: number
-  quotation_id?: number
+  sale_id?: number | null
+  quotation_id?: number | null
   date: string
-  due_date?: string
-  subtotal: number
-  tax_rate: number
-  tax_amount: number
-  discount: number
-  shipping: number
+  due_date?: string | null
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
   total: number
-  status: 'pending' | 'sent' | 'paid' | 'cancelled'
-  payment_status: 'pending' | 'partial' | 'paid' | 'overdue'
-  notes?: string
+  paid?: number
+  due?: number
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+  payment_status: 'unpaid' | 'partial' | 'paid'
+  notes?: string | null
+  created_by?: number
   created_at?: string
   updated_at?: string
-  customers?: { id: number; name: string; email: string }
+  customers?: { id: number; name: string; email?: string }
   warehouses?: { id: number; name: string }
   invoice_items?: InvoiceItem[]
 }
@@ -33,11 +36,13 @@ export interface InvoiceItem {
   product_id: number
   quantity: number
   unit_price: number
-  discount: number
-  tax: number
+  discount?: number
+  tax?: number
   subtotal: number
   created_at?: string
   products?: { id: number; name: string; code: string }
+  name?: string
+  code?: string
 }
 
 export interface Transfer {
@@ -96,7 +101,7 @@ export const invoicesV2Api = createApi({
   tagTypes: ['Invoice', 'Transfer'],
   endpoints: (builder) => ({
     // Invoices
-    getInvoices: builder.query<PaginatedResponse<Invoice>, QueryParams>({
+    getInvoices: builder.query<PaginatedResponse<Invoice & { customer_name?: string; warehouse_name?: string }>, QueryParams>({
       query: (params) => {
         const searchParams = new URLSearchParams()
         if (params.page) searchParams.append('page', params.page.toString())
@@ -104,6 +109,14 @@ export const invoicesV2Api = createApi({
         if (params.search) searchParams.append('search', params.search)
         return `/invoices?${searchParams.toString()}`
       },
+      transformResponse: (response: PaginatedResponse<Invoice>) => ({
+        ...response,
+        data: response.data.map(invoice => ({
+          ...invoice,
+          customer_name: invoice.customers?.name,
+          warehouse_name: invoice.warehouses?.name,
+        })),
+      }),
       providesTags: (result) =>
         result
           ? [
@@ -117,8 +130,9 @@ export const invoicesV2Api = createApi({
       providesTags: (result, error, id) => [{ type: 'Invoice', id }],
     }),
     getInvoiceItems: builder.query<InvoiceItem[], string>({
-      query: (id) => `/invoices/${id}/items`,
-      providesTags: (result, error, id) => [{ type: 'Invoice', id }],
+      query: (invoiceId) => `/invoices/items?invoice_id=${invoiceId}`,
+      transformResponse: (response: { success: boolean; data: InvoiceItem[] }) => response.data || [],
+      providesTags: (result, error, invoiceId) => [{ type: 'Invoice', id: invoiceId }],
     }),
     createInvoice: builder.mutation<{ success: boolean; data: Invoice }, Omit<Invoice, 'id'> & { items: Omit<InvoiceItem, 'id' | 'invoice_id'>[] }>({
       query: (invoiceData) => ({
@@ -139,7 +153,7 @@ export const invoicesV2Api = createApi({
         { type: 'Invoice', id: 'LIST' },
       ],
     }),
-    deleteInvoice: builder.mutation<{ success: boolean }, number>({
+    deleteInvoice: builder.mutation<{ success: boolean }, string>({
       query: (id) => ({
         url: `/invoices?id=${id}`,
         method: 'DELETE',
