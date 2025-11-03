@@ -117,8 +117,8 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
         
         // Fetch customers and warehouses in parallel
         const [customersRes, warehousesRes] = await Promise.all([
-          fetch('/api/customers'),
-          fetch('/api/settings/warehouses')
+          fetch('/api/v2/customers'),
+          fetch('/api/v2/settings/warehouses')
         ])
 
         if (!customersRes.ok || !warehousesRes.ok) {

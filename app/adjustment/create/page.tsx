@@ -60,7 +60,7 @@ export default function CreateAdjustment() {
   useEffect(() => {
     const fetchWarehouses = async () => {
       try {
-        const response = await fetch('/api/settings/warehouses')
+        const response = await fetch('/api/v2/settings/warehouses')
         const data = await response.json()
         // Ensure data is an array before setting it
         if (Array.isArray(data)) {

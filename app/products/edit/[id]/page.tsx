@@ -56,10 +56,10 @@ export default function EditProduct() {
     const loadDropdownData = async () => {
       try {
         const [categoriesRes, brandsRes, unitsRes, warehousesRes] = await Promise.all([
-          fetch("/api/settings/categories"),
-          fetch("/api/settings/brands"),
-          fetch("/api/settings/units"),
-          fetch("/api/settings/warehouses"),
+          fetch("/api/v2/settings/categories"),
+          fetch("/api/v2/settings/brands"),
+          fetch("/api/v2/settings/units"),
+          fetch("/api/v2/settings/warehouses"),
         ])
 
         const [categoriesData, brandsData, unitsData, warehousesData] = await Promise.all([
