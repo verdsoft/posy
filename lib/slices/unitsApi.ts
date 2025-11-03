@@ -73,9 +73,9 @@ export const unitsApi = createApi({
     }),
     updateUnit: builder.mutation<Unit, UpdateUnitInput>({
       query: ({ id, ...unitData }) => ({
-        url: '',
+        url: `?id=${id}`,
         method: 'PUT',
-        body: { id, ...unitData },
+        body: unitData,
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Unit', id },
@@ -97,9 +97,8 @@ export const unitsApi = createApi({
     }),
     deleteUnit: builder.mutation<void, number>({
       query: (id) => ({
-        url: '',
+        url: `?id=${id}`,
         method: 'DELETE',
-        body: { id },
       }),
       invalidatesTags: (result, error, id) => [
         { type: 'Unit', id },

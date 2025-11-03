@@ -34,22 +34,6 @@ export async function GET(req: NextRequest): Promise<NextResponse<Unit | Paginat
             },
             take: 10,
             orderBy: { name: 'asc' }
-          },
-          base_unit_relation: {
-            select: {
-              id: true,
-              name: true,
-              short_name: true
-            }
-          },
-          sub_units: {
-            select: {
-              id: true,
-              name: true,
-              short_name: true,
-              operator: true,
-              operation_value: true
-            }
           }
         }
       })
@@ -94,16 +78,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<Unit | Paginat
           status: true,
           created_at: true,
           updated_at: true,
-          base_unit_relation: {
-            select: {
-              name: true,
-              short_name: true
-            }
-          },
           _count: {
             select: {
-              products: true,
-              sub_units: true
+              products: true
             }
           }
         },
@@ -223,25 +200,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<Unit | Ap
       )
     }
 
-    // Validate base_unit if provided
-    if (base_unit && base_unit !== "-") {
-      const baseUnitExists = await prisma.units.findUnique({
-        where: { id: parseInt(base_unit) }
-      })
-
-      if (!baseUnitExists) {
-        return NextResponse.json(
-          { error: "Base unit not found" },
-          { status: 400 }
-        )
-      }
-    }
-
     const newUnit = await prisma.units.create({
       data: {
         name: name.trim(),
         short_name: short_name.trim(),
-        base_unit: base_unit && base_unit !== "-" ? parseInt(base_unit) : null,
+        base_unit: base_unit && base_unit !== "-" ? base_unit.trim() : null,
         operator: operator.trim(),
         operation_value: operationValueNum,
         status,
@@ -380,37 +343,12 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Unit | Api
       }
     }
 
-    // Validate base_unit if provided
-    let baseUnitValue = null
-    if (base_unit && base_unit !== "-") {
-      const baseUnitExists = await prisma.units.findUnique({
-        where: { id: parseInt(base_unit) }
-      })
-
-      if (!baseUnitExists) {
-        return NextResponse.json(
-          { error: "Base unit not found" },
-          { status: 400 }
-        )
-      }
-
-      // Check for circular reference
-      if (parseInt(base_unit) === parseInt(id)) {
-        return NextResponse.json(
-          { error: "Unit cannot be its own base unit" },
-          { status: 400 }
-        )
-      }
-
-      baseUnitValue = parseInt(base_unit)
-    }
-
     const updatedUnit = await prisma.units.update({
       where: { id: parseInt(id) },
       data: {
         name: name.trim(),
         short_name: short_name.trim(),
-        base_unit: baseUnitValue,
+        base_unit: base_unit && base_unit !== "-" ? base_unit.trim() : null,
         operator: operator.trim(),
         operation_value: operationValueNum,
         status: status || existingUnit.status,
@@ -557,26 +495,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Unit | A
     // Validate base_unit if being updated
     if (body.base_unit !== undefined) {
       if (body.base_unit && body.base_unit !== "-") {
-        const baseUnitExists = await prisma.units.findUnique({
-          where: { id: parseInt(body.base_unit) }
-        })
-
-        if (!baseUnitExists) {
-          return NextResponse.json(
-            { error: "Base unit not found" },
-            { status: 400 }
-          )
-        }
-
-        // Check for circular reference
-        if (parseInt(body.base_unit) === parseInt(id)) {
-          return NextResponse.json(
-            { error: "Unit cannot be its own base unit" },
-            { status: 400 }
-          )
-        }
-
-        body.base_unit = parseInt(body.base_unit)
+        body.base_unit = body.base_unit.trim()
       } else {
         body.base_unit = null
       }
@@ -620,8 +539,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     const existingUnit = await prisma.units.findUnique({
       where: { id: parseInt(id) },
       include: {
-        products: { select: { id: true } },
-        sub_units: { select: { id: true } }
+        products: { select: { id: true } }
       }
     })
 
@@ -636,14 +554,6 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     if (existingUnit.products.length > 0) {
       return NextResponse.json(
         { error: "Cannot delete unit with associated products. Please reassign or delete the products first." },
-        { status: 400 }
-      )
-    }
-
-    // Check for sub-units
-    if (existingUnit.sub_units.length > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete unit with sub-units. Please reassign or delete the sub-units first." },
         { status: 400 }
       )
     }

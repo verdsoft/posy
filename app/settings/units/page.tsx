@@ -69,9 +69,10 @@ export default function Units() {
       setIsCreateOpen(false)
       setForm({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
       toast.success("Unit created successfully")
-    } catch (error) {
+    } catch (error :unknown) {
+      const message = error instanceof Error ? error.message : String(error)
       console.error("Error creating unit:", error)
-      toast.error("Failed to create unit")
+      toast.error(message)
     }
   }
 

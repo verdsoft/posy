@@ -20,7 +20,7 @@ import { toast } from "sonner"
 export default function Currencies() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [form, setForm] = useState({ code: "", name: "", symbol: "" })
+  const [form, setForm] = useState({ code: "", name: "", symbol: "", exchange_rate: "" })
   const [editId, setEditId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
   const [deleteId, setDeleteId] = useState<number | null>(null)
@@ -41,33 +41,38 @@ export default function Currencies() {
 
   const handleCreate = async () => {
     try {
-      await createCurrency(form).unwrap()
+      await createCurrency({ ...form, exchange_rate: parseFloat(form.exchange_rate) }).unwrap()
       setIsCreateOpen(false)
-      setForm({ code: "", name: "", symbol: "" })
+      setForm({ code: "", name: "", symbol: "", exchange_rate: "" })
       toast.success("Currency created successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating currency:", error)
-      toast.error("Failed to create currency")
+      toast.error(error?.data?.error || "Failed to create currency")
     }
   }
 
   const openEdit = (currency: Currency) => {
     setEditId(currency.id)
-    setForm({ code: currency.code, name: currency.name, symbol: currency.symbol })
+    setForm({
+      code: currency.code,
+      name: currency.name,
+      symbol: currency.symbol,
+      exchange_rate: currency.exchange_rate?.toString() || "1"
+    })
     setIsEditOpen(true)
   }
 
   const handleEdit = async () => {
     try {
       if (!editId) return
-      await updateCurrency({ id: editId, ...form }).unwrap()
+      await updateCurrency({ id: editId, ...form, exchange_rate: parseFloat(form.exchange_rate) }).unwrap()
       setIsEditOpen(false)
       setEditId(null)
-      setForm({ code: "", name: "", symbol: "" })
+      setForm({ code: "", name: "", symbol: "", exchange_rate: "" })
       toast.success("Currency updated successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating currency:", error)
-      toast.error("Failed to update currency")
+      toast.error(error?.data?.error || "Failed to update currency")
     }
   }
 
@@ -142,8 +147,20 @@ export default function Currencies() {
                       <Label htmlFor="symbol">Symbol *</Label>
                       <Input id="symbol" value={form.symbol} onChange={handleFormChange} placeholder="Enter currency symbol" />
                     </div>
+                    <div>
+                      <Label htmlFor="exchange_rate">Exchange Rate *</Label>
+                      <Input
+                        id="exchange_rate"
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        value={form.exchange_rate}
+                        onChange={handleFormChange}
+                        placeholder="Enter exchange rate"
+                      />
+                    </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim()}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim() || !form.exchange_rate.trim()}>
                         Submit
                       </Button>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
@@ -171,8 +188,20 @@ export default function Currencies() {
                       <Label htmlFor="symbol">Symbol *</Label>
                       <Input id="symbol" value={form.symbol} onChange={handleFormChange} placeholder="Enter currency symbol" />
                     </div>
+                    <div>
+                      <Label htmlFor="exchange_rate">Exchange Rate *</Label>
+                      <Input
+                        id="exchange_rate"
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        value={form.exchange_rate}
+                        onChange={handleFormChange}
+                        placeholder="Enter exchange rate"
+                      />
+                    </div>
                     <div className="flex gap-2 pt-4">
-                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim()}>
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.code.trim() || !form.name.trim() || !form.symbol.trim() || !form.exchange_rate.trim()}>
                         Save
                       </Button>
                       <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">
@@ -196,13 +225,14 @@ export default function Currencies() {
                   <th className="text-left p-4 font-medium">Currency Code</th>
                   <th className="text-left p-4 font-medium">Currency Name</th>
                   <th className="text-left p-4 font-medium">Symbol</th>
+                  <th className="text-left p-4 font-medium">Exchange Rate</th>
                   <th className="text-left p-4 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCurrencies.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-gray-400">
+                    <td colSpan={6} className="p-4 text-center text-gray-400">
                       No currencies found.
                     </td>
                   </tr>
@@ -215,6 +245,7 @@ export default function Currencies() {
                     <td className="p-4">{currency.code}</td>
                     <td className="p-4">{currency.name}</td>
                     <td className="p-4">{currency.symbol}</td>
+                    <td className="p-4">{currency.exchange_rate}</td>
                     <td className="p-4">
                       <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(currency)}>
