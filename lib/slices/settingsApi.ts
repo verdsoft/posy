@@ -72,6 +72,15 @@ export const settingsApi = createApi({
     }),
     getCategories: builder.query<Category[], void>({
       query: () => 'categories',
+      transformResponse: (response: Category[] | { data?: Category[] }) => {
+        if (Array.isArray(response)) {
+          return response
+        }
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+          return response.data
+        }
+        return []
+      },
       providesTags: ['Category'],
     }),
     createCategory: builder.mutation<Category, Partial<Category>>({
@@ -100,6 +109,15 @@ export const settingsApi = createApi({
     }),
     getBrands: builder.query<Brand[], void>({
       query: () => 'brands',
+      transformResponse: (response: Brand[] | { data?: Brand[] }) => {
+        if (Array.isArray(response)) {
+          return response
+        }
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+          return response.data
+        }
+        return []
+      },
       providesTags: ['Brand'],
     }),
     createBrand: builder.mutation<Brand, Partial<Brand>>({
@@ -128,6 +146,15 @@ export const settingsApi = createApi({
     }),
     getWarehouses: builder.query<Warehouse[], void>({
       query: () => 'warehouses',
+      transformResponse: (response: Warehouse[] | { data?: Warehouse[] }) => {
+        if (Array.isArray(response)) {
+          return response
+        }
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+          return response.data
+        }
+        return []
+      },
       providesTags: ['Warehouse'],
     }),
     createWarehouse: builder.mutation<Warehouse, Partial<Warehouse>>({
@@ -156,6 +183,15 @@ export const settingsApi = createApi({
     }),
     getUnits: builder.query<Unit[], void>({
       query: () => 'units',
+      transformResponse: (response: Unit[] | { data?: Unit[] }) => {
+        if (Array.isArray(response)) {
+          return response
+        }
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+          return response.data
+        }
+        return []
+      },
       providesTags: ['Unit'],
     }),
     createUnit: builder.mutation<Unit, Partial<Unit>>({
