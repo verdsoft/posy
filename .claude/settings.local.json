@@ -12,7 +12,9 @@
       "Bash(sed:*)",
       "Bash(awk:*)",
       "Bash(npm run build:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(C:arvipPOSytestslibslicesreturnsApi.test.ts)",
+      "Bash(npx jest:*)"
     ],
     "deny": [],
     "ask": []
