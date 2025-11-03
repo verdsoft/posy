@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/432</span>
+                <span class='fraction'>0/441</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/432</span>
+                <span class='fraction'>0/441</span>
             </div>
         
             
@@ -494,7 +494,25 @@
 <a name='L429'></a><a href='#L429'>429</a>
 <a name='L430'></a><a href='#L430'>430</a>
 <a name='L431'></a><a href='#L431'>431</a>
-<a name='L432'></a><a href='#L432'>432</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L432'></a><a href='#L432'>432</a>
+<a name='L433'></a><a href='#L433'>433</a>
+<a name='L434'></a><a href='#L434'>434</a>
+<a name='L435'></a><a href='#L435'>435</a>
+<a name='L436'></a><a href='#L436'>436</a>
+<a name='L437'></a><a href='#L437'>437</a>
+<a name='L438'></a><a href='#L438'>438</a>
+<a name='L439'></a><a href='#L439'>439</a>
+<a name='L440'></a><a href='#L440'>440</a>
+<a name='L441'></a><a href='#L441'>441</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1275,36 +1293,45 @@
 <span class="cstat-no" title="statement not covered" >        &lt;/TabsContent&gt;</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >        &lt;TabsContent value="status" className="space-y-6"&gt;</span>
-<span class="cstat-no" title="statement not covered" >          {statusData?.data &amp;&amp; (</span>
+<span class="cstat-no" title="statement not covered" >          {statusData?.data?.statistics &amp;&amp; (</span>
 <span class="cstat-no" title="statement not covered" >            &lt;div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"&gt;</span>
 <span class="cstat-no" title="statement not covered" >              &lt;Card&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;CardContent className="p-4"&gt;</span>
-<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold"&gt;{statusData.data.statistics.totalTransactions}&lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold"&gt;{statusData.data.statistics.totalTransactions || 0}&lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >                  &lt;p className="text-sm text-gray-600"&gt;Total Transactions&lt;/p&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;/CardContent&gt;</span>
 <span class="cstat-no" title="statement not covered" >              &lt;/Card&gt;</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >              &lt;Card&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;CardContent className="p-4"&gt;</span>
-<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold"&gt;{statusData.data.statistics.todayTransactions}&lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold"&gt;{statusData.data.statistics.todayTransactions || 0}&lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >                  &lt;p className="text-sm text-gray-600"&gt;Today's Transactions&lt;/p&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;/CardContent&gt;</span>
 <span class="cstat-no" title="statement not covered" >              &lt;/Card&gt;</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >              &lt;Card&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;CardContent className="p-4"&gt;</span>
-<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold text-red-600"&gt;{statusData.data.statistics.failedTransactions}&lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold text-red-600"&gt;{statusData.data.statistics.failedTransactions || 0}&lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >                  &lt;p className="text-sm text-gray-600"&gt;Failed Transactions&lt;/p&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;/CardContent&gt;</span>
 <span class="cstat-no" title="statement not covered" >              &lt;/Card&gt;</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >              &lt;Card&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;CardContent className="p-4"&gt;</span>
-<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold text-orange-600"&gt;{statusData.data.statistics.offlineQueueSize}&lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >                  &lt;div className="text-2xl font-bold text-orange-600"&gt;{statusData.data.statistics.offlineQueueSize || 0}&lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >                  &lt;p className="text-sm text-gray-600"&gt;Offline Queue&lt;/p&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;/CardContent&gt;</span>
 <span class="cstat-no" title="statement not covered" >              &lt;/Card&gt;</span>
 <span class="cstat-no" title="statement not covered" >            &lt;/div&gt;</span>
+<span class="cstat-no" title="statement not covered" >          )}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >          {statusData?.data &amp;&amp; !statusData.data.statistics &amp;&amp; (</span>
+<span class="cstat-no" title="statement not covered" >            &lt;Alert&gt;</span>
+<span class="cstat-no" title="statement not covered" >              &lt;AlertCircle className="h-4 w-4" /&gt;</span>
+<span class="cstat-no" title="statement not covered" >              &lt;AlertDescription&gt;</span>
+<span class="cstat-no" title="statement not covered" >                No statistics available. Make sure FDMS is configured and connected.</span>
+<span class="cstat-no" title="statement not covered" >              &lt;/AlertDescription&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;/Alert&gt;</span>
 <span class="cstat-no" title="statement not covered" >          )}</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >          {statusData?.data?.device &amp;&amp; (</span>
@@ -1363,7 +1390,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-03T09:45:08.920Z
+                at 2025-11-03T14:12:07.941Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

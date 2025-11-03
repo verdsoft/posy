@@ -116,15 +116,16 @@ export default function POSSystem() {
   const { data: fdmsStatus } = useGetFDMSStatusQuery()
 
   const allCategories = useMemo(() => {
-    return categoriesData ? [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData] : [];
+    const categories = Array.isArray(categoriesData) ? categoriesData : [];
+    return [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categories];
   }, [categoriesData]);
 
   const allBrands = useMemo(() => {
-    return brandsData || [];
+    return Array.isArray(brandsData) ? brandsData : [];
   }, [brandsData]);
 
   const allWarehouses = useMemo(() => {
-    return warehousesData || [];
+    return Array.isArray(warehousesData) ? warehousesData : [];
   }, [warehousesData]);
 
   const allCustomers = useMemo(() => {
