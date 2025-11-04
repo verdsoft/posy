@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
           warehouses: { select: { name: true } },
           sale_items: {
             include: {
-              product: { select: { name: true, sku: true } }
+              products: { select: { name: true, code: true } }
             }
           },
         },
@@ -186,16 +186,32 @@ export async function GET(req: NextRequest) {
         include: {
           customers: { select: { name: true, email: true } },
           warehouses: { select: { name: true } },
-          sale_items: { select: { quantity: true, unit_price: true, subtotal: true } }
+          sale_items: {
+            include: {
+              products: { select: { name: true, code: true } }
+            }
+          }
         },
         orderBy,
       }),
       prisma.sales.count({ where }),
     ])
 
+    // Format the data to include customer_name, warehouse_name, and products
+    const formattedSales = sales.map(sale => ({
+      ...sale,
+      customer_name: sale.customers?.name || null,
+      warehouse_name: sale.warehouses?.name || null,
+      products: sale.sale_items?.map(item => ({
+        name: item.products?.name || 'Unknown',
+        code: item.products?.code || 'N/A',
+        quantity: item.quantity
+      })) || []
+    }))
+
     return NextResponse.json({
       success: true,
-      data: sales,
+      data: formattedSales,
       pagination: {
         total,
         page,

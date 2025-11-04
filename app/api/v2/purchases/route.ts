@@ -99,9 +99,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
           suppliers: { select: { name: true } },
           warehouses: { select: { name: true } },
           users: { select: { name: true } },
-          _count: {
-            select: {
-              purchase_items: true
+          purchase_items: {
+            include: {
+              products: { select: { name: true, code: true } }
             }
           }
         }
@@ -109,8 +109,18 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
       prisma.purchases.count({ where })
     ])
 
+    // Format the data to include products array
+    const formattedPurchases = purchases.map(purchase => ({
+      ...purchase,
+      products: purchase.purchase_items?.map(item => ({
+        name: item.products?.name || 'Unknown',
+        code: item.products?.code || 'N/A',
+        quantity: item.quantity
+      })) || []
+    }))
+
     return NextResponse.json({
-      data: purchases,
+      data: formattedPurchases,
       pagination: {
         total,
         page,

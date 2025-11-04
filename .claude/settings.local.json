@@ -14,7 +14,8 @@
       "Bash(npm run build:*)",
       "Bash(cat:*)",
       "Bash(C:arvipPOSytestslibslicesreturnsApi.test.ts)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(npx puppeteer browsers install chrome)"
     ],
     "deny": [],
     "ask": []

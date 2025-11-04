@@ -70,27 +70,27 @@ export default function SaleList() {
   const exportToPDF = () => {
     const doc = new jsPDF()
     doc.text('Sales List', 14, 16)
-    
+
     const tableData = sales.map(sale => [
       new Date(sale.date).toLocaleDateString(),
       sale.reference,
       sale.customer_name || 'N/A',
-      sale.warehouse_name || 'N/A',
+      sale.products?.map((p: any) => `${p.name} (${p.quantity})`).join(', ') || 'N/A',
       sale.status,
       `$${Number(sale.total).toFixed(2)}`,
       `$${Number(sale.paid).toFixed(2)}`,
       `$${Number(sale.due).toFixed(2)}`,
       sale.payment_status
     ])
-    
+
     autoTable(doc, {
-      head: [['Date', 'Reference', 'Customer', 'Warehouse', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
+      head: [['Date', 'Reference', 'Customer', 'Products', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
       body: tableData,
       startY: 20,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-    
+
     doc.save('sales.pdf')
   }
 
@@ -100,7 +100,7 @@ export default function SaleList() {
         Date: new Date(sale.date).toLocaleDateString(),
         Reference: sale.reference,
         Customer: sale.customer_name || 'N/A',
-        Warehouse: sale.warehouse_name || 'N/A',
+        Products: sale.products?.map((p: any) => `${p.name} (${p.quantity})`).join(', ') || 'N/A',
         Status: sale.status,
         Total: Number(sale.total),
         Paid: Number(sale.paid),
@@ -108,7 +108,7 @@ export default function SaleList() {
         'Payment Status': sale.payment_status
       }))
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sales")
     XLSX.writeFile(workbook, "sales.xlsx")
@@ -176,7 +176,7 @@ export default function SaleList() {
                     <th className="text-left p-3">Date</th>
                     <th className="text-left p-3">Reference</th>
                     <th className="text-left p-3">Customer</th>
-                    <th className="text-left p-3">Warehouse</th>
+                    <th className="text-left p-3">Products</th>
                     <th className="text-left p-3">Status</th>
                     <th className="text-left p-3">Total</th>
                     <th className="text-left p-3">Paid</th>
@@ -203,8 +203,20 @@ export default function SaleList() {
                       <tr key={sale.id} className="border-b hover:bg-gray-50">
                         <td className="p-3">{new Date(sale.date).toLocaleDateString()}</td>
                         <td className="p-3 font-medium">{sale.reference}</td>
-                        <td className="p-3">{sale.customer_name}</td>
-                        <td className="p-3">{sale.warehouse_name}</td>
+                        <td className="p-3">{sale.customer_name || 'N/A'}</td>
+                        <td className="p-3">
+                          {sale.products && sale.products.length > 0 ? (
+                            <div className="text-sm">
+                              {sale.products.map((p: any, idx: number) => (
+                                <div key={idx}>
+                                  {p.name} ({p.quantity})
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
                         <td className="p-3">{sale.status}</td>
                         <td className="p-3 font-medium">${Number(sale.total).toFixed(2)}</td>
                         <td className="p-3">${Number(sale.paid).toFixed(2)}</td>

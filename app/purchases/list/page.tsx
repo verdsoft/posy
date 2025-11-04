@@ -98,27 +98,28 @@ export default function PurchaseList() {
   const exportToPDF = () => {
     const doc = new jsPDF()
     doc.text('Purchase List', 14, 16)
-    
+
     const tableData = purchases.map(purchase => [
       formatDate(purchase.date),
       purchase.reference,
       purchase.suppliers?.name || 'N/A',
       purchase.warehouses?.name || 'N/A',
+      (purchase as any).products?.map((p: any) => `${p.name} (${p.quantity})`).join(', ') || 'N/A',
       purchase.status,
       Number(purchase.total),
       Number(purchase.paid),
       Number(purchase.due),
       purchase.payment_status
     ])
-    
+
     autoTable(doc, {
-      head: [['Date', 'Reference', 'Supplier', 'Warehouse', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
+      head: [['Date', 'Reference', 'Supplier', 'Warehouse', 'Products', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
       body: tableData,
       startY: 20,
-      styles: { fontSize: 8 },
+      styles: { fontSize: 7 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-    
+
     doc.save('purchases.pdf')
   }
 
@@ -129,6 +130,7 @@ export default function PurchaseList() {
         Reference: purchase.reference,
         Supplier: purchase.suppliers?.name || 'N/A',
         Warehouse: purchase.warehouses?.name || 'N/A',
+        Products: (purchase as any).products?.map((p: any) => `${p.name} (${p.quantity})`).join(', ') || 'N/A',
         Status: purchase.status,
         Total: Number(purchase.total),
         Paid: Number(purchase.paid),
@@ -136,7 +138,7 @@ export default function PurchaseList() {
         'Payment Status': purchase.payment_status
       }))
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Purchases")
     XLSX.writeFile(workbook, "purchases.xlsx")
@@ -239,6 +241,7 @@ export default function PurchaseList() {
                     <th className="text-left p-3">Reference</th>
                     <th className="text-left p-3">Supplier</th>
                     <th className="text-left p-3">Warehouse</th>
+                    <th className="text-left p-3">Products</th>
                     <th className="text-left p-3">Status</th>
                     <th className="text-left p-3">Total</th>
                     <th className="text-left p-3">Paid</th>
@@ -250,15 +253,15 @@ export default function PurchaseList() {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={10} className="text-center p-6">Loading...</td>
+                      <td colSpan={11} className="text-center p-6">Loading...</td>
                     </tr>
                   ) : isError ? (
                     <tr>
-                      <td colSpan={10} className="text-center p-6 text-red-600">Failed to load purchases</td>
+                      <td colSpan={11} className="text-center p-6 text-red-600">Failed to load purchases</td>
                     </tr>
                   ) : purchases.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center p-6 text-gray-500">No purchases found</td>
+                      <td colSpan={11} className="text-center p-6 text-gray-500">No purchases found</td>
                     </tr>
                   ) : (
                     purchases.map((purchase) => (
@@ -267,6 +270,19 @@ export default function PurchaseList() {
                         <td className="p-3 font-medium">{purchase.reference}</td>
                         <td className="p-3">{purchase.suppliers?.name || 'N/A'}</td>
                         <td className="p-3">{purchase.warehouses?.name || 'N/A'}</td>
+                        <td className="p-3">
+                          {(purchase as any).products && (purchase as any).products.length > 0 ? (
+                            <div className="text-sm">
+                              {(purchase as any).products.map((p: any, idx: number) => (
+                                <div key={idx}>
+                                  {p.name} ({p.quantity})
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
                         <td className="p-3">{getStatusBadge(purchase.status)}</td>
                         <td className="p-3 font-medium">${Number(purchase.total) }</td>
                         <td className="p-3">${Number(purchase.paid) }</td>
