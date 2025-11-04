@@ -41,12 +41,12 @@ export const settingsApi = createApi({
   tagTypes: ['Category', 'Brand', 'Warehouse', 'Unit', 'Backup', 'SystemSettings'],
   endpoints: (builder) => ({
     getSystemSettings: builder.query<SystemSettings, void>({
-        query: () => 'system',
+        query: () => 'systems',
         providesTags: ['SystemSettings'],
     }),
     updateSystemSettings: builder.mutation<void, FormData>({
         query: (formData) => ({
-            url: 'system',
+            url: 'systems',
             method: 'POST',
             body: formData,
         }),

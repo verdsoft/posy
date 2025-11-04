@@ -1,30 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
   try {
-    const settings = await prisma.system_settings.findFirst({
-      orderBy: { id: 'desc' }
+    const [systemTitle, systemLogo] = await Promise.all([
+      prisma.settings.findUnique({ where: { key: 'system_title' } }),
+      prisma.settings.findUnique({ where: { key: 'system_logo' } })
+    ]);
+
+    return NextResponse.json({
+      system_title: systemTitle?.value || '',
+      system_logo: systemLogo?.value || ''
     });
-
-    if (!settings) {
-      // Return default settings if none exist
-      return NextResponse.json({
-        company_name: '',
-        email: '',
-        phone: '',
-        address: '',
-        tax_rate: 0,
-        currency: 'USD',
-        currency_symbol: '$',
-        date_format: 'YYYY-MM-DD',
-        time_format: 'HH:mm',
-        timezone: 'UTC',
-        language: 'en'
-      });
-    }
-
-    return NextResponse.json(settings);
   } catch (error) {
     console.error('Failed to fetch system settings:', error);
     return NextResponse.json(
@@ -36,29 +25,52 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Check if request has FormData or JSON
+    const contentType = req.headers.get('content-type') || '';
+    let system_title: string | undefined;
+    let system_logo: string | undefined;
 
-    // Check if settings exist
-    const existingSettings = await prisma.system_settings.findFirst();
-
-    let settings;
-    if (existingSettings) {
-      // Update existing settings
-      settings = await prisma.system_settings.update({
-        where: { id: existingSettings.id },
-        data: {
-          ...body,
-          updated_at: new Date()
-        }
-      });
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData (for file uploads)
+      const formData = await req.formData();
+      system_title = formData.get('system_title')?.toString();
+      system_logo = formData.get('system_logo')?.toString();
     } else {
-      // Create new settings
-      settings = await prisma.system_settings.create({
-        data: body
-      });
+      // Handle JSON
+      const body = await req.json();
+      system_title = body.system_title;
+      system_logo = body.system_logo;
     }
 
-    return NextResponse.json(settings);
+    // Update or create settings using upsert
+    const updates = [];
+
+    if (system_title !== undefined) {
+      updates.push(
+        prisma.settings.upsert({
+          where: { key: 'system_title' },
+          update: { value: system_title },
+          create: { key: 'system_title', value: system_title }
+        })
+      );
+    }
+
+    if (system_logo !== undefined) {
+      updates.push(
+        prisma.settings.upsert({
+          where: { key: 'system_logo' },
+          update: { value: system_logo },
+          create: { key: 'system_logo', value: system_logo }
+        })
+      );
+    }
+
+    await Promise.all(updates);
+
+    return NextResponse.json({
+      system_title: system_title || '',
+      system_logo: system_logo || ''
+    });
   } catch (error) {
     console.error('Failed to save system settings:', error);
     return NextResponse.json(
@@ -71,25 +83,37 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const { system_title, system_logo } = body;
 
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Settings ID is required' },
-        { status: 400 }
+    // Update or create settings using upsert
+    const updates = [];
+
+    if (system_title !== undefined) {
+      updates.push(
+        prisma.settings.upsert({
+          where: { key: 'system_title' },
+          update: { value: system_title },
+          create: { key: 'system_title', value: system_title }
+        })
       );
     }
 
-    const settings = await prisma.system_settings.update({
-      where: { id: parseInt(id) },
-      data: {
-        ...body,
-        updated_at: new Date()
-      }
-    });
+    if (system_logo !== undefined) {
+      updates.push(
+        prisma.settings.upsert({
+          where: { key: 'system_logo' },
+          update: { value: system_logo },
+          create: { key: 'system_logo', value: system_logo }
+        })
+      );
+    }
 
-    return NextResponse.json(settings);
+    await Promise.all(updates);
+
+    return NextResponse.json({
+      system_title: system_title || '',
+      system_logo: system_logo || ''
+    });
   } catch (error) {
     console.error('Failed to update system settings:', error);
     return NextResponse.json(
