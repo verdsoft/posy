@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     salesData.forEach(sale => {
       const dateStr = sale.created_at.toISOString().split("T")[0]
       if (dateMap[dateStr]) {
-        dateMap[dateStr].sales += sale.total
+        dateMap[dateStr].sales += Number(sale.total)
       }
     })
 
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     purchasesData.forEach(purchase => {
       const dateStr = purchase.created_at.toISOString().split("T")[0]
       if (dateMap[dateStr]) {
-        dateMap[dateStr].purchases += purchase.total
+        dateMap[dateStr].purchases += Number(purchase.total)
       }
     })
 

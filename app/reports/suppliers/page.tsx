@@ -51,8 +51,8 @@ export default function SupplierReport() {
   })
 
   const filteredSuppliers = useMemo(() => {
-    if(!suppliers) return [];
-    return suppliers.filter(supplier =>
+    if(!suppliers?.data) return [];
+    return suppliers.data.filter(supplier =>
         supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         supplier.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         supplier.phone?.toLowerCase().includes(searchTerm.toLowerCase())
