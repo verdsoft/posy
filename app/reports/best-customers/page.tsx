@@ -49,8 +49,8 @@ export default function BestCustomers() {
   })
 
   const bestCustomers = useMemo(() => {
-    if (!customers) return [];
-    return [...customers]
+    if (!customers?.data) return [];
+    return [...customers.data]
         .filter(c => c.total_sales > 0)
         .sort((a, b) => b.total_sales - a.total_sales);
   }, [customers]);

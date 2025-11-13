@@ -8,38 +8,36 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams
     const limit = parseInt(searchParams.get("limit") || "10")
 
-    // Use raw SQL to find products where quantity < alert_quantity
+    // Find products where stock < alert_quantity using raw SQL
     const lowStockItems = await prisma.$queryRaw<Array<{
-      product_id: number
-      warehouse_id: number
-      quantity: number
+      id: number
+      name: string
+      code: string
+      stock: number
       alert_quantity: number
-      product_name: string
-      product_code: string
       warehouse_name: string
     }>>`
       SELECT
-        pw.product_id,
-        pw.warehouse_id,
-        pw.quantity,
-        pw.alert_quantity,
-        p.name as product_name,
-        p.code as product_code,
+        p.id,
+        p.name,
+        p.code,
+        p.stock,
+        p.alert_quantity,
         w.name as warehouse_name
-      FROM product_warehouse pw
-      INNER JOIN products p ON pw.product_id = p.id
-      INNER JOIN warehouses w ON pw.warehouse_id = w.id
-      WHERE pw.quantity < pw.alert_quantity
-      ORDER BY pw.quantity ASC
+      FROM products p
+      INNER JOIN warehouses w ON p.warehouse_id = w.id
+      WHERE p.stock < p.alert_quantity
+        AND p.status = 'active'
+      ORDER BY p.stock ASC
       LIMIT ${limit}
     `
 
     const result = lowStockItems.map(item => ({
-      id: item.product_id,
-      name: item.product_name,
-      code: item.product_code,
-      current_stock: item.quantity,
-      min_stock: item.alert_quantity,
+      id: item.id,
+      name: item.name,
+      code: item.code,
+      current_stock: Number(item.stock),
+      min_stock: Number(item.alert_quantity),
       warehouse_name: item.warehouse_name
     }))
 
