@@ -51,8 +51,8 @@ export default function CustomerReport() {
   })
 
   const filteredCustomers = useMemo(() => {
-    if(!customers) return [];
-    return customers.filter(customer =>
+    if(!customers?.data) return [];
+    return customers.data.filter(customer =>
         customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.phone?.toLowerCase().includes(searchTerm.toLowerCase())

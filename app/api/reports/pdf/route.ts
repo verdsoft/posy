@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import PDFGenerator from '@/lib/pdf-generator'
+import { PrismaClient } from '@prisma/client'
+import { generateSalesReportPDF, SalesReportPDFData } from '@/lib/utils/pdf-generator'
+
+const prisma = new PrismaClient()
 
 interface ReportData {
   title: string
@@ -8,26 +11,10 @@ interface ReportData {
   filters?: Array<{ label: string; value: string }>
   summary?: Array<{ label: string; value: string | number; isCurrency?: boolean }>
   dateRange?: string
-  company?: {
-    name: string
-    address?: string
-    city?: string
-    state?: string
-    postal_code?: string
-    phone?: string
-    email?: string
-  }
-  totals?: any
-  analytics?: any
   showSummaryByStatus?: boolean
   showSummaryBySupplier?: boolean
-  showSummaryByPaymentStatus?: boolean
-  showCustomerAnalytics?: boolean
-  showSupplierAnalytics?: boolean
   statusSummary?: any[]
   supplierSummary?: any[]
-  paymentStatusSummary?: any[]
-  recommendations?: boolean
 }
 
 export async function POST(req: NextRequest) {
@@ -42,85 +29,43 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Get company information (you might want to fetch this from database)
-    const defaultCompany = {
-      name: 'POS System',
-      address: '123 Business Street',
-      city: 'Business City',
-      state: 'BC',
-      postal_code: '12345',
-      phone: '(555) 123-4567',
-      email: 'info@possystem.com'
+    // Fetch organization data
+    const organization = await prisma.organization.findFirst()
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization not found. Please set up your organization details in settings.' },
+        { status: 404 }
+      )
     }
 
-    // Calculate totals for financial reports
-    let totals = reportData.totals
-    if (!totals && reportData.data && reportData.data.length > 0) {
-      const firstItem = reportData.data[0]
-      if (firstItem.total !== undefined || firstItem.subtotal !== undefined) {
-        totals = reportData.data.reduce((acc, item) => ({
-          subtotal: (acc.subtotal || 0) + Number(item.subtotal || 0),
-          tax_amount: (acc.tax_amount || 0) + Number(item.tax_amount || 0),
-          discount: (acc.discount || 0) + Number(item.discount || 0),
-          total: (acc.total || 0) + Number(item.total || 0),
-          paid: (acc.paid || 0) + Number(item.paid || 0),
-          due: (acc.due || 0) + Number(item.due || 0)
-        }), {
-          subtotal: 0,
-          tax_amount: 0,
-          discount: 0,
-          total: 0,
-          paid: 0,
-          due: 0
-        })
-      }
-    }
-
-    // Calculate summary analytics for quantity alerts
-    let summary
-    if (reportData.template === 'quantity-alerts-report' && reportData.data) {
-      summary = {
-        critical: reportData.data.filter(item => item.stock <= (item.alert_quantity * 0.5)).length,
-        high: reportData.data.filter(item =>
-          item.stock > (item.alert_quantity * 0.5) && item.stock <= (item.alert_quantity * 0.8)
-        ).length,
-        medium: reportData.data.filter(item => item.stock > (item.alert_quantity * 0.8)).length
-      }
-    }
-
-    // Prepare template data
-    const templateData = {
+    // Prepare PDF data
+    const pdfData: SalesReportPDFData = {
+      organization: {
+        id: organization.id,
+        name: organization.name,
+        address: organization.address || undefined,
+        city: organization.city || undefined,
+        phone: organization.phone || undefined,
+        email: organization.email || undefined,
+        tax_number: organization.tax_number || undefined,
+        logo: organization.logo || undefined,
+      },
       title: reportData.title,
-      company: reportData.company || defaultCompany,
-      generatedAt: new Date(),
-      dateRange: reportData.dateRange,
-      totalRecords: reportData.data?.length || 0,
-      filters: reportData.filters,
-      summary: reportData.summary,
+      dateRange: reportData.dateRange || 'All Time',
       data: reportData.data || [],
-      totals,
-      analytics: reportData.analytics,
+      summary: reportData.summary,
+      filters: reportData.filters,
       showSummaryByStatus: reportData.showSummaryByStatus,
       showSummaryBySupplier: reportData.showSummaryBySupplier,
-      showSummaryByPaymentStatus: reportData.showSummaryByPaymentStatus,
-      showCustomerAnalytics: reportData.showCustomerAnalytics,
-      showSupplierAnalytics: reportData.showSupplierAnalytics,
       statusSummary: reportData.statusSummary,
-      supplierSummary: reportData.supplierSummary,
-      paymentStatusSummary: reportData.paymentStatusSummary,
-      summary: summary || reportData.summary,
-      recommendations: reportData.recommendations,
-      content: '' // This will be filled by the template
+      supplierSummary: reportData.supplierSummary
     }
 
     // Generate PDF
-    const pdfGenerator = PDFGenerator.getInstance()
-    const pdfBuffer = await pdfGenerator.generatePDF({
-      template: reportData.template,
-      data: templateData,
-      filename: `${reportData.title.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`,
+    const pdfBuffer = await generateSalesReportPDF(pdfData, {
       format: 'A4',
-      orientation: 'portrait'
+      orientation: 'landscape'
     })
 
     // Return PDF as response
@@ -142,6 +87,8 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 }
     )
+  } finally {
+    await prisma.$disconnect()
   }
 }
 

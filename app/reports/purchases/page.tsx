@@ -87,15 +87,9 @@ export default function PurchaseReport() {
   // Handle delete purchase
   const handleDelete = async () => {
     if (!selectedPurchase) return
-    
+
     try {
-      const res = await fetch(`/api/purchases?id=${selectedPurchase.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete purchase")
-      
-      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.filter(p => p.id !== selectedPurchase.id) : [])
+      await deletePurchase(selectedPurchase.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Purchase deleted successfully")
     } catch (error) {

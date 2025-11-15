@@ -1,13 +1,20 @@
 /**
- * PDF Generation Service using PDFKit
- * Lightweight alternative to Puppeteer - no external browser dependencies
+ * PDF Generation Service using jsPDF and autoTable
+ * Professional document generation with organization branding
  */
 
-import PDFDocument from 'pdfkit'
-import * as fs from 'fs'
-import * as path from 'path'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { format } from 'date-fns'
 import { Organization } from '@/lib/types/prisma'
+
+// Extend jsPDF type to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF
+    lastAutoTable?: any
+  }
+}
 
 /**
  * Template types supported by the PDF generator
@@ -36,6 +43,8 @@ export interface BasePDFData {
     quantity: number
     price: number
     total: number
+    discount?: number
+    tax?: number
   }>
   subtotal: number
   taxAmount?: number
@@ -86,846 +95,877 @@ export interface ReceiptPDFData extends BasePDFData {
 }
 
 /**
+ * Sales Report data interface
+ */
+export interface SalesReportPDFData {
+  organization: Organization
+  title: string
+  dateRange: string
+  data: any[]
+  summary?: Array<{ label: string; value: number | string; isCurrency?: boolean }>
+  filters?: Array<{ label: string; value: string }>
+  showSummaryByStatus?: boolean
+  showSummaryBySupplier?: boolean
+  statusSummary?: Array<{ status: string; count: number; amount: number }>
+  supplierSummary?: Array<{ supplier_name: string; count: number; amount: number }>
+}
+
+/**
  * PDF generation options
  */
 export interface PDFGenerationOptions {
   format?: 'A4' | 'A5' | 'Letter'
-  margin?: {
-    top?: string
-    right?: string
-    bottom?: string
-    left?: string
-  }
-  printBackground?: boolean
-  landscape?: boolean
-  preferCSSPageSize?: boolean
+  orientation?: 'portrait' | 'landscape'
 }
 
 /**
- * Main PDF Generator class
+ * Colors for professional design
  */
-export class PDFGenerator {
-  private templatesPath: string
-
-  constructor() {
-    this.templatesPath = path.join(process.cwd(), 'lib', 'templates', 'pdf')
-    console.log('PDFGenerator initialized with PDFKit')
-  }
-
-  /**
-   * Helper: Format currency
-   */
-  private formatCurrency(amount: number, symbol: string = '$'): string {
-    if (typeof amount !== 'number') return `${symbol}0.00`
-    return `${symbol}${amount.toFixed(2)}`
-  }
-
-  /**
-   * Helper: Format date
-   */
-  private formatDate(date: Date | string): string {
-    if (!date) return ''
-    const dateObj = typeof date === 'string' ? new Date(date) : date
-    return format(dateObj, 'MMM dd, yyyy')
-  }
-
-  /**
-   * Helper: Format date and time
-   */
-  private formatDateTime(date: Date | string): string {
-    if (!date) return ''
-    const dateObj = typeof date === 'string' ? new Date(date) : date
-    return format(dateObj, 'MMM dd, yyyy hh:mm a')
-  }
-
-  /**
-   * Generate PDF buffer from data
-   */
-  private async generatePDFFromData(
-    templateType: PDFTemplateType,
-    data: BasePDFData,
-    options: PDFGenerationOptions = {}
-  ): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      try {
-        const doc = new PDFDocument({
-          size: options.format || 'A4',
-          layout: options.landscape ? 'landscape' : 'portrait',
-          margins: {
-            top: 50,
-            bottom: 50,
-            left: 50,
-            right: 50
-          }
-        })
-
-        const chunks: Buffer[] = []
-        doc.on('data', (chunk) => chunks.push(chunk))
-        doc.on('end', () => resolve(Buffer.concat(chunks)))
-        doc.on('error', reject)
-
-        // Generate content based on template type
-        switch (templateType) {
-          case 'invoice':
-            this.generateInvoiceContent(doc, data as InvoicePDFData)
-            break
-          case 'quotation':
-            this.generateQuotationContent(doc, data as QuotationPDFData)
-            break
-          case 'receipt':
-            this.generateReceiptContent(doc, data as ReceiptPDFData)
-            break
-          case 'sales-report':
-            this.generateReportContent(doc, data)
-            break
-          default:
-            throw new Error(`Unsupported template type: ${templateType}`)
-        }
-
-        doc.end()
-      } catch (error) {
-        reject(new Error(`Failed to generate PDF: ${error}`))
-      }
-    })
-  }
-
-  /**
-   * Generate invoice content
-   */
-  private generateInvoiceContent(doc: PDFKit.PDFDocument, data: InvoicePDFData): void {
-    // Header
-    this.generateHeader(doc, data, 'INVOICE')
-
-    // Document info
-    doc.fontSize(10)
-    doc.text(`Invoice #: ${data.invoiceNumber}`, 50, 180)
-    doc.text(`Date: ${this.formatDate(data.invoiceDate)}`, 50, 195)
-    if (data.dueDate) {
-      doc.text(`Due Date: ${this.formatDate(data.dueDate)}`, 50, 210)
-    }
-    if (data.status) {
-      doc.text(`Status: ${data.status}`, 50, 225)
-    }
-
-    // Customer info
-    this.generateCustomerInfo(doc, data, 180)
-
-    // Items table
-    this.generateItemsTable(doc, data.items, 280)
-
-    // Totals
-    this.generateTotals(doc, data)
-
-    // Payment info
-    if (data.amountPaid || data.balanceDue) {
-      const y = doc.y + 20
-      doc.fontSize(10)
-      if (data.amountPaid) {
-        doc.text(`Amount Paid: ${this.formatCurrency(data.amountPaid)}`, 400, y)
-      }
-      if (data.balanceDue) {
-        doc.text(`Balance Due: ${this.formatCurrency(data.balanceDue)}`, 400, y + 15)
-      }
-    }
-
-    // Footer
-    this.generateFooter(doc, data)
-  }
-
-  /**
-   * Generate quotation content
-   */
-  private generateQuotationContent(doc: PDFKit.PDFDocument, data: QuotationPDFData): void {
-    const pageWidth = doc.page.width
-
-    // Dark Header Background (matching #1f2937 to #374151 gradient - using dark gray)
-    doc.rect(0, 0, pageWidth, 120).fillAndStroke('#1f2937', '#1f2937')
-
-    // Logo placeholder circle (if no logo)
-    if (data.organization?.logo) {
-      try {
-        const logoPath = path.join(process.cwd(), 'public', data.organization.logo)
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, 50, 40, { width: 50, height: 50 })
-        } else {
-          this.drawLogoPlaceholder(doc, 50, 40)
-        }
-      } catch (error) {
-        this.drawLogoPlaceholder(doc, 50, 40)
-      }
-    } else {
-      this.drawLogoPlaceholder(doc, 50, 40)
-    }
-
-    // Company Name and Info (White text on dark background)
-    doc.fillColor('#ffffff')
-    doc.fontSize(20).font('Helvetica-Bold')
-    doc.text(data.organization?.name || 'Company Name', 110, 42)
-
-    doc.fontSize(9).font('Helvetica')
-    let infoY = 64
-    if (data.organization?.email) {
-      doc.text(data.organization.email, 110, infoY)
-      infoY += 12
-    }
-    if (data.organization?.phone) {
-      doc.text(data.organization.phone, 110, infoY)
-      infoY += 12
-    }
-    if (data.organization?.address) {
-      const addressLine = `${data.organization.address}${data.organization.city ? ', ' + data.organization.city : ''}${data.organization.country ? ', ' + data.organization.country : ''}`
-      doc.fontSize(8).text(addressLine, 110, infoY)
-    }
-
-    // "QUOTATION" Title on the right
-    doc.fontSize(24).font('Helvetica-Bold')
-    doc.text('QUOTATION', pageWidth - 200, 55, { width: 150, align: 'right' })
-
-    // Reset to black text
-    doc.fillColor('#000000')
-
-    // Document Info Section (Two columns layout)
-    let contentY = 150
-
-    // Left Column: Client Info
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#3b82f6')
-    doc.text('QUOTATION TO', 50, contentY)
-
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1f2937')
-    doc.text(data.customer?.name || 'Customer', 50, contentY + 20)
-
-    doc.fontSize(9).font('Helvetica').fillColor('#333333')
-    let clientY = contentY + 35
-    if (data.customer?.email) {
-      doc.text(data.customer.email, 50, clientY)
-      clientY += 12
-    }
-    if (data.customer?.phone) {
-      doc.text(data.customer.phone, 50, clientY)
-      clientY += 12
-    }
-    if (data.customer?.address) {
-      doc.text(data.customer.address, 50, clientY)
-      clientY += 12
-    }
-    if (data.customer?.city) {
-      const location = `${data.customer.city}${data.customer.country ? ', ' + data.customer.country : ''}`
-      doc.text(location, 50, clientY)
-    }
-
-    // Right Column: Document Details
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#3b82f6')
-    const rightColumnX = 320
-    const detailsWidth = pageWidth - rightColumnX - 50
-    doc.text('DOCUMENT DETAILS', rightColumnX, contentY, { width: detailsWidth, align: 'left' })
-
-    doc.fontSize(9).font('Helvetica').fillColor('#374151')
-    let detailsY = contentY + 20
-
-    // Quotation Number
-    doc.font('Helvetica-Bold').text('Quotation #:', rightColumnX, detailsY, { width: 80, align: 'left' })
-    doc.font('Helvetica').text(data.quotationNumber, rightColumnX + 85, detailsY, { width: detailsWidth - 85, align: 'left' })
-    detailsY += 15
-
-    // Date
-    doc.font('Helvetica-Bold').text('Date:', rightColumnX, detailsY, { width: 80, align: 'left' })
-    doc.font('Helvetica').text(this.formatDate(data.quotationDate), rightColumnX + 85, detailsY, { width: detailsWidth - 85, align: 'left' })
-    detailsY += 15
-
-    // Valid Until
-    if (data.validUntil) {
-      doc.font('Helvetica-Bold').text('Valid Until:', rightColumnX, detailsY, { width: 80, align: 'left' })
-      doc.font('Helvetica').text(this.formatDate(data.validUntil), rightColumnX + 85, detailsY, { width: detailsWidth - 85, align: 'left' })
-      detailsY += 15
-    }
-
-    // Status
-    if (data.status) {
-      doc.font('Helvetica-Bold').text('Status:', rightColumnX, detailsY, { width: 80, align: 'left' })
-      doc.font('Helvetica').fillColor('#3b82f6').text(data.status.toUpperCase(), rightColumnX + 85, detailsY, { width: detailsWidth - 85, align: 'left' })
-      doc.fillColor('#333333')
-    }
-
-    // Items Table
-    const tableY = Math.max(clientY, detailsY) + 40
-    this.generateProfessionalTable(doc, data.items, tableY, data.organization?.currency_symbol)
-
-    // Calculate table end position
-    const tableEndY = tableY + 40 + (data.items.length * 25) + 10
-
-    // Totals Section (on the right)
-    this.generateQuotationTotals(doc, data, tableEndY)
-
-    // Notes Section
-    if (data.notes) {
-      const notesY = tableEndY + 120
-      this.generateNotesSection(doc, data.notes, notesY)
-    }
-
-    // Terms & Conditions
-    if (data.organization?.terms_conditions) {
-      const termsY = doc.y + 30
-      this.generateTermsSection(doc, data.organization.terms_conditions, termsY)
-    }
-
-    // Footer
-    this.generateProfessionalFooter(doc, data.organization)
-  }
-
-  /**
-   * Generate receipt content
-   */
-  private generateReceiptContent(doc: PDFKit.PDFDocument, data: ReceiptPDFData): void {
-    // Header (smaller for receipt)
-    this.generateHeader(doc, data, 'RECEIPT')
-
-    // Document info
-    doc.fontSize(10)
-    doc.text(`Receipt #: ${data.receiptNumber}`, 50, 180)
-    doc.text(`Date: ${this.formatDate(data.saleDate)}`, 50, 195)
-    if (data.cashier) {
-      doc.text(`Cashier: ${data.cashier.name}`, 50, 210)
-    }
-    if (data.paymentMethod) {
-      doc.text(`Payment: ${data.paymentMethod}`, 50, 225)
-    }
-
-    // Customer info (optional for receipts)
-    if (data.customer) {
-      this.generateCustomerInfo(doc, data, 180)
-    }
-
-    // Items table
-    this.generateItemsTable(doc, data.items, 280)
-
-    // Totals
-    this.generateTotals(doc, data)
-
-    // Payment info
-    if (data.amountPaid || data.changeAmount) {
-      const y = doc.y + 20
-      doc.fontSize(10)
-      if (data.amountPaid) {
-        doc.text(`Amount Paid: ${this.formatCurrency(data.amountPaid)}`, 400, y)
-      }
-      if (data.changeAmount) {
-        doc.text(`Change: ${this.formatCurrency(data.changeAmount)}`, 400, y + 15)
-      }
-    }
-
-    // Footer
-    this.generateFooter(doc, data)
-  }
-
-  /**
-   * Generate report content
-   */
-  private generateReportContent(doc: PDFKit.PDFDocument, data: BasePDFData): void {
-    this.generateHeader(doc, data, 'SALES REPORT')
-    this.generateItemsTable(doc, data.items, 280)
-    this.generateTotals(doc, data)
-    this.generateFooter(doc, data)
-  }
-
-  /**
-   * Generate header with logo and company info
-   */
-  private generateHeader(doc: PDFKit.PDFDocument, data: BasePDFData, title: string): void {
-    // Logo
-    if (data.organization?.logo) {
-      try {
-        const logoPath = path.join(process.cwd(), 'public', data.organization.logo)
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, 50, 45, { width: 80 })
-        }
-      } catch (error) {
-        console.error('Error loading logo:', error)
-      }
-    }
-
-    // Company info
-    doc.fontSize(18).text(data.organization?.name || 'Company Name', 180, 50)
-    doc.fontSize(9)
-      .text(data.organization?.address || '', 180, 72)
-      .text(data.organization?.email || '', 180, 84)
-      .text(data.organization?.phone || '', 180, 96)
-
-    // Document title
-    doc.fontSize(20).font('Helvetica-Bold')
-    doc.text(title, 50, 130, { align: 'center' })
-    doc.font('Helvetica')
-
-    // Line under header
-    doc.moveTo(50, 160).lineTo(550, 160).stroke()
-  }
-
-  /**
-   * Generate customer information
-   */
-  private generateCustomerInfo(doc: PDFKit.PDFDocument, data: BasePDFData, y: number): void {
-    if (!data.customer) return
-
-    doc.fontSize(10).font('Helvetica-Bold')
-    doc.text('Bill To:', 350, y)
-    doc.font('Helvetica').fontSize(9)
-    doc.text(data.customer.name || '', 350, y + 15)
-    if (data.customer.email) doc.text(data.customer.email, 350, y + 27)
-    if (data.customer.phone) doc.text(data.customer.phone, 350, y + 39)
-    if (data.customer.address) doc.text(data.customer.address, 350, y + 51)
-  }
-
-  /**
-   * Generate items table
-   */
-  private generateItemsTable(doc: PDFKit.PDFDocument, items: any[], startY: number): void {
-    const headers = ['Description', 'Qty', 'Price', 'Total']
-    const colWidths = [260, 70, 80, 80]
-    const startX = 50
-
-    // Header
-    doc.fontSize(10).font('Helvetica-Bold')
-    headers.forEach((header, i) => {
-      const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-      doc.text(header, x, startY)
-    })
-
-    // Header line
-    doc.moveTo(startX, startY + 15).lineTo(startX + colWidths.reduce((a, b) => a + b, 0), startY + 15).stroke()
-
-    // Items
-    doc.font('Helvetica').fontSize(9)
-    let y = startY + 25
-
-    items.forEach((item) => {
-      const name = item.product?.name || item.name || 'Item'
-      const quantity = item.quantity || 0
-      const price = item.price || item.unit_price || 0
-      const total = item.total || (quantity * price)
-
-      doc.text(name, startX, y, { width: colWidths[0] })
-      doc.text(quantity.toString(), startX + colWidths[0], y, { width: colWidths[1], align: 'center' })
-      doc.text(this.formatCurrency(price), startX + colWidths[0] + colWidths[1], y, { width: colWidths[2], align: 'right' })
-      doc.text(this.formatCurrency(total), startX + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3], align: 'right' })
-
-      y += 20
-    })
-
-    // Bottom line
-    doc.moveTo(startX, y + 5).lineTo(startX + colWidths.reduce((a, b) => a + b, 0), y + 5).stroke()
-    doc.y = y + 15
-  }
-
-  /**
-   * Generate totals section
-   */
-  private generateTotals(doc: PDFKit.PDFDocument, data: BasePDFData): void {
-    const y = doc.y + 10
-    const rightX = 400
-
-    doc.fontSize(10).font('Helvetica')
-
-    // Subtotal
-    doc.text('Subtotal:', rightX, y, { width: 90, align: 'right' })
-    doc.text(this.formatCurrency(data.subtotal || 0), rightX + 100, y, { align: 'right' })
-
-    // Tax
-    if (data.taxAmount) {
-      doc.text(`Tax (${data.taxPercentage || 0}%):`, rightX, y + 15, { width: 90, align: 'right' })
-      doc.text(this.formatCurrency(data.taxAmount), rightX + 100, y + 15, { align: 'right' })
-    }
-
-    // Discount
-    if (data.discountAmount) {
-      doc.text('Discount:', rightX, y + 30, { width: 90, align: 'right' })
-      doc.text(`-${this.formatCurrency(data.discountAmount)}`, rightX + 100, y + 30, { align: 'right' })
-    }
-
-    // Total
-    const totalY = y + (data.taxAmount && data.discountAmount ? 45 : data.taxAmount || data.discountAmount ? 30 : 15)
-    doc.fontSize(12).font('Helvetica-Bold')
-    doc.text('Total:', rightX, totalY, { width: 90, align: 'right' })
-    doc.text(this.formatCurrency(data.totalAmount || 0), rightX + 100, totalY, { align: 'right' })
-
-    doc.y = totalY + 25
-  }
-
-  /**
-   * Generate footer
-   */
-  private generateFooter(doc: PDFKit.PDFDocument, data: BasePDFData): void {
-    // Notes
-    if (data.notes) {
-      doc.font('Helvetica').fontSize(9)
-      doc.moveDown(2)
-      doc.text('Notes:', 50)
-      doc.text(data.notes, 50, doc.y, { width: 500 })
-    }
-
-    // Thank you message
-    doc.fontSize(10).fillColor('gray')
-    doc.text('Thank you for your business!', 50, doc.page.height - 50, {
-      align: 'center',
-      width: doc.page.width - 100
-    })
-  }
-
-  /**
-   * Generate invoice PDF
-   */
-  async generateInvoicePDF(
-    data: InvoicePDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
+const COLORS = {
+  primary: '#1a237e',      // Deep blue
+  secondary: '#3949ab',    // Medium blue
+  accent: '#5c6bc0',       // Light blue
+  success: '#10b981',      // Green
+  warning: '#f59e0b',      // Orange
+  danger: '#ef4444',       // Red
+  text: '#1f2937',         // Dark gray
+  textLight: '#6b7280',    // Medium gray
+  border: '#e5e7eb',       // Light gray
+  background: '#f9fafb'    // Very light gray
+}
+
+/**
+ * Format currency values
+ */
+function formatCurrency(amount: number, symbol: string = '$'): string {
+  if (typeof amount !== 'number') return `${symbol}0.00`
+  return `${symbol}${amount.toFixed(2)}`
+}
+
+/**
+ * Format date values
+ */
+function formatDate(date: Date | string, formatStr: string = 'MMM dd, yyyy'): string {
+  if (!date) return ''
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return format(dateObj, formatStr)
+}
+
+/**
+ * Add header with organization branding
+ */
+function addHeader(doc: jsPDF, organization: Organization, documentTitle: string) {
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let yPos = 20
+
+  // Add logo if available (placeholder for now - you can load actual images)
+  if (organization.logo) {
     try {
-      return await this.generatePDFFromData('invoice', data, options)
+      // If logo is a base64 string or URL, you can add it here
+      // doc.addImage(organization.logo, 'PNG', 15, yPos - 5, 30, 30)
+      // For now, we'll just add a placeholder box
+      doc.setFillColor(COLORS.primary)
+      doc.circle(30, yPos + 5, 8, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(12)
+      doc.text(organization.name.charAt(0).toUpperCase(), 30, yPos + 7, { align: 'center' })
     } catch (error) {
-      throw new Error(`Failed to generate invoice PDF: ${error}`)
+      console.error('Error adding logo:', error)
     }
   }
 
-  /**
-   * Generate quotation PDF
-   */
-  async generateQuotationPDF(
-    data: QuotationPDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    try {
-      return await this.generatePDFFromData('quotation', data, options)
-    } catch (error) {
-      throw new Error(`Failed to generate quotation PDF: ${error}`)
+  // Organization name and details
+  doc.setTextColor(COLORS.primary)
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text(organization.name || 'Business Name', organization.logo ? 50 : 15, yPos)
+
+  yPos += 7
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(COLORS.textLight)
+
+  if (organization.address) {
+    doc.text(organization.address, organization.logo ? 50 : 15, yPos)
+    yPos += 4
+  }
+
+  const contactInfo = []
+  if (organization.phone) contactInfo.push(`Tel: ${organization.phone}`)
+  if (organization.email) contactInfo.push(`Email: ${organization.email}`)
+
+  if (contactInfo.length > 0) {
+    doc.text(contactInfo.join(' | '), organization.logo ? 50 : 15, yPos)
+    yPos += 4
+  }
+
+  if (organization.tax_number) {
+    doc.text(`Tax No: ${organization.tax_number}`, organization.logo ? 50 : 15, yPos)
+  }
+
+  // Document title on the right
+  doc.setFontSize(24)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.primary)
+  doc.text(documentTitle, pageWidth - 15, 20, { align: 'right' })
+
+  // Horizontal line
+  doc.setDrawColor(COLORS.border)
+  doc.setLineWidth(0.5)
+  doc.line(15, 45, pageWidth - 15, 45)
+
+  return 50 // Return Y position after header
+}
+
+/**
+ * Add footer with page numbers
+ */
+function addFooter(doc: jsPDF) {
+  const pageCount = doc.getNumberOfPages()
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+
+  doc.setFontSize(8)
+  doc.setTextColor(COLORS.textLight)
+  doc.setFont('helvetica', 'normal')
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    const text = `Page ${i} of ${pageCount}`
+    doc.text(text, pageWidth / 2, pageHeight - 10, { align: 'center' })
+
+    // Add generation date
+    const generatedText = `Generated on ${formatDate(new Date(), 'MMM dd, yyyy hh:mm a')}`
+    doc.text(generatedText, 15, pageHeight - 10)
+  }
+}
+
+/**
+ * Generate Invoice PDF
+ */
+export async function generateInvoicePDF(data: InvoicePDFData, options: PDFGenerationOptions = {}): Promise<Buffer> {
+  const doc = new jsPDF({
+    orientation: options.orientation || 'portrait',
+    unit: 'mm',
+    format: options.format || 'A4'
+  })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let yPos = addHeader(doc, data.organization, 'INVOICE')
+
+  // Invoice details
+  yPos += 10
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.text)
+
+  // Left side - Invoice info
+  doc.text('Invoice Number:', 15, yPos)
+  doc.setFont('helvetica', 'normal')
+  doc.text(data.invoiceNumber, 55, yPos)
+
+  yPos += 6
+  doc.setFont('helvetica', 'bold')
+  doc.text('Invoice Date:', 15, yPos)
+  doc.setFont('helvetica', 'normal')
+  doc.text(formatDate(data.invoiceDate), 55, yPos)
+
+  if (data.dueDate) {
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('Due Date:', 15, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(formatDate(data.dueDate), 55, yPos)
+  }
+
+  if (data.status) {
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('Status:', 15, yPos)
+    doc.setFont('helvetica', 'normal')
+
+    // Status badge
+    const statusColors: Record<string, string> = {
+      'paid': COLORS.success,
+      'unpaid': COLORS.danger,
+      'partial': COLORS.warning,
+      'completed': COLORS.success,
+      'pending': COLORS.warning,
+      'cancelled': COLORS.danger
+    }
+    const statusColor = statusColors[data.status.toLowerCase()] || COLORS.textLight
+    doc.setTextColor(statusColor)
+    doc.text(data.status.toUpperCase(), 55, yPos)
+    doc.setTextColor(COLORS.text)
+  }
+
+  // Right side - Customer info
+  if (data.customer) {
+    const rightX = pageWidth - 15
+    let rightY = yPos - 18
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFillColor(COLORS.background)
+    doc.rect(pageWidth - 80, rightY - 5, 65, 35, 'F')
+    doc.text('Bill To:', pageWidth - 75, rightY, { align: 'left' })
+
+    rightY += 6
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text(data.customer.name, pageWidth - 75, rightY, { align: 'left' })
+
+    rightY += 5
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.textLight)
+
+    if (data.customer.address) {
+      doc.text(data.customer.address, pageWidth - 75, rightY, { align: 'left', maxWidth: 60 })
+      rightY += 4
+    }
+
+    const customerContact = []
+    if (data.customer.phone) customerContact.push(data.customer.phone)
+    if (data.customer.email) customerContact.push(data.customer.email)
+
+    if (customerContact.length > 0) {
+      doc.text(customerContact.join(', '), pageWidth - 75, rightY, { align: 'left', maxWidth: 60 })
     }
   }
 
-  /**
-   * Generate receipt PDF
-   */
-  async generateReceiptPDF(
-    data: ReceiptPDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    try {
-      // Receipts typically use smaller format
-      const receiptOptions = {
-        ...options,
-        format: 'A5' as const,
-      }
-      return await this.generatePDFFromData('receipt', data, receiptOptions)
-    } catch (error) {
-      throw new Error(`Failed to generate receipt PDF: ${error}`)
+  // Items table
+  yPos += 15
+  doc.setTextColor(COLORS.text)
+
+  const tableHeaders = [['#', 'Item', 'Quantity', 'Unit Price', 'Total']]
+  const tableData = data.items.map((item, index) => [
+    (index + 1).toString(),
+    `${item.product.name}${item.product.description ? '\n' + item.product.description : ''}`,
+    item.quantity.toString(),
+    formatCurrency(item.price),
+    formatCurrency(item.total)
+  ])
+
+  autoTable(doc, {
+    startY: yPos,
+    head: tableHeaders,
+    body: tableData,
+    theme: 'striped',
+    headStyles: {
+      fillColor: COLORS.primary,
+      textColor: '#ffffff',
+      fontSize: 10,
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    bodyStyles: {
+      fontSize: 9,
+      textColor: COLORS.text
+    },
+    alternateRowStyles: {
+      fillColor: COLORS.background
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },
+      1: { halign: 'left', cellWidth: 'auto' },
+      2: { halign: 'center', cellWidth: 25 },
+      3: { halign: 'right', cellWidth: 30 },
+      4: { halign: 'right', cellWidth: 30 }
+    },
+    margin: { left: 15, right: 15 }
+  })
+
+  // Calculate totals position
+  yPos = doc.lastAutoTable.finalY + 10
+
+  // Totals section
+  const totalsX = pageWidth - 70
+  doc.setFontSize(10)
+
+  // Subtotal
+  doc.setFont('helvetica', 'normal')
+  doc.text('Subtotal:', totalsX, yPos, { align: 'right' })
+  doc.text(formatCurrency(data.subtotal), pageWidth - 15, yPos, { align: 'right' })
+
+  // Discount
+  if (data.discountAmount && data.discountAmount > 0) {
+    yPos += 6
+    doc.text('Discount:', totalsX, yPos, { align: 'right' })
+    doc.setTextColor(COLORS.danger)
+    doc.text(`-${formatCurrency(data.discountAmount)}`, pageWidth - 15, yPos, { align: 'right' })
+    doc.setTextColor(COLORS.text)
+  }
+
+  // Tax
+  if (data.taxAmount && data.taxAmount > 0) {
+    yPos += 6
+    doc.text(`Tax (${data.taxPercentage || 0}%):`, totalsX, yPos, { align: 'right' })
+    doc.text(formatCurrency(data.taxAmount), pageWidth - 15, yPos, { align: 'right' })
+  }
+
+  // Shipping
+  if (data.shippingCost && data.shippingCost > 0) {
+    yPos += 6
+    doc.text('Shipping:', totalsX, yPos, { align: 'right' })
+    doc.text(formatCurrency(data.shippingCost), pageWidth - 15, yPos, { align: 'right' })
+  }
+
+  // Total
+  yPos += 8
+  doc.setDrawColor(COLORS.primary)
+  doc.setLineWidth(0.5)
+  doc.line(totalsX - 20, yPos - 2, pageWidth - 15, yPos - 2)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(COLORS.primary)
+  doc.text('Total:', totalsX, yPos, { align: 'right' })
+  doc.text(formatCurrency(data.totalAmount), pageWidth - 15, yPos, { align: 'right' })
+
+  // Amount paid and balance due
+  if (data.amountPaid !== undefined) {
+    yPos += 7
+    doc.setFontSize(10)
+    doc.setTextColor(COLORS.text)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Amount Paid:', totalsX, yPos, { align: 'right' })
+    doc.setTextColor(COLORS.success)
+    doc.text(formatCurrency(data.amountPaid), pageWidth - 15, yPos, { align: 'right' })
+  }
+
+  if (data.balanceDue !== undefined && data.balanceDue > 0) {
+    yPos += 6
+    doc.setTextColor(COLORS.text)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Balance Due:', totalsX, yPos, { align: 'right' })
+    doc.setTextColor(COLORS.danger)
+    doc.text(formatCurrency(data.balanceDue), pageWidth - 15, yPos, { align: 'right' })
+  }
+
+  // Notes
+  if (data.notes) {
+    yPos += 15
+    doc.setTextColor(COLORS.text)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('Notes:', 15, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(COLORS.textLight)
+    const splitNotes = doc.splitTextToSize(data.notes, pageWidth - 30)
+    doc.text(splitNotes, 15, yPos)
+  }
+
+  // Add footer
+  addFooter(doc)
+
+  // Convert to buffer
+  const pdfBuffer = Buffer.from(doc.output('arraybuffer'))
+  return pdfBuffer
+}
+
+/**
+ * Generate Quotation PDF
+ */
+export async function generateQuotationPDF(data: QuotationPDFData, options: PDFGenerationOptions = {}): Promise<Buffer> {
+  const doc = new jsPDF({
+    orientation: options.orientation || 'portrait',
+    unit: 'mm',
+    format: options.format || 'A4'
+  })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let yPos = addHeader(doc, data.organization, 'QUOTATION')
+
+  // Quotation details
+  yPos += 10
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.text)
+
+  // Left side - Quotation info
+  doc.text('Quotation Number:', 15, yPos)
+  doc.setFont('helvetica', 'normal')
+  doc.text(data.quotationNumber, 55, yPos)
+
+  yPos += 6
+  doc.setFont('helvetica', 'bold')
+  doc.text('Quote Date:', 15, yPos)
+  doc.setFont('helvetica', 'normal')
+  doc.text(formatDate(data.quotationDate), 55, yPos)
+
+  if (data.validUntil) {
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('Valid Until:', 15, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.text(formatDate(data.validUntil), 55, yPos)
+  }
+
+  if (data.status) {
+    yPos += 6
+    doc.setFont('helvetica', 'bold')
+    doc.text('Status:', 15, yPos)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.warning)
+    doc.text(data.status.toUpperCase(), 55, yPos)
+    doc.setTextColor(COLORS.text)
+  }
+
+  // Right side - Customer info
+  if (data.customer) {
+    const rightX = pageWidth - 15
+    let rightY = yPos - 18
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFillColor(COLORS.background)
+    doc.rect(pageWidth - 80, rightY - 5, 65, 35, 'F')
+    doc.text('Quote For:', pageWidth - 75, rightY, { align: 'left' })
+
+    rightY += 6
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text(data.customer.name, pageWidth - 75, rightY, { align: 'left' })
+
+    rightY += 5
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(COLORS.textLight)
+
+    if (data.customer.address) {
+      doc.text(data.customer.address, pageWidth - 75, rightY, { align: 'left', maxWidth: 60 })
+      rightY += 4
+    }
+
+    const customerContact = []
+    if (data.customer.phone) customerContact.push(data.customer.phone)
+    if (data.customer.email) customerContact.push(data.customer.email)
+
+    if (customerContact.length > 0) {
+      doc.text(customerContact.join(', '), pageWidth - 75, rightY, { align: 'left', maxWidth: 60 })
     }
   }
 
-  /**
-   * Generate PDF for any template type (convenience method)
-   */
-  async generatePDF(
-    templateType: PDFTemplateType,
-    data: BasePDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    switch (templateType) {
-      case 'invoice':
-        return this.generateInvoicePDF(data as InvoicePDFData, options)
-      case 'quotation':
-        return this.generateQuotationPDF(data as QuotationPDFData, options)
-      case 'receipt':
-        return this.generateReceiptPDF(data as ReceiptPDFData, options)
-      case 'sales-report':
-        return await this.generatePDFFromData(templateType, data, options)
-      default:
-        throw new Error(`Unsupported template type: ${templateType}`)
-    }
+  // Items table
+  yPos += 15
+  doc.setTextColor(COLORS.text)
+
+  const tableHeaders = [['#', 'Item', 'Quantity', 'Unit Price', 'Total']]
+  const tableData = data.items.map((item, index) => [
+    (index + 1).toString(),
+    `${item.product.name}${item.product.description ? '\n' + item.product.description : ''}`,
+    item.quantity.toString(),
+    formatCurrency(item.price),
+    formatCurrency(item.total)
+  ])
+
+  autoTable(doc, {
+    startY: yPos,
+    head: tableHeaders,
+    body: tableData,
+    theme: 'striped',
+    headStyles: {
+      fillColor: COLORS.secondary,
+      textColor: '#ffffff',
+      fontSize: 10,
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    bodyStyles: {
+      fontSize: 9,
+      textColor: COLORS.text
+    },
+    alternateRowStyles: {
+      fillColor: COLORS.background
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },
+      1: { halign: 'left', cellWidth: 'auto' },
+      2: { halign: 'center', cellWidth: 25 },
+      3: { halign: 'right', cellWidth: 30 },
+      4: { halign: 'right', cellWidth: 30 }
+    },
+    margin: { left: 15, right: 15 }
+  })
+
+  // Calculate totals position
+  yPos = doc.lastAutoTable.finalY + 10
+
+  // Totals section
+  const totalsX = pageWidth - 70
+  doc.setFontSize(10)
+
+  // Subtotal
+  doc.setFont('helvetica', 'normal')
+  doc.text('Subtotal:', totalsX, yPos, { align: 'right' })
+  doc.text(formatCurrency(data.subtotal), pageWidth - 15, yPos, { align: 'right' })
+
+  // Discount
+  if (data.discountAmount && data.discountAmount > 0) {
+    yPos += 6
+    doc.text('Discount:', totalsX, yPos, { align: 'right' })
+    doc.setTextColor(COLORS.danger)
+    doc.text(`-${formatCurrency(data.discountAmount)}`, pageWidth - 15, yPos, { align: 'right' })
+    doc.setTextColor(COLORS.text)
   }
 
-  /**
-   * Generate and save PDF to file
-   */
-  async generateAndSavePDF(
-    templateType: PDFTemplateType,
-    data: BasePDFData,
-    outputPath: string,
-    options?: PDFGenerationOptions
-  ): Promise<void> {
-    try {
-      const pdfBuffer = await this.generatePDF(templateType, data, options)
-      await fs.promises.writeFile(outputPath, pdfBuffer)
-    } catch (error) {
-      throw new Error(`Failed to save PDF: ${error}`)
-    }
+  // Tax
+  if (data.taxAmount && data.taxAmount > 0) {
+    yPos += 6
+    doc.text(`Tax (${data.taxPercentage || 0}%):`, totalsX, yPos, { align: 'right' })
+    doc.text(formatCurrency(data.taxAmount), pageWidth - 15, yPos, { align: 'right' })
   }
 
-  /**
-   * Draw logo placeholder (white circle with blue inner circle)
-   */
-  private drawLogoPlaceholder(doc: PDFKit.PDFDocument, x: number, y: number): void {
-    // White circle
-    doc.circle(x + 25, y + 25, 25).fillAndStroke('#ffffff', '#ffffff')
-    // Blue inner circle
-    doc.circle(x + 25, y + 25, 14).fillAndStroke('#3b82f6', '#3b82f6')
-    // Reset fill color
-    doc.fillColor('#000000')
+  // Total
+  yPos += 8
+  doc.setDrawColor(COLORS.secondary)
+  doc.setLineWidth(0.5)
+  doc.line(totalsX - 20, yPos - 2, pageWidth - 15, yPos - 2)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(COLORS.secondary)
+  doc.text('Total:', totalsX, yPos, { align: 'right' })
+  doc.text(formatCurrency(data.totalAmount), pageWidth - 15, yPos, { align: 'right' })
+
+  // Notes
+  if (data.notes) {
+    yPos += 15
+    doc.setTextColor(COLORS.text)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('Notes:', 15, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(COLORS.textLight)
+    const splitNotes = doc.splitTextToSize(data.notes, pageWidth - 30)
+    doc.text(splitNotes, 15, yPos)
   }
 
-  /**
-   * Generate professional table with blue header
-   */
-  private generateProfessionalTable(
-    doc: PDFKit.PDFDocument,
-    items: any[],
-    startY: number,
-    currencySymbol: string = '$'
-  ): void {
-    const pageWidth = doc.page.width
-    const startX = 50
-    const tableWidth = pageWidth - 100
-    const colWidths = [tableWidth * 0.5, tableWidth * 0.15, tableWidth * 0.175, tableWidth * 0.175]
+  // Add footer
+  addFooter(doc)
 
-    // Blue header background
-    doc.rect(startX, startY, tableWidth, 30).fillAndStroke('#3b82f6', '#3b82f6')
+  // Convert to buffer
+  const pdfBuffer = Buffer.from(doc.output('arraybuffer'))
+  return pdfBuffer
+}
 
-    // Header text (white)
-    doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold')
-    doc.text('DESCRIPTION', startX + 10, startY + 10, { width: colWidths[0] - 10 })
-    doc.text('QTY', startX + colWidths[0], startY + 10, { width: colWidths[1], align: 'center' })
-    doc.text('UNIT PRICE', startX + colWidths[0] + colWidths[1], startY + 10, { width: colWidths[2], align: 'right' })
-    doc.text('TOTAL', startX + colWidths[0] + colWidths[1] + colWidths[2], startY + 10, { width: colWidths[3], align: 'right' })
+/**
+ * Generate Receipt PDF
+ */
+export async function generateReceiptPDF(data: ReceiptPDFData, options: PDFGenerationOptions = {}): Promise<Buffer> {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [80, 200] // Thermal receipt size
+  })
 
-    // Reset to black text
-    doc.fillColor('#000000').font('Helvetica')
+  const pageWidth = 80
+  let yPos = 10
 
-    // Table rows
-    let y = startY + 40
-    items.forEach((item, index) => {
-      // Alternating row background (light gray for even rows)
-      if (index % 2 === 0) {
-        doc.rect(startX, y - 5, tableWidth, 25).fillAndStroke('#f8fafc', '#f8fafc')
-      }
+  // Organization header (centered for receipt)
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.text)
+  doc.text(data.organization.name || 'Business Name', pageWidth / 2, yPos, { align: 'center' })
 
-      // Product name (bold)
-      doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
-      doc.text(item.product?.name || item.name || 'Item', startX + 10, y, { width: colWidths[0] - 10 })
+  yPos += 5
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(COLORS.textLight)
 
-      // Product description or code (if available)
-      if (item.product?.code) {
-        doc.fontSize(8).font('Helvetica').fillColor('#6b7280')
-        doc.text(`SKU: ${item.product.code}`, startX + 10, y + 10, { width: colWidths[0] - 10 })
-      }
+  if (data.organization.address) {
+    const addressLines = doc.splitTextToSize(data.organization.address, pageWidth - 10)
+    doc.text(addressLines, pageWidth / 2, yPos, { align: 'center' })
+    yPos += addressLines.length * 3
+  }
 
-      // Quantity
-      doc.fillColor('#000000').fontSize(9).font('Helvetica')
-      const quantity = item.quantity || 0
-      doc.text(quantity.toString(), startX + colWidths[0], y, { width: colWidths[1], align: 'center' })
+  if (data.organization.phone) {
+    doc.text(`Tel: ${data.organization.phone}`, pageWidth / 2, yPos, { align: 'center' })
+    yPos += 3
+  }
 
-      // Price
-      const price = item.price || item.unit_price || 0
-      doc.text(this.formatCurrency(price, currencySymbol), startX + colWidths[0] + colWidths[1], y, {
-        width: colWidths[2],
-        align: 'right'
-      })
+  if (data.organization.tax_number) {
+    doc.text(`Tax No: ${data.organization.tax_number}`, pageWidth / 2, yPos, { align: 'center' })
+    yPos += 3
+  }
 
-      // Total (bold)
-      const total = item.subtotal || item.total || (quantity * price)
-      doc.font('Helvetica-Bold')
-      doc.text(this.formatCurrency(total, currencySymbol), startX + colWidths[0] + colWidths[1] + colWidths[2], y, {
-        width: colWidths[3] - 10,
-        align: 'right'
-      })
+  // Divider
+  yPos += 2
+  doc.setDrawColor(COLORS.border)
+  doc.line(5, yPos, pageWidth - 5, yPos)
+  yPos += 5
 
-      y += 25
+  // Receipt title
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.text)
+  doc.text('RECEIPT', pageWidth / 2, yPos, { align: 'center' })
+  yPos += 6
 
-      // Draw row separator
-      doc.moveTo(startX, y - 5).lineTo(startX + tableWidth, y - 5).strokeColor('#e5e7eb').stroke()
-      doc.strokeColor('#000000')
+  // Receipt details
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`Receipt #: ${data.receiptNumber}`, 5, yPos)
+  yPos += 4
+  doc.text(`Date: ${formatDate(data.saleDate, 'MMM dd, yyyy hh:mm a')}`, 5, yPos)
+  yPos += 4
+
+  if (data.cashier) {
+    doc.text(`Cashier: ${data.cashier.name}`, 5, yPos)
+    yPos += 4
+  }
+
+  if (data.customer && data.customer.name !== 'Walk-in Customer') {
+    doc.text(`Customer: ${data.customer.name}`, 5, yPos)
+    yPos += 4
+  }
+
+  // Divider
+  yPos += 2
+  doc.line(5, yPos, pageWidth - 5, yPos)
+  yPos += 5
+
+  // Items
+  doc.setFont('helvetica', 'bold')
+  doc.text('Item', 5, yPos)
+  doc.text('Qty', 50, yPos, { align: 'right' })
+  doc.text('Total', pageWidth - 5, yPos, { align: 'right' })
+  yPos += 4
+
+  doc.setFont('helvetica', 'normal')
+  data.items.forEach((item) => {
+    const itemName = doc.splitTextToSize(item.product.name, 35)
+    doc.text(itemName, 5, yPos)
+    doc.text(item.quantity.toString(), 50, yPos, { align: 'right' })
+    doc.text(formatCurrency(item.total), pageWidth - 5, yPos, { align: 'right' })
+    yPos += itemName.length * 4
+  })
+
+  // Divider
+  yPos += 2
+  doc.line(5, yPos, pageWidth - 5, yPos)
+  yPos += 5
+
+  // Totals
+  doc.setFont('helvetica', 'normal')
+  doc.text('Subtotal:', 5, yPos)
+  doc.text(formatCurrency(data.subtotal), pageWidth - 5, yPos, { align: 'right' })
+  yPos += 4
+
+  if (data.discountAmount && data.discountAmount > 0) {
+    doc.text('Discount:', 5, yPos)
+    doc.text(`-${formatCurrency(data.discountAmount)}`, pageWidth - 5, yPos, { align: 'right' })
+    yPos += 4
+  }
+
+  if (data.taxAmount && data.taxAmount > 0) {
+    doc.text(`Tax (${data.taxPercentage || 0}%):`, 5, yPos)
+    doc.text(formatCurrency(data.taxAmount), pageWidth - 5, yPos, { align: 'right' })
+    yPos += 4
+  }
+
+  yPos += 2
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text('TOTAL:', 5, yPos)
+  doc.text(formatCurrency(data.totalAmount), pageWidth - 5, yPos, { align: 'right' })
+  yPos += 6
+
+  if (data.amountPaid !== undefined) {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Paid:', 5, yPos)
+    doc.text(formatCurrency(data.amountPaid), pageWidth - 5, yPos, { align: 'right' })
+    yPos += 4
+  }
+
+  if (data.changeAmount !== undefined && data.changeAmount > 0) {
+    doc.text('Change:', 5, yPos)
+    doc.text(formatCurrency(data.changeAmount), pageWidth - 5, yPos, { align: 'right' })
+    yPos += 4
+  }
+
+  if (data.paymentMethod) {
+    yPos += 2
+    doc.text(`Payment: ${data.paymentMethod}`, pageWidth / 2, yPos, { align: 'center' })
+    yPos += 4
+  }
+
+  // QR Code placeholder (if ZIMRA integration)
+  if (data.qrCode) {
+    yPos += 5
+    doc.setFontSize(7)
+    doc.text('Tax Verification QR Code', pageWidth / 2, yPos, { align: 'center' })
+    yPos += 3
+    // Add actual QR code image here if available
+    doc.text('[QR CODE]', pageWidth / 2, yPos, { align: 'center' })
+    yPos += 5
+  }
+
+  // Thank you message
+  yPos += 5
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Thank you for your business!', pageWidth / 2, yPos, { align: 'center' })
+  yPos += 4
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'normal')
+  doc.text('Please come again', pageWidth / 2, yPos, { align: 'center' })
+
+  // Convert to buffer
+  const pdfBuffer = Buffer.from(doc.output('arraybuffer'))
+  return pdfBuffer
+}
+
+/**
+ * Generate Sales Report PDF
+ */
+export async function generateSalesReportPDF(data: SalesReportPDFData, options: PDFGenerationOptions = {}): Promise<Buffer> {
+  const doc = new jsPDF({
+    orientation: options.orientation || 'landscape',
+    unit: 'mm',
+    format: options.format || 'A4'
+  })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let yPos = addHeader(doc, data.organization, data.title.toUpperCase())
+
+  // Report metadata
+  yPos += 10
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.text)
+  doc.text('Date Range:', 15, yPos)
+  doc.setFont('helvetica', 'normal')
+  doc.text(data.dateRange, 45, yPos)
+
+  // Filters if any
+  if (data.filters && data.filters.length > 0) {
+    yPos += 6
+    data.filters.forEach(filter => {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${filter.label}:`, 15, yPos)
+      doc.setFont('helvetica', 'normal')
+      doc.text(filter.value, 45, yPos)
+      yPos += 6
     })
   }
 
-  /**
-   * Generate quotation totals section (light gray box on the right)
-   */
-  private generateQuotationTotals(doc: PDFKit.PDFDocument, data: QuotationPDFData, startY: number): void {
-    const pageWidth = doc.page.width
-    const boxWidth = 250
-    const boxX = pageWidth - boxWidth - 50
-    const boxPadding = 15
+  // Summary cards
+  if (data.summary && data.summary.length > 0) {
+    yPos += 5
+    const cardWidth = (pageWidth - 40) / data.summary.length
+    let cardX = 15
 
-    // Light gray background box
-    const boxHeight = 100 + (data.taxAmount ? 15 : 0) + (data.discountAmount ? 15 : 0)
-    doc.rect(boxX, startY, boxWidth, boxHeight).fillAndStroke('#f8fafc', '#e5e7eb')
+    data.summary.forEach((item, index) => {
+      doc.setFillColor(COLORS.background)
+      doc.rect(cardX, yPos - 5, cardWidth - 5, 15, 'F')
 
-    let y = startY + boxPadding
-    doc.fillColor('#374151').fontSize(9)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.textLight)
+      doc.text(item.label, cardX + 2, yPos)
 
-    // Subtotal
-    doc.font('Helvetica').text('Subtotal:', boxX + boxPadding, y, { width: boxWidth - 120, align: 'left' })
-    doc.font('Helvetica-Bold').text(
-      this.formatCurrency(data.subtotal || 0, data.organization?.currency_symbol),
-      boxX + boxWidth - boxPadding - 100,
-      y,
-      { width: 100, align: 'right' }
+      doc.setFontSize(12)
+      doc.setTextColor(COLORS.primary)
+      const value = item.isCurrency ? formatCurrency(Number(item.value)) : item.value.toString()
+      doc.text(value, cardX + 2, yPos + 7)
+
+      cardX += cardWidth
+    })
+
+    yPos += 20
+  }
+
+  // Data table
+  if (data.data && data.data.length > 0) {
+    const firstItem = data.data[0]
+    const headers = Object.keys(firstItem).map(key =>
+      key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     )
-    y += 20
 
-    // Tax
-    if (data.taxAmount) {
-      const taxRate = data.taxPercentage || 0
-      doc.font('Helvetica').text(`Tax (${taxRate}%):`, boxX + boxPadding, y, { width: boxWidth - 120, align: 'left' })
-      doc.font('Helvetica-Bold').text(
-        this.formatCurrency(data.taxAmount, data.organization?.currency_symbol),
-        boxX + boxWidth - boxPadding - 100,
-        y,
-        { width: 100, align: 'right' }
-      )
-      y += 20
-    }
-
-    // Discount
-    if (data.discountAmount) {
-      doc.fillColor('#ef4444').font('Helvetica').text('Discount:', boxX + boxPadding, y, { width: boxWidth - 120, align: 'left' })
-      doc.font('Helvetica-Bold').text(
-        `-${this.formatCurrency(data.discountAmount, data.organization?.currency_symbol)}`,
-        boxX + boxWidth - boxPadding - 100,
-        y,
-        { width: 100, align: 'right' }
-      )
-      y += 20
-      doc.fillColor('#374151')
-    }
-
-    // Blue line separator
-    y += 5
-    doc.moveTo(boxX + boxPadding, y).lineTo(boxX + boxWidth - boxPadding, y).strokeColor('#3b82f6').lineWidth(2).stroke()
-    doc.strokeColor('#000000').lineWidth(1)
-    y += 15
-
-    // Total (larger, blue text)
-    doc.fillColor('#3b82f6').fontSize(14).font('Helvetica-Bold')
-    doc.text('TOTAL:', boxX + boxPadding, y, { width: boxWidth - 120, align: 'left' })
-    doc.text(
-      this.formatCurrency(data.totalAmount || 0, data.organization?.currency_symbol),
-      boxX + boxWidth - boxPadding - 100,
-      y,
-      { width: 100, align: 'right' }
+    const tableData = data.data.map(item =>
+      Object.values(item).map(val => {
+        if (typeof val === 'number') return formatCurrency(val)
+        if (val instanceof Date) return formatDate(val)
+        return String(val || '')
+      })
     )
 
-    // Reset colors
-    doc.fillColor('#000000')
+    autoTable(doc, {
+      startY: yPos,
+      head: [headers],
+      body: tableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: COLORS.primary,
+        textColor: '#ffffff',
+        fontSize: 9,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: COLORS.text
+      },
+      alternateRowStyles: {
+        fillColor: COLORS.background
+      },
+      margin: { left: 15, right: 15 }
+    })
+
+    yPos = doc.lastAutoTable.finalY + 10
   }
 
-  /**
-   * Generate notes section with blue left border
-   */
-  private generateNotesSection(doc: PDFKit.PDFDocument, notes: string, startY: number): void {
-    const pageWidth = doc.page.width
+  // Additional summaries
+  if (data.showSummaryByStatus && data.statusSummary && data.statusSummary.length > 0) {
+    yPos += 5
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.text)
+    doc.text('Summary by Status', 15, yPos)
+    yPos += 5
 
-    // Section heading
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#3b82f6')
-    doc.text('NOTES', 50, startY)
+    const statusHeaders = [['Status', 'Count', 'Total Amount']]
+    const statusData = data.statusSummary.map(item => [
+      item.status,
+      item.count.toString(),
+      formatCurrency(item.amount)
+    ])
 
-    // Notes box with light gray background and blue left border
-    const boxY = startY + 20
-    const boxWidth = pageWidth - 100
-
-    // Light gray background
-    doc.rect(50, boxY, boxWidth, 60).fillAndStroke('#f8fafc', '#f8fafc')
-
-    // Blue left border
-    doc.rect(50, boxY, 4, 60).fillAndStroke('#3b82f6', '#3b82f6')
-
-    // Notes text
-    doc.fillColor('#374151').fontSize(9).font('Helvetica')
-    doc.text(notes, 65, boxY + 10, { width: boxWidth - 30, lineGap: 3 })
-
-    // Reset color
-    doc.fillColor('#000000')
+    autoTable(doc, {
+      startY: yPos,
+      head: statusHeaders,
+      body: statusData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.secondary,
+        textColor: '#ffffff',
+        fontSize: 9,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        fontSize: 8
+      },
+      margin: { left: 15, right: pageWidth / 2 + 5 },
+      tableWidth: (pageWidth / 2) - 20
+    })
   }
 
-  /**
-   * Generate terms & conditions section
-   */
-  private generateTermsSection(doc: PDFKit.PDFDocument, terms: string, startY: number): void {
-    // Section heading
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#3b82f6')
-    doc.text('TERMS & CONDITIONS', 50, startY)
+  // Add footer
+  addFooter(doc)
 
-    // Terms text (small gray text)
-    doc.fillColor('#6b7280').fontSize(8).font('Helvetica')
-    doc.text(terms, 50, startY + 15, { width: doc.page.width - 100, lineGap: 2 })
-
-    // Reset color
-    doc.fillColor('#000000')
-  }
-
-  /**
-   * Generate professional footer at bottom
-   */
-  private generateProfessionalFooter(doc: PDFKit.PDFDocument, organization: any): void {
-    const pageHeight = doc.page.height
-    const pageWidth = doc.page.width
-    const footerY = pageHeight - 50
-
-    // Top border line
-    doc.moveTo(50, footerY).lineTo(pageWidth - 50, footerY).strokeColor('#e5e7eb').stroke()
-    doc.strokeColor('#000000')
-
-    // Footer text (small, centered, gray)
-    doc.fontSize(8).fillColor('#6b7280').font('Helvetica')
-
-    // Company info line
-    const footerLine1 = `${organization?.name || 'Company'}${organization?.email ? ' | ' + organization.email : ''}${organization?.phone ? ' | ' + organization.phone : ''}${organization?.website ? ' | ' + organization.website : ''}`
-    doc.text(footerLine1, 50, footerY + 10, { width: pageWidth - 100, align: 'center' })
-
-    // Address line
-    if (organization?.address) {
-      const footerLine2 = `${organization.address}${organization.city ? ', ' + organization.city : ''}${organization.country ? ', ' + organization.country : ''}`
-      doc.text(footerLine2, 50, footerY + 20, { width: pageWidth - 100, align: 'center' })
-    }
-
-    // Reset color
-    doc.fillColor('#000000')
-  }
-
-  /**
-   * Clear caches (no-op for PDFKit, kept for compatibility)
-   */
-  clearCache(): void {
-    // PDFKit doesn't use caching
-  }
+  // Convert to buffer
+  const pdfBuffer = Buffer.from(doc.output('arraybuffer'))
+  return pdfBuffer
 }
 
-/**
- * Default PDF generator instance
- */
-export const pdfGenerator = new PDFGenerator()
-
-/**
- * Convenience functions for direct use
- */
-export async function generateInvoicePDF(
-  data: InvoicePDFData,
-  options?: PDFGenerationOptions
-): Promise<Buffer> {
-  return pdfGenerator.generateInvoicePDF(data, options)
-}
-
-export async function generateQuotationPDF(
-  data: QuotationPDFData,
-  options?: PDFGenerationOptions
-): Promise<Buffer> {
-  return pdfGenerator.generateQuotationPDF(data, options)
-}
-
-export async function generateReceiptPDF(
-  data: ReceiptPDFData,
-  options?: PDFGenerationOptions
-): Promise<Buffer> {
-  return pdfGenerator.generateReceiptPDF(data, options)
-}
-
-/**
- * Legacy compatibility - returns base64 data URL for download
- */
-export function createDownloadableURL(pdfBuffer: Buffer): string {
-  const base64 = pdfBuffer.toString('base64')
-  return `data:application/pdf;base64,${base64}`
+// Export all generation functions
+export {
+  generateInvoicePDF,
+  generateQuotationPDF,
+  generateReceiptPDF,
+  generateSalesReportPDF
 }
