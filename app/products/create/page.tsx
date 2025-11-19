@@ -12,6 +12,7 @@ import { Upload, X, Loader2 } from "lucide-react"
 import AuthGuard from "@/components/AuthGuard"
 import { useCreateProductMutation } from '@/lib/slices/productsApi'
 import { toast } from "sonner"
+import type React from "react"
 
 interface FormData {
   name: string
