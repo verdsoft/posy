@@ -44,7 +44,7 @@ const initialState: CustomersState = {
 
 export const fetchCustomers = createAsyncThunk(
   "customers/fetchCustomers",
-  async ({ page = 1, limit = 10 }: { page?: number; limit?: number }) => {
+  async ({ page = 1, limit = 7 }: { page?: number; limit?: number }) => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     const mockCustomers: Customer[] = [

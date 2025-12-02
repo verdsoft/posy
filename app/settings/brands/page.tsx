@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Edit, Trash2, ImageIcon } from "lucide-react"
+import { Search, Edit, Trash2, ImageIcon, FileDown, Plus } from "lucide-react"
 import type React from "react"
 import {
   useGetBrandsQuery,
@@ -17,6 +17,9 @@ import {
   type Brand
 } from "@/lib/slices/brandsApi"
 import { toast } from "sonner"
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 
 export default function Brands() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -90,6 +93,56 @@ export default function Brands() {
     }
   }
 
+  // PDF Export functionality
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF()
+      
+      doc.text('Brands List', 14, 16)
+      
+      const tableData = filteredBrands.map(brand => [
+        brand.id,
+        brand.name || "-",
+        brand.description || "-"
+      ])
+      
+      autoTable(doc, {
+        head: [['ID', 'Brand Name', 'Brand Description']],
+        body: tableData,
+        startY: 20,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [26, 35, 126] }
+      })
+      
+      doc.save(`brands-${new Date().getTime()}.pdf`)
+      toast.success("PDF exported successfully")
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      toast.error("Failed to export PDF")
+    }
+  }
+
+  // Excel Export functionality
+  const handleExportExcel = () => {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(
+        filteredBrands.map(brand => ({
+          ID: brand.id,
+          'Brand Name': brand.name || "-",
+          'Brand Description': brand.description || "-"
+        }))
+      )
+      
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Brands")
+      XLSX.writeFile(workbook, `brands-${new Date().getTime()}.xlsx`)
+      toast.success("Excel file exported successfully")
+    } catch (error) {
+      console.error("Error generating Excel:", error)
+      toast.error("Failed to export Excel file")
+    }
+  }
+
   const filteredBrands = (Array.isArray(brands) ? brands : []).filter(
     (b) =>
       b.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -98,76 +151,94 @@ export default function Brands() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+      <div className="p-4">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
             <span>Settings</span>
             <span>|</span>
             <span>Brand</span>
           </div>
-          <h1 className="text-2xl font-bold">Brand</h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow flat-ui">
+        <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="p-6 border-b">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="p-3 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                 <Input
                   placeholder="Search this table"
-                  className="pl-10"
+                  className="w-48 h-8 text-sm pl-7"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleExportPDF}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleExportExcel}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                EXCEL
+              </Button>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#1a237e] hover:bg-purple-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700 h-8 px-2 text-xs">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Create Brand</DialogTitle>
+                    <DialogTitle className="text-sm">Create Brand</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="name">Brand Name *</Label>
-                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter brand name" />
+                      <Label htmlFor="name" className="text-xs">Brand Name *</Label>
+                      <Input 
+                        id="name" 
+                        value={form.name} 
+                        onChange={handleFormChange} 
+                        placeholder="Enter brand name" 
+                        className="h-8 text-sm" 
+                      />
                     </div>
                     <div>
-                      <Label htmlFor="description">Brand Description</Label>
-                      <Textarea id="description" value={form.description} onChange={handleFormChange} placeholder="Enter brand description" rows={3} />
+                      <Label htmlFor="description" className="text-xs">Brand Description</Label>
+                      <Textarea 
+                        id="description" 
+                        value={form.description} 
+                        onChange={handleFormChange} 
+                        placeholder="Enter brand description" 
+                        rows={3} 
+                        className="text-sm"
+                      />
                     </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate} disabled={!form.name.trim()}>
-                        Submit
+                    <div className="flex gap-2 pt-3">
+                      <Button 
+                        className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+                        onClick={handleCreate} 
+                        disabled={!form.name.trim() || isCreating}
+                      >
+                        {isCreating ? "Creating..." : "Submit"}
                       </Button>
-                      <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Edit Brand</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Brand Name *</Label>
-                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter brand name" />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Brand Description</Label>
-                      <Textarea id="description" value={form.description} onChange={handleFormChange} placeholder="Enter brand description" rows={3} />
-                    </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit} disabled={!form.name.trim()}>
-                        Save
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsCreateOpen(false)} 
+                        className="flex-1 h-8 text-xs"
+                      >
                         Cancel
                       </Button>
                     </div>
@@ -179,68 +250,83 @@ export default function Brands() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-4 font-medium">
-                    <input type="checkbox" className="rounded" />
+                  <th className="text-left p-2 font-medium">
+                    <input type="checkbox" className="rounded scale-75" />
                   </th>
-                  <th className="text-left p-4 font-medium">Brand Image</th>
-                  <th className="text-left p-4 font-medium">Brand Name</th>
-                  <th className="text-left p-4 font-medium">Brand Description</th>
-                  <th className="text-left p-4 font-medium">Action</th>
+                  <th className="text-left p-2 font-medium">ID</th>
+                  <th className="text-left p-2 font-medium">Brand Image</th>
+                  <th className="text-left p-2 font-medium">Brand Name</th>
+                  <th className="text-left p-2 font-medium">Brand Description</th>
+                  <th className="text-left p-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredBrands.length === 0 && (
+                {loading ? (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-gray-400">
-                      No brands found.
-                    </td>
+                    <td colSpan={6} className="text-center p-4 text-sm">Loading...</td>
                   </tr>
+                ) : filteredBrands.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center p-4 text-sm">No brands found.</td>
+                  </tr>
+                ) : (
+                  filteredBrands.map((brand) => (
+                    <tr key={brand.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2">
+                        <input type="checkbox" className="rounded scale-75" />
+                      </td>
+                      <td className="p-2">{brand.id}</td>
+                      <td className="p-2">
+                        <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                          <ImageIcon className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </td>
+                      <td className="p-2">{brand.name}</td>
+                      <td className="p-2">{brand.description}</td>
+                      <td className="p-2">
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0" 
+                            onClick={() => openEdit(brand)}
+                          >
+                            <Edit className="h-3 w-3 text-green-600" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0" 
+                            onClick={() => openDelete(brand.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-red-600" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
-                {filteredBrands.map((brand) => (
-                  <tr key={brand.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <input type="checkbox" className="rounded" />
-                    </td>
-                    <td className="p-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
-                        <ImageIcon className="h-6 w-6 text-gray-400" />
-                      </div>
-                    </td>
-                    <td className="p-4">{brand.name}</td>
-                    <td className="p-4">{brand.description}</td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(brand)}>
-                          <Edit className="h-4 w-4 text-green-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDelete(brand.id)}>
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+          <div className="p-3 border-t flex items-center justify-between">
+            <div className="text-xs text-gray-600">Rows per page: 10</div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-600">
                 {filteredBrands.length > 0
                   ? `1 - ${filteredBrands.length} of ${filteredBrands.length}`
                   : "0"}
               </span>
               <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
                   prev
                 </Button>
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
                   next
                 </Button>
               </div>
@@ -249,19 +335,76 @@ export default function Brands() {
         </div>
       </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Edit Brand</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="name" className="text-xs">Brand Name *</Label>
+              <Input 
+                id="name" 
+                value={form.name} 
+                onChange={handleFormChange} 
+                placeholder="Enter brand name" 
+                className="h-8 text-sm" 
+              />
+            </div>
+            <div>
+              <Label htmlFor="description" className="text-xs">Brand Description</Label>
+              <Textarea 
+                id="description" 
+                value={form.description} 
+                onChange={handleFormChange} 
+                placeholder="Enter brand description" 
+                rows={3} 
+                className="text-sm"
+              />
+            </div>
+            <div className="flex gap-2 pt-3">
+              <Button 
+                className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+                onClick={handleEdit} 
+                disabled={!form.name.trim() || isUpdating}
+              >
+                {isUpdating ? "Saving..." : "Save"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditOpen(false)} 
+                className="flex-1 h-8 text-xs"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Brand</DialogTitle>
+            <DialogTitle className="text-sm">Delete Brand</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-3 text-sm">
             Are you sure you want to delete this brand?
           </div>
-          <div className="flex gap-2 pt-4">
-            <Button className="bg-red-600 hover:bg-red-700 flex-1" onClick={handleDeleteConfirmed}>
-              Delete
+          <div className="flex gap-2 pt-3">
+            <Button 
+              className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs" 
+              onClick={handleDeleteConfirmed}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="flex-1">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteOpen(false)} 
+              className="flex-1 h-8 text-xs"
+            >
               Cancel
             </Button>
           </div>

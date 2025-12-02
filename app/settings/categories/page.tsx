@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Search, Edit, Trash2 } from "lucide-react"
+import { Search, Edit, Trash2, FileDown, Plus } from "lucide-react"
 import {
   useGetCategoriesQuery,
   useCreateCategoryMutation,
@@ -16,6 +16,9 @@ import {
   type Category
 } from "@/lib/slices/categoriesApi"
 import { toast } from "sonner"
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 
 export default function Categories() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -99,6 +102,60 @@ export default function Categories() {
     }
   }
 
+  // PDF Export functionality
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF()
+      
+      // Add title
+      doc.text('Categories List', 14, 16)
+      
+      // Prepare table data
+      const tableData = filteredCategories.map(category => [
+        category.id,
+        category.code || "-",
+        category.name || "-"
+      ])
+      
+      // Add table using autoTable as separate function
+      autoTable(doc, {
+        head: [['ID', 'Category Code', 'Category Name']],
+        body: tableData,
+        startY: 20,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [26, 35, 126] }
+      })
+      
+      // Save the PDF
+      doc.save(`categories-${new Date().getTime()}.pdf`)
+      toast.success("PDF exported successfully")
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      toast.error("Failed to export PDF")
+    }
+  }
+
+  // Excel Export functionality
+  const handleExportExcel = () => {
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(
+        filteredCategories.map(category => ({
+          ID: category.id,
+          'Category Code': category.code || "-",
+          'Category Name': category.name || "-"
+        }))
+      )
+      
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Categories")
+      XLSX.writeFile(workbook, `categories-${new Date().getTime()}.xlsx`)
+      toast.success("Excel file exported successfully")
+    } catch (error) {
+      console.error("Error generating Excel:", error)
+      toast.error("Failed to export Excel file")
+    }
+  }
+
   const filteredCategories = (Array.isArray(categories) ? categories : []).filter(
     (cat) =>
       cat.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -107,90 +164,97 @@ export default function Categories() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+      <div className="p-4">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
             <span>Settings</span>
             <span>|</span>
             <span>Category</span>
           </div>
-          <h1 className="text-2xl font-bold">Category</h1>
         </div>
 
         <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="p-6 border-b">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="p-3 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                 <Input
                   placeholder="Search this table"
-                  className="pl-10"
+                  className="w-48 h-8 text-sm pl-7"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
-
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleExportPDF}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleExportExcel}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                EXCEL
+              </Button>
               {/* Create Dialog */}
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#1a237e] hover:bg-blue-700">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-blue-700 h-8 px-2 text-xs">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Create Category</DialogTitle>
+                    <DialogTitle className="text-sm">Create Category</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="code">Category Code *</Label>
-                      <Input id="code" value={form.code} onChange={handleFormChange} placeholder="Enter category code" />
-                    </div>
-                    <div>
-                      <Label htmlFor="name">Category Name *</Label>
-                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter category name" />
-                    </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleCreate}>Submit</Button>
-                      <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">Cancel</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              {/* Edit Dialog */}
-              <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Edit Category</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="code">Category Code *</Label>
-                      <Input id="code" value={form.code} onChange={handleFormChange} placeholder="Enter category code" />
+                      <Label htmlFor="code" className="text-xs">Category Code *</Label>
+                      <Input 
+                        id="code" 
+                        value={form.code} 
+                        onChange={handleFormChange} 
+                        placeholder="Enter category code" 
+                        className="h-8 text-sm" 
+                      />
                     </div>
                     <div>
-                      <Label htmlFor="name">Category Name *</Label>
-                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter category name" />
+                      <Label htmlFor="name" className="text-xs">Category Name *</Label>
+                      <Input 
+                        id="name" 
+                        value={form.name} 
+                        onChange={handleFormChange} 
+                        placeholder="Enter category name" 
+                        className="h-8 text-sm" 
+                      />
                     </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1" onClick={handleEdit}>Save</Button>
-                      <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">Cancel</Button>
+                    <div className="flex gap-2 pt-3">
+                      <Button 
+                        className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+                        onClick={handleCreate}
+                        disabled={isCreating}
+                      >
+                        {isCreating ? "Creating..." : "Submit"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsCreateOpen(false)} 
+                        className="flex-1 h-8 text-xs"
+                      >
+                        Cancel
+                      </Button>
                     </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              {/* Delete Dialog */}
-              <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Delete Category</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4">
-                    Are you sure you want to delete this category?
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <Button className="bg-red-600 hover:bg-red-700 flex-1" onClick={handleDeleteConfirmed}>Delete</Button>
-                    <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="flex-1">Cancel</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -199,41 +263,53 @@ export default function Categories() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-4 font-medium">
-                    <input type="checkbox" className="rounded" />
+                  <th className="text-left p-2 font-medium">
+                    <input type="checkbox" className="rounded scale-75" />
                   </th>
-                  <th className="text-left p-4 font-medium">Category Code</th>
-                  <th className="text-left p-4 font-medium">Category Name</th>
-                  <th className="text-left p-4 font-medium">Action</th>
+                  <th className="text-left p-2 font-medium">ID</th>
+                  <th className="text-left p-2 font-medium">Category Code</th>
+                  <th className="text-left p-2 font-medium">Category Name</th>
+                  <th className="text-left p-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="text-center p-4">Loading...</td>
+                    <td colSpan={5} className="text-center p-4 text-sm">Loading...</td>
                   </tr>
                 ) : filteredCategories.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center p-4">No categories found.</td>
+                    <td colSpan={5} className="text-center p-4 text-sm">No categories found.</td>
                   </tr>
                 ) : (
                   filteredCategories.map((category) => (
                     <tr key={category.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 pl-4">
-                        <input type="checkbox" className="rounded" />
+                      <td className="p-2">
+                        <input type="checkbox" className="rounded scale-75" />
                       </td>
+                      <td className="p-2">{category.id}</td>
                       <td className="p-2">{category.code}</td>
                       <td className="p-2">{category.name}</td>
                       <td className="p-2">
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(category)}>
-                            <Edit className="h-4 w-4 text-green-600" />
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0" 
+                            onClick={() => openEdit(category)}
+                          >
+                            <Edit className="h-3 w-3 text-green-600" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDelete(category.id)}>
-                            <Trash2 className="h-4 w-4 text-red-600" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0" 
+                            onClick={() => openDelete(category.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-red-600" />
                           </Button>
                         </div>
                       </td>
@@ -245,17 +321,17 @@ export default function Categories() {
           </div>
 
           {/* Pagination */}
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                1 - {categories.length} of {categories.length}
+          <div className="p-3 border-t flex items-center justify-between">
+            <div className="text-xs text-gray-600">Rows per page: 10</div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-600">
+                1 - {filteredCategories.length} of {filteredCategories.length}
               </span>
               <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
                   prev
                 </Button>
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
                   next
                 </Button>
               </div>
@@ -263,6 +339,81 @@ export default function Categories() {
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Edit Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="code" className="text-xs">Category Code *</Label>
+              <Input 
+                id="code" 
+                value={form.code} 
+                onChange={handleFormChange} 
+                placeholder="Enter category code" 
+                className="h-8 text-sm" 
+              />
+            </div>
+            <div>
+              <Label htmlFor="name" className="text-xs">Category Name *</Label>
+              <Input 
+                id="name" 
+                value={form.name} 
+                onChange={handleFormChange} 
+                placeholder="Enter category name" 
+                className="h-8 text-sm" 
+              />
+            </div>
+            <div className="flex gap-2 pt-3">
+              <Button 
+                className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+                onClick={handleEdit}
+                disabled={isUpdating}
+              >
+                {isUpdating ? "Saving..." : "Save"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditOpen(false)} 
+                className="flex-1 h-8 text-xs"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Delete Category</DialogTitle>
+          </DialogHeader>
+          <div className="py-3 text-sm">
+            Are you sure you want to delete this category?
+          </div>
+          <div className="flex gap-2 pt-3">
+            <Button 
+              className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs" 
+              onClick={handleDeleteConfirmed}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteOpen(false)} 
+              className="flex-1 h-8 text-xs"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

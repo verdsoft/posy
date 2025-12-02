@@ -175,172 +175,179 @@ export default function SupplierList() {
             <span>|</span>
             <span>Supplier Management</span>
           </div>
-          <h1 className="text-2xl font-bold">Supplier Management</h1>
+          {/* <h1 className="text-2xl font-bold">Supplier Management</h1> */}
         </div>
 
         <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Input 
-                  placeholder="Search this table..." 
-                  className="w-64" 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportPDF}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportExcel}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                EXCEL
-              </Button>
-              <Button 
-                className="bg-[#1a237e] hover:bg-purple-700"
-                onClick={() => setShowCreateModal(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create
-              </Button>
-            </div>
-          </div>
+  <div className="p-3 border-b flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="relative">
+        <Input 
+          placeholder="Search this table..." 
+          className="w-48 h-8 text-sm" 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 px-2 text-xs"
+        onClick={handleExportPDF}
+      >
+        <FileDown className="h-3 w-3 mr-1" />
+        PDF
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 px-2 text-xs"
+        onClick={handleExportExcel}
+      >
+        <FileDown className="h-3 w-3 mr-1" />
+        EXCEL
+      </Button>
+      <Button 
+        className="bg-[#1a237e] hover:bg-purple-700 h-8 px-2 text-xs"
+        onClick={() => setShowCreateModal(true)}
+      >
+        <Plus className="h-3 w-3 mr-1" />
+        Create
+      </Button>
+    </div>
+  </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-3">
-                    <input type="checkbox" />
-                  </th>
-                  <th className="text-left p-3">ID</th>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">Phone</th>
-                  <th className="text-left p-3">Email</th>
-                  <th className="text-left p-3">Country</th>
-                  <th className="text-left p-3">City</th>
-                  <th className="text-left p-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={8} className="text-center p-6">Loading...</td>
-                  </tr>
-                ) : suppliers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center p-6">No suppliers found.</td>
-                  </tr>
-                ) : (
-                  suppliers.map((supplier) => (
-                    <tr key={supplier.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3">
-                        <input type="checkbox" />
-                      </td>
-                      <td className="p-3">{supplier.id}</td>
-                      <td className="p-3">{supplier.name}</td>
-                      <td className="p-3">{supplier.phone || "-"}</td>
-                      <td className="p-3">{supplier.email}</td>
-                      <td className="p-3">{supplier.country || "-"}</td>
-                      <td className="p-3">{supplier.city || "-"}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openViewModal(supplier)}
-                          >
-                            <Eye className="h-4 w-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(supplier)}
-                          >
-                            <Edit className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteModal(supplier)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+  <div className="overflow-x-auto">
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="text-left p-2">
+            <input type="checkbox" className="scale-75" />
+          </th>
+          {/* <th className="text-left p-2">ID</th> */}
+          <th className="text-left p-2">Name</th>
+          <th className="text-left p-2">Phone</th>
+          <th className="text-left p-2">Email</th>
+          <th className="text-left p-2">Country</th>
+          <th className="text-left p-2">City</th>
+          <th className="text-left p-2">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {isLoading ? (
+          <tr>
+            <td colSpan={8} className="text-center p-4 text-sm">Loading...</td>
+          </tr>
+        ) : suppliers.length === 0 ? (
+          <tr>
+            <td colSpan={8} className="text-center p-4 text-sm">No suppliers found.</td>
+          </tr>
+        ) : (
+          suppliers.map((supplier) => (
+            <tr key={supplier.id} className="border-b hover:bg-gray-50">
+              <td className="p-2">
+                <input type="checkbox" className="scale-75" />
+              </td>
+              {/* <td className="p-2">{supplier.id}</td> */}
+              <td className="p-2">{supplier.name}</td>
+              <td className="p-2">{supplier.phone || "-"}</td>
+              <td className="p-2">{supplier.email}</td>
+              <td className="p-2">{supplier.country || "-"}</td>
+              <td className="p-2">{supplier.city || "-"}</td>
+              <td className="p-2">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => openViewModal(supplier)}
+                  >
+                    <Eye className="h-3 w-3 text-blue-600" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => openEditModal(supplier)}
+                  >
+                    <Edit className="h-3 w-3 text-green-600" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => openDeleteModal(supplier)}
+                  >
+                    <Trash2 className="h-3 w-3 text-red-600" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
 
-          {pagination && (
-            <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">Rows per page</p>
-                <Select
-                  value={limit.toString()}
-                  onValueChange={(value) => setLimit(Number(value))}
-                >
-                  <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 25, 50, 100].map((size) => (
-                      <SelectItem key={size} value={size.toString()}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+  {pagination && (
+    <div className="mt-3 flex flex-col md:flex-row items-center justify-between gap-3 p-3">
+      <div className="flex items-center gap-2">
+        <p className="text-xs text-muted-foreground">Rows per page</p>
+        <Select
+          value={limit.toString()}
+          onValueChange={(value) => setLimit(Number(value))}
+        >
+          <SelectTrigger className="h-7 w-[65px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[10, 25, 50, 100].map((size) => (
+              <SelectItem key={size} value={size.toString()} className="text-xs">
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-              <UIPagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
-                      disabled={page === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-2" />
-                      Previous
-                    </Button>
-                  </PaginationItem>
-                  
-                  <span className="text-sm text-muted-foreground mx-4">
-                    Page {page} of {pagination.totalPages}
-                  </span>
+      <UIPagination>
+        <PaginationContent>
+          <PaginationItem>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage((old) => Math.max(old - 1, 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-3 w-3 mr-1" />
+              Previous
+            </Button>
+          </PaginationItem>
+          
+          <span className="text-xs text-muted-foreground mx-3">
+            Page {page} of {pagination.totalPages}
+          </span>
 
-                  <PaginationItem>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPage((old) => old + 1)}
-                      disabled={page >= (pagination.totalPages || 1)}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </PaginationItem>
-                </PaginationContent>
-              </UIPagination>
-            </div>
-          )}
-        </div>
+          <PaginationItem>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage((old) => old + 1)}
+              disabled={page >= (pagination.totalPages || 1)}
+            >
+              Next
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </PaginationItem>
+        </PaginationContent>
+      </UIPagination>
+    </div>
+  )}
+</div>
 
         {/* Create Supplier Modal */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
