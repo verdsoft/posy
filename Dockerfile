@@ -16,11 +16,11 @@ COPY package.json package-lock.json* pnpm-lock.yaml* ./
 
 # Install dependencies (prefers npm since package-lock.json exists)
 RUN if [ -f package-lock.json ]; then \
-      npm ci; \
+      npm ci --legacy-peer-deps; \
     elif [ -f pnpm-lock.yaml ]; then \
       corepack enable && pnpm install --frozen-lockfile; \
     else \
-      npm install; \
+      npm install --legacy-peer-deps; \
     fi
 
 # 3) Build stage
