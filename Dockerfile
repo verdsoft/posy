@@ -11,8 +11,9 @@ WORKDIR /app
 # 2) Dependencies stage
 FROM base AS deps
 
-# Copy package manifests
+# Copy package manifests and Prisma schema (needed for prisma generate in postinstall)
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
+COPY prisma ./prisma
 
 # Install dependencies (prefers npm since package-lock.json exists)
 RUN if [ -f package-lock.json ]; then \
