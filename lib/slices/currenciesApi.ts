@@ -42,9 +42,9 @@ export const currenciesApi = createApi({
       providesTags: (result) =>
         result && Array.isArray(result)
           ? [
-              ...result.map(({ id }) => ({ type: 'Currency' as const, id })),
-              { type: 'Currency', id: 'LIST' },
-            ]
+            ...result.map(({ id }) => ({ type: 'Currency' as const, id })),
+            { type: 'Currency', id: 'LIST' },
+          ]
           : [{ type: 'Currency', id: 'LIST' }],
     }),
     createCurrency: builder.mutation<Currency, CreateCurrencyInput>({
@@ -62,12 +62,12 @@ export const currenciesApi = createApi({
               draft.push(data)
             })
           )
-        } catch {}
+        } catch { }
       },
     }),
     updateCurrency: builder.mutation<Currency, UpdateCurrencyInput>({
       query: ({ id, ...currencyData }) => ({
-        url: '',
+        url: `?id=${id}`,
         method: 'PUT',
         body: { id, ...currencyData },
       }),
@@ -86,12 +86,12 @@ export const currenciesApi = createApi({
               }
             })
           )
-        } catch {}
+        } catch { }
       },
     }),
     deleteCurrency: builder.mutation<void, number>({
       query: (id) => ({
-        url: '',
+        url: `?id=${id}`,
         method: 'DELETE',
         body: { id },
       }),

@@ -1,59 +1,68 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-
-export interface TransferItem {
-  product_id: string
-  quantity: number
-  cost?: number
-}
-
-export interface Transfer {
-  id: string
-  reference: string
-  from_warehouse_id: string
-  to_warehouse_id: string
-  date: string
-  status: string
-  notes?: string
-}
-
-export interface PaginatedResponse<T> {
-  data: T[]
-  pagination: { total: number; page: number; limit: number; totalPages: number }
-}
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type {
+  Transfer,
+  CreateTransferInput,
+  UpdateTransferInput,
+  PaginatedResponse,
+  SearchParams
+} from '@/lib/types/prisma';
 
 export const transfersApi = createApi({
   reducerPath: 'transfersApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2' }),
-  tagTypes: ['Transfers'],
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/transfers' }),
+  tagTypes: ['Transfer'],
   endpoints: (builder) => ({
-    getTransfers: builder.query<PaginatedResponse<Transfer>, { page: number; limit: number; search?: string }>({
-      query: ({ page, limit, search = '' }) => ({
-        url: `transfers`,
-        params: { page, limit, search },
-      }),
+    getTransfers: builder.query<PaginatedResponse<Transfer>, SearchParams>({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params.page) searchParams.append('page', params.page.toString());
+        if (params.limit) searchParams.append('limit', params.limit.toString());
+        if (params.search) searchParams.append('search', params.search);
+        // Add other filters as needed
+        return `?${searchParams.toString()}`;
+      },
       providesTags: (result) =>
-        result?.data
+        result
           ? [
-              ...result.data.map((t) => ({ type: 'Transfers' as const, id: t.id })),
-              { type: 'Transfers' as const, id: 'LIST' },
-            ]
-          : [{ type: 'Transfers' as const, id: 'LIST' }],
+            ...result.data.map(({ id }) => ({ type: 'Transfer' as const, id })),
+            { type: 'Transfer', id: 'LIST' },
+          ]
+          : [{ type: 'Transfer', id: 'LIST' }],
     }),
-    createTransfer: builder.mutation<{ success: boolean; id: string; reference: string }, any>({
-      query: (body) => ({ url: `transfers`, method: 'POST', body }),
-      invalidatesTags: [{ type: 'Transfers', id: 'LIST' }],
+    getTransferById: builder.query<Transfer, number | string>({
+      query: (id) => `?id=${id}`,
+      providesTags: (result, error, id) => [{ type: 'Transfer', id }],
     }),
-    updateTransfer: builder.mutation<{ success: boolean }, { id: string } & Partial<Transfer>>({
-      query: ({ id, ...body }) => ({ url: `transfers`, method: 'PUT', body: { id, ...body } }),
-      invalidatesTags: (_res, _err, arg) => [{ type: 'Transfers', id: arg.id }, { type: 'Transfers', id: 'LIST' }],
+    createTransfer: builder.mutation<Transfer, CreateTransferInput>({
+      query: (transferData) => ({
+        url: '',
+        method: 'POST',
+        body: transferData,
+      }),
+      invalidatesTags: [{ type: 'Transfer', id: 'LIST' }],
     }),
-    deleteTransfer: builder.mutation<{ success: boolean }, string>({
-      query: (id) => ({ url: `transfers?id=${encodeURIComponent(id)}`, method: 'DELETE' }),
-      invalidatesTags: [{ type: 'Transfers', id: 'LIST' }],
+    updateTransfer: builder.mutation<Transfer, { id: number | string; data: UpdateTransferInput }>({
+      query: ({ id, data }) => ({
+        url: `?id=${id}`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Transfer', id }, { type: 'Transfer', id: 'LIST' }],
+    }),
+    deleteTransfer: builder.mutation<{ success: boolean; message: string }, number | string>({
+      query: (id) => ({
+        url: `?id=${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, id) => [{ type: 'Transfer', id }, { type: 'Transfer', id: 'LIST' }],
     }),
   }),
-})
+});
 
-export const { useGetTransfersQuery, useCreateTransferMutation, useUpdateTransferMutation, useDeleteTransferMutation } = transfersApi
-
-
+export const {
+  useGetTransfersQuery,
+  useGetTransferByIdQuery,
+  useCreateTransferMutation,
+  useUpdateTransferMutation,
+  useDeleteTransferMutation,
+} = transfersApi;

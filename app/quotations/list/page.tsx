@@ -5,19 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
+import {
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
-import { Search, FileDown, Edit, Trash2, ChevronLeft, ChevronRight, MoreHorizontal, Eye, FileText } from "lucide-react"
+import { Search, FileDown, Edit, Trash2, ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
-// Old jsPDF imports removed - now using server-side Handlebars templates
-// PDF generation moved to server-side API routes
 import { useGetOrganizationQuery } from '@/lib/slices/organizationApi'
 import type React from "react"
 import { ViewQuotationDialog } from "./view-quotation/page"
@@ -37,12 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import { TableActions } from "@/components/ui/table-actions"
 
 interface FullQuotation extends Quotation {
   customer_name?: string;
@@ -59,6 +49,8 @@ interface QuotationListItem {
   total: number
   created_by?: string
   valid_until?: string | null
+  customers?: { name: string, email?: string, phone?: string, address?: string, city?: string, country?: string }
+  warehouses?: { name: string }
 }
 
 export default function QuotationList() {
@@ -78,7 +70,7 @@ export default function QuotationList() {
   const { data: fullQuotationData } = useGetQuotationByIdQuery(quotationIdForActions || "", { skip: !quotationIdForActions });
   const { data: quotationItemsData } = useGetQuotationItemsQuery(quotationIdForActions || "", { skip: !quotationIdForActions });
   const { data: organization } = useGetOrganizationQuery();
-  
+
   const quotations = (data?.data || []) as unknown as QuotationListItem[];
   const pagination = data?.pagination;
 
@@ -89,7 +81,7 @@ export default function QuotationList() {
 
   const handleDeleteQuotation = async () => {
     if (!quotationToDelete) return
-    
+
     try {
       await deleteQuotation(quotationToDelete).unwrap()
       toast.success("Quotation deleted successfully")
@@ -117,7 +109,7 @@ export default function QuotationList() {
         Total: Number(quotation.total)
       }))
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Quotations")
     XLSX.writeFile(workbook, "quotations.xlsx")
@@ -132,11 +124,6 @@ export default function QuotationList() {
       const itemsResponse = await fetch(`/api/v2/quotations/items?quotation_id=${quotationId}`);
       const itemsResult = await itemsResponse.json();
       const itemsData = itemsResult.data || [];
-
-      // Debug: Uncomment to troubleshoot item data issues
-      // console.log('Quotation data:', quotationData);
-      // console.log('Items response:', itemsResult);
-      // console.log('Items data:', itemsData);
 
       // Prepare data for PDF generation
       const pdfData = {
@@ -246,10 +233,10 @@ export default function QuotationList() {
           discount: Number(Number(fetchedFullQuotation.discount || 0).toFixed(2)),
           shipping: Number(Number(fetchedFullQuotation.shipping || 0).toFixed(2)),
           total: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
-          paid: 0, 
+          paid: 0,
           due: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
           status: "pending",
-          payment_status: "unpaid", 
+          payment_status: "unpaid",
           notes: fetchedFullQuotation.notes || null,
           created_by: fetchedFullQuotation.created_by || user_id || null,
           items: fetchedQuotationItems.map(item => ({
@@ -261,15 +248,12 @@ export default function QuotationList() {
             discount: Number(Number(item.discount || 0).toFixed(2)),
             tax: Number(Number(item.tax || 0).toFixed(2)),
             subtotal: Number(((Number(item.price || item.unit_price || 0) * Number(item.quantity || 0)) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
-
-            
           })),
         };
 
         const newInvoice = await createInvoice(invoicePayload).unwrap();
         toast.success(`Invoice ${newInvoice.reference} created from quotation!`);
 
-        // Small delay to ensure cache is updated
         setTimeout(() => {
           router.push(`/invoice/edit/${newInvoice.id}`);
         }, 100);
@@ -293,8 +277,8 @@ export default function QuotationList() {
           discount: Number(Number(fullQuotationData.discount || 0).toFixed(2)),
           shipping: Number(Number(fullQuotationData.shipping || 0).toFixed(2)),
           total: Number(Number(fullQuotationData.total || 0).toFixed(2)),
-          paid: 0, 
-          due: Number(Number(fullQuotationData.total || 0).toFixed(2)), 
+          paid: 0,
+          due: Number(Number(fullQuotationData.total || 0).toFixed(2)),
           status: "pending",
           payment_status: "unpaid",
           notes: fullQuotationData.notes || null,
@@ -314,7 +298,6 @@ export default function QuotationList() {
         const newInvoice = await createInvoice(invoicePayload).unwrap();
         toast.success(`Invoice ${newInvoice.reference} created from quotation!`);
 
-        // Small delay to ensure cache is updated
         setTimeout(() => {
           router.push(`/invoice/edit/${newInvoice.id}`);
         }, 100);
@@ -329,48 +312,50 @@ export default function QuotationList() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+      <div className="p-4 md:p-6">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span>Sales</span>
             <span>|</span>
             <span>Quotations</span>
           </div>
-          <h1 className="text-2xl font-bold">Quotations</h1>
+          {/* <h1 className="text-xl font-semibold">Quotations</h1> */}
         </div>
 
         <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
                   placeholder="Search quotations..."
-                  className="w-64 pl-10"
+                  className="w-full md:w-64 h-8 text-sm pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
                 onClick={exportToPDF}
               >
-                <FileDown className="h-4 w-4 mr-2" />
+                <FileDown className="h-3 w-3 mr-1" />
                 PDF
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
                 onClick={exportToExcel}
               >
-                <FileDown className="h-4 w-4 mr-2" />
+                <FileDown className="h-3 w-3 mr-1" />
                 Excel
               </Button>
               <Button
-                className="bg-[#1a237e] hover:bg-purple-700"
+                className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs flex-1 md:flex-none"
                 onClick={() => router.push('/quotations/create')}
               >
                 Create Quotation
@@ -379,200 +364,180 @@ export default function QuotationList() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-3">Date</th>
-                  <th className="text-left p-3">Reference</th>
-                  <th className="text-left p-3">Customer</th>
-                  <th className="text-left p-3">Warehouse</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Total</th>
-                  <th className="text-left p-3">Actions</th>
+                  <th className="text-left p-2 font-medium">
+                    <input type="checkbox" className="rounded scale-75" />
+                  </th>
+                  <th className="text-left p-2 font-medium">Date</th>
+                  <th className="text-left p-2 font-medium">Reference</th>
+                  <th className="text-left p-2 font-medium">Customer</th>
+                  <th className="text-left p-2 font-medium">Warehouse</th>
+                  <th className="text-left p-2 font-medium">Status</th>
+                  <th className="text-left p-2 font-medium">Total</th>
+                  <th className="text-right p-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-6">Loading...</td>
+                    <td colSpan={8} className="text-center p-8 text-muted-foreground">Loading...</td>
                   </tr>
                 ) : isError ? (
-                    <tr>
-                      <td colSpan={7} className="text-center p-6 text-red-600">Failed to load quotations</td>
-                    </tr>
-                  ) : quotations.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center p-6 text-gray-500">No quotations found</td>
-                    </tr>
-                  ) : (
-                    quotations.map((quotation) => (
-                      <tr key={quotation.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3">{quotation.date}</td>
-                        <td className="p-3 font-medium">{quotation.reference}</td>
-                        <td className="p-3">{quotation.customers?.name || quotation.customer_name || ''}</td>
-                        <td className="p-3">{quotation.warehouses?.name || quotation.warehouse_name || ''}</td>
-                        <td className="p-3">
-                          <Badge 
-                            variant={quotation.status === 'sent' ? 'default' : 'secondary'}
-                            className="text-xs"
+                  <tr>
+                    <td colSpan={8} className="text-center p-8 text-red-500">Failed to load quotations</td>
+                  </tr>
+                ) : quotations.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center p-8 text-muted-foreground">No quotations found</td>
+                  </tr>
+                ) : (
+                  quotations.map((quotation) => (
+                    <tr key={quotation.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-2">
+                        <input type="checkbox" className="rounded scale-75" />
+                      </td>
+                      <td className="p-2">{new Date(quotation.date).toLocaleDateString()}</td>
+                      <td className="p-2 font-medium">{quotation.reference}</td>
+                      <td className="p-2">{quotation.customers?.name || quotation.customer_name || ''}</td>
+                      <td className="p-2">{quotation.warehouses?.name || quotation.warehouse_name || ''}</td>
+                      <td className="p-2">
+                        <Badge
+                          variant={quotation.status === 'sent' ? 'default' : 'secondary'}
+                          className="text-xs font-normal"
+                        >
+                          {quotation.status}
+                        </Badge>
+                      </td>
+                      <td className="p-2 font-medium">${Number(quotation.total).toFixed(2)}</td>
+                      <td className="p-2 text-right">
+                        <TableActions
+                          onView={() => {
+                            setViewQuotation(quotation)
+                            setIsViewDialogOpen(true)
+                          }}
+                          onEdit={() => router.push(`/quotations/edit/${quotation.id}`)}
+                          onDelete={() => handleDeleteClick(quotation.id)}
+                        >
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setQuotationIdForActions(quotation.id);
+                              exportSingleQuotationToPDF(quotation.id);
+                            }}
+                            disabled={isLoading}
+                            className="cursor-pointer"
                           >
-                            {quotation.status}
-                          </Badge>
-                        </td>
-                        <td className="p-3 font-medium">${Number(quotation.total).toFixed(2)}</td>
-                        <td className="p-3">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setViewQuotation(quotation)
-                                  setIsViewDialogOpen(true)
-                                }}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => router.push(`/quotations/edit/${quotation.id}`)}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setQuotationIdForActions(quotation.id);
-                                  exportSingleQuotationToPDF(quotation.id);
-                                }}
-                                disabled={isLoading}
-                              >
-                                <FileDown className="h-4 w-4 mr-2" />
-                                Download PDF
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setQuotationIdForActions(quotation.id);
-                                  handleMakeInvoice(quotation);
-                                }}
-                                disabled={isCreatingInvoice || isLoading}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Make Invoice
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteClick(quotation.id)}
-                                disabled={isDeleting}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            
-            {pagination && (
-              <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-muted-foreground">Rows per page</p>
-                  <Select
-                    value={limit.toString()}
-                    onValueChange={(value) => setLimit(Number(value))}
-                  >
-                    <SelectTrigger className="h-8 w-[70px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[10, 25, 50, 100].map((size) => (
-                        <SelectItem key={size} value={size.toString()}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-  
+                            <FileDown className="h-4 w-4 mr-2" />
+                            Download PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setQuotationIdForActions(quotation.id);
+                              handleMakeInvoice(quotation);
+                            }}
+                            disabled={isCreatingInvoice || isLoading}
+                            className="cursor-pointer"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Make Invoice
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </TableActions>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {pagination && (
+            <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-muted-foreground">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => setLimit(Number(value))}
+                >
+                  <SelectTrigger className="h-7 w-[60px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()} className="text-xs">
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <UIPagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPage((old) => Math.max(old - 1, 1))}
-                        disabled={page === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-2" />
-                        Previous
-                      </Button>
-                    </PaginationItem>
-                    
-                    <span className="text-sm text-muted-foreground mx-4">
-                      Page {page} of {pagination.totalPages}
-                    </span>
-  
-                    <PaginationItem>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPage((old) => old + 1)}
-                        disabled={page >= (pagination.totalPages || 1)}
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </PaginationItem>
-                  </PaginationContent>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-3 w-3 mr-1" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1 px-2">
+                      <span className="text-xs">Page {page} of {pagination.totalPages}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (pagination.totalPages || 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
                 </UIPagination>
               </div>
-            )}
-          </div>
-  
-          {viewQuotation && (
-            <ViewQuotationDialog
-              quotation={viewQuotation}
-              open={isViewDialogOpen}
-              onOpenChange={setIsViewDialogOpen}
-            />
+            </div>
           )}
-  
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the quotation
-                  and remove its data from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDeleteQuotation}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? "Deleting..." : "Delete Quotation"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
-      </DashboardLayout>
-    )
-  }
+
+        {viewQuotation && (
+          <ViewQuotationDialog
+            quotation={viewQuotation}
+            open={isViewDialogOpen}
+            onOpenChange={setIsViewDialogOpen}
+          />
+        )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the quotation
+                and remove its data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteQuotation}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete Quotation"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </DashboardLayout>
+  )
+}

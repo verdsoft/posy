@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Search, Edit, Trash2, FileDown, Plus } from "lucide-react"
+import { Search, FileDown, Plus } from "lucide-react"
 import type React from "react"
+import { TableActions } from "@/components/ui/table-actions"
 import {
   useGetWarehousesQuery,
   useCreateWarehouseMutation,
@@ -252,21 +253,19 @@ export default function Warehouses() {
                       <td className="p-2">{warehouse.email}</td>
                       <td className="p-2">{warehouse.zip_code}</td>
                       <td className="p-2">
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openEdit(warehouse)}>
-                            <Edit className="h-3 w-3 text-green-600" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openDelete(warehouse.id)}>
-                            <Trash2 className="h-3 w-3 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <div className="flex gap-1">
+                        <TableActions
+                          onEdit={() => openEdit(warehouse)}
+                          onDelete={() => openDelete(warehouse.id)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
           {/* Pagination */}
           <div className="p-3 border-t flex items-center justify-between">

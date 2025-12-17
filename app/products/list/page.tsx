@@ -1,10 +1,11 @@
 "use client"
-import {  useState } from "react"
+
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit, FileDown, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { ViewProductDialog } from "@/components/view-product-dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { Product } from "@/lib/types/index"
@@ -13,16 +14,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useGetProductsQuery, useDeleteProductMutation } from '@/lib/slices/productsApi'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TableActions } from "@/components/ui/table-actions"
 import type React from "react"
 
 declare module 'jspdf' {
@@ -62,7 +55,7 @@ export default function ProductList() {
 
   const { data, isLoading, isError } = useGetProductsQuery({ page, limit, search });
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
-  
+
   const products = data?.data || [];
   const pagination = data?.pagination;
 
@@ -95,7 +88,7 @@ export default function ProductList() {
   const exportToPDF = () => {
     const doc = new jsPDF()
     doc.text('Product List', 14, 16)
-    
+
     const tableData = products.map(product => [
       product.name || '',
       product.code || '',
@@ -105,7 +98,7 @@ export default function ProductList() {
       product.units?.name || product.unit_name || '',
       Number(product.stock ?? 0)
     ])
-    
+
     autoTable(doc, {
       head: [['Name', 'Code', 'Category', 'Brand', 'Price', 'Unit', 'Quantity']],
       body: tableData,
@@ -113,7 +106,7 @@ export default function ProductList() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-    
+
     doc.save('products.pdf')
   }
 
@@ -129,7 +122,7 @@ export default function ProductList() {
         Quantity: Number(product.stock ?? 0)
       }))
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Products")
     XLSX.writeFile(workbook, "products.xlsx")
@@ -143,229 +136,207 @@ export default function ProductList() {
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
               <span>Products</span>
               <span>|</span>
-              <span>Product List</span>
+              <span>List</span>
             </div>
-            <h1 className="text-xl font-semibold">Product List</h1>
+            {/* <h1 className="text-xl font-semibold">Product List</h1> */}
           </div>
 
-          <Card>
-            <CardHeader className="p-4 pb-0">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="w-full md:w-64">
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative w-full md:w-auto">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                   <Input
                     placeholder="Search products..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    className="w-full md:w-64 h-8 text-sm pl-8"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={exportToPDF}
-                  >
-                    <FileDown className="h-4 w-4 mr-2" />
-                    PDF
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={exportToExcel}
-                  >
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Excel
-                  </Button>
-                  <Button
-                    onClick={() => router.push("/products/create")}
-                    size="sm"
-                  >
-                    Create Product
-                  </Button>
-                </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Brand</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead className="w-[150px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 5 }).map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-10 w-10 rounded" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                          <TableCell className="flex gap-2">
-                            <Skeleton className="h-8 w-8 rounded" />
-                            <Skeleton className="h-8 w-8 rounded" />
-                            <Skeleton className="h-8 w-8 rounded" />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : products.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center">
-                          No products found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      products.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell>
-                            {product.image ? (
-                              <img
-                                src={product.image.startsWith("/uploads") ? product.image : `/uploads/${product.image}`}
-                                alt={product.name}
-                                className="w-10 h-10 object-cover rounded"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">📷</div>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.code}</TableCell>
-                          <TableCell>{product.categories?.name || product.category_name || ''}</TableCell>
-                          <TableCell>{product.brands?.name || product.brand_name || ''}</TableCell>
-                          <TableCell>{Number(product.price) }</TableCell>
-                          <TableCell>{product.units?.name || product.unit_name || ''}</TableCell>
-                          <TableCell>{Number(product.stock ?? 0)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => {
-                                  setViewProduct(product)
-                                  setIsViewDialogOpen(true)
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => router.push(`/products/edit/${product.id}`)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleDeleteClick(product.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToPDF}
+                  className="h-8 px-2 text-xs flex-1 md:flex-none"
+                >
+                  <FileDown className="h-3 w-3 mr-1" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToExcel}
+                  className="h-8 px-2 text-xs flex-1 md:flex-none"
+                >
+                  <FileDown className="h-3 w-3 mr-1" />
+                  Excel
+                </Button>
+                <Button
+                  onClick={() => router.push("/products/create")}
+                  className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs flex-1 md:flex-none"
+                >
+                  Create Product
+                </Button>
               </div>
+            </div>
 
-              {pagination && (
-                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">Rows per page</p>
-                    <Select
-                      value={limit.toString()}
-                      onValueChange={(value) => setLimit(Number(value))}
-                    >
-                      <SelectTrigger className="h-8 w-[70px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[10, 25, 50, 100].map((size) => (
-                          <SelectItem key={size} value={size.toString()}>
-                            {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-2 font-medium">
+                      <input type="checkbox" className="rounded scale-75" />
+                    </th>
+                    <th className="text-left p-2 font-medium w-[50px]">Image</th>
+                    <th className="text-left p-2 font-medium">Name</th>
+                    <th className="text-left p-2 font-medium">Code</th>
+                    <th className="text-left p-2 font-medium">Category</th>
+                    <th className="text-left p-2 font-medium">Brand</th>
+                    <th className="text-left p-2 font-medium">Price</th>
+                    <th className="text-left p-2 font-medium">Unit</th>
+                    <th className="text-left p-2 font-medium">Stock</th>
+                    <th className="text-right p-2 font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={10} className="text-center p-8 text-muted-foreground">Loading...</td>
+                    </tr>
+                  ) : isError ? (
+                    <tr>
+                      <td colSpan={10} className="text-center p-8 text-red-500">Failed to load products</td>
+                    </tr>
+                  ) : products.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="text-center p-8 text-muted-foreground">No products found</td>
+                    </tr>
+                  ) : (
+                    products.map((product) => (
+                      <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors">
+                        <td className="p-2">
+                          <input type="checkbox" className="rounded scale-75" />
+                        </td>
+                        <td className="p-2">
+                          {product.image ? (
+                            <img
+                              src={product.image.startsWith("/uploads") ? product.image : `/uploads/${product.image}`}
+                              alt={product.name}
+                              className="w-8 h-8 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-muted rounded flex items-center justify-center text-xs">📷</div>
+                          )}
+                        </td>
+                        <td className="p-2 font-medium">{product.name}</td>
+                        <td className="p-2">{product.code}</td>
+                        <td className="p-2">{product.categories?.name || product.category_name || ''}</td>
+                        <td className="p-2">{product.brands?.name || product.brand_name || ''}</td>
+                        <td className="p-2 font-medium">${Number(product.price).toFixed(2)}</td>
+                        <td className="p-2">{product.units?.name || product.unit_name || ''}</td>
+                        <td className="p-2">{Number(product.stock ?? 0)}</td>
+                        <td className="p-2 text-right">
+                          <TableActions
+                            onView={() => {
+                              setViewProduct(product)
+                              setIsViewDialogOpen(true)
+                            }}
+                            onEdit={() => router.push(`/products/edit/${product.id}`)}
+                            onDelete={() => handleDeleteClick(product.id)}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {pagination && (
+              <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-muted-foreground">
+                  Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={limit.toString()}
+                    onValueChange={(value) => setLimit(Number(value))}
+                  >
+                    <SelectTrigger className="h-7 w-[60px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((size) => (
+                        <SelectItem key={size} value={size.toString()} className="text-xs">
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   <UIPagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
-                          disabled={page === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-2" />
-                          Previous
-                        </Button>
-                      </PaginationItem>
-                      
-                      <span className="text-sm text-muted-foreground mx-4">
-                        Page {page} of {pagination.totalPages}
-                      </span>
-
-                      <PaginationItem>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPage((old) => old + 1)}
-                          disabled={page >= (pagination.totalPages || 1)}
-                        >
-                          Next
-                          <ChevronRight className="h-4 w-4 ml-2" />
-                        </Button>
-                      </PaginationItem>
-                    </PaginationContent>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                        disabled={page === 1}
+                      >
+                        <ChevronLeft className="h-3 w-3 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1 px-2">
+                        <span className="text-xs">Page {page} of {pagination.totalPages}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setPage((old) => old + 1)}
+                        disabled={page >= (pagination.totalPages || 1)}
+                      >
+                        Next
+                        <ChevronRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </div>
                   </UIPagination>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
+
+          {viewProduct && (
+            <ViewProductDialog
+              product={viewProduct}
+              open={isViewDialogOpen}
+              onOpenChange={setIsViewDialogOpen}
+            />
+          )}
+
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the product and remove its data from our servers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Product
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-
-        {viewProduct && (
-          <ViewProductDialog
-            product={viewProduct}
-            open={isViewDialogOpen}
-            onOpenChange={setIsViewDialogOpen}
-          />
-        )}
-
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the product and remove its data from our servers.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete Product
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </DashboardLayout>
     </AuthGuard>
   )

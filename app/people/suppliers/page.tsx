@@ -5,7 +5,7 @@ import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Edit, Eye, Trash2, FileDown, Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileDown, Plus, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
@@ -17,6 +17,7 @@ import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { TableActions } from "@/components/ui/table-actions"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -64,7 +65,7 @@ export default function SupplierList() {
 
   const handleEdit = async () => {
     if (!selectedSupplier) return
-    
+
     try {
       await updateSupplier({ id: selectedSupplier.id, data: formData }).unwrap()
       setShowEditModal(false)
@@ -78,12 +79,11 @@ export default function SupplierList() {
 
   const handleDelete = async () => {
     if (!selectedSupplier) return
-    
+
     try {
       await deleteSupplier(selectedSupplier.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Supplier deleted successfully")
-      refetch()
     } catch (error) {
       toast.error("Failed to delete supplier")
       console.error(error)
@@ -126,9 +126,9 @@ export default function SupplierList() {
 
   const handleExportPDF = () => {
     const doc = new jsPDF()
-    
+
     doc.text('Suppliers List', 14, 16)
-    
+
     const tableData = suppliers.map(supplier => [
       supplier.id,
       supplier.name,
@@ -137,7 +137,7 @@ export default function SupplierList() {
       supplier.country || "-",
       supplier.city || "-"
     ])
-    
+
     autoTable(doc, {
       head: [['ID', 'Name', 'Phone', 'Email', 'Country', 'City']],
       body: tableData,
@@ -145,7 +145,7 @@ export default function SupplierList() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-    
+
     doc.save('suppliers.pdf')
   }
 
@@ -160,7 +160,7 @@ export default function SupplierList() {
         City: supplier.city || "-"
       }))
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Suppliers")
     XLSX.writeFile(workbook, "suppliers.xlsx")
@@ -168,186 +168,167 @@ export default function SupplierList() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <span>Supplier List</span>
+      <div className="p-4 md:p-6">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span>People</span>
             <span>|</span>
-            <span>Supplier Management</span>
+            <span>Supplier List</span>
           </div>
-          {/* <h1 className="text-2xl font-bold">Supplier Management</h1> */}
+          {/* <h1 className="text-xl font-semibold">Supplier Management</h1> */}
         </div>
 
         <div className="bg-white rounded-lg shadow">
-  <div className="p-3 border-b flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className="relative">
-        <Input 
-          placeholder="Search this table..." 
-          className="w-48 h-8 text-sm" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 px-2 text-xs"
-        onClick={handleExportPDF}
-      >
-        <FileDown className="h-3 w-3 mr-1" />
-        PDF
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 px-2 text-xs"
-        onClick={handleExportExcel}
-      >
-        <FileDown className="h-3 w-3 mr-1" />
-        EXCEL
-      </Button>
-      <Button 
-        className="bg-[#1a237e] hover:bg-purple-700 h-8 px-2 text-xs"
-        onClick={() => setShowCreateModal(true)}
-      >
-        <Plus className="h-3 w-3 mr-1" />
-        Create
-      </Button>
-    </div>
-  </div>
+          <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search suppliers..."
+                  className="w-full md:w-64 h-8 text-sm pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
+                onClick={handleExportPDF}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
+                onClick={handleExportExcel}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                Excel
+              </Button>
+              <Button
+                className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs flex-1 md:flex-none"
+                onClick={() => setShowCreateModal(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Supplier
+              </Button>
+            </div>
+          </div>
 
-  <div className="overflow-x-auto">
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="text-left p-2">
-            <input type="checkbox" className="scale-75" />
-          </th>
-          {/* <th className="text-left p-2">ID</th> */}
-          <th className="text-left p-2">Name</th>
-          <th className="text-left p-2">Phone</th>
-          <th className="text-left p-2">Email</th>
-          <th className="text-left p-2">Country</th>
-          <th className="text-left p-2">City</th>
-          <th className="text-left p-2">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {isLoading ? (
-          <tr>
-            <td colSpan={8} className="text-center p-4 text-sm">Loading...</td>
-          </tr>
-        ) : suppliers.length === 0 ? (
-          <tr>
-            <td colSpan={8} className="text-center p-4 text-sm">No suppliers found.</td>
-          </tr>
-        ) : (
-          suppliers.map((supplier) => (
-            <tr key={supplier.id} className="border-b hover:bg-gray-50">
-              <td className="p-2">
-                <input type="checkbox" className="scale-75" />
-              </td>
-              {/* <td className="p-2">{supplier.id}</td> */}
-              <td className="p-2">{supplier.name}</td>
-              <td className="p-2">{supplier.phone || "-"}</td>
-              <td className="p-2">{supplier.email}</td>
-              <td className="p-2">{supplier.country || "-"}</td>
-              <td className="p-2">{supplier.city || "-"}</td>
-              <td className="p-2">
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => openViewModal(supplier)}
-                  >
-                    <Eye className="h-3 w-3 text-blue-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => openEditModal(supplier)}
-                  >
-                    <Edit className="h-3 w-3 text-green-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => openDeleteModal(supplier)}
-                  >
-                    <Trash2 className="h-3 w-3 text-red-600" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
-  </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-2 font-medium">
+                    <input type="checkbox" className="rounded scale-75" />
+                  </th>
+                  {/* <th className="text-left p-2 font-medium">ID</th> */}
+                  <th className="text-left p-2 font-medium">Name</th>
+                  <th className="text-left p-2 font-medium">Phone</th>
+                  <th className="text-left p-2 font-medium">Email</th>
+                  <th className="text-left p-2 font-medium">Country</th>
+                  <th className="text-left p-2 font-medium">City</th>
+                  <th className="text-right p-2 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">Loading...</td>
+                  </tr>
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-8 text-red-500">Failed to load suppliers</td>
+                  </tr>
+                ) : suppliers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">No suppliers found.</td>
+                  </tr>
+                ) : (
+                  suppliers.map((supplier) => (
+                    <tr key={supplier.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-2">
+                        <input type="checkbox" className="rounded scale-75" />
+                      </td>
+                      {/* <td className="p-2">{supplier.id}</td> */}
+                      <td className="p-2 font-medium">{supplier.name}</td>
+                      <td className="p-2">{supplier.phone || "-"}</td>
+                      <td className="p-2">{supplier.email}</td>
+                      <td className="p-2">{supplier.country || "-"}</td>
+                      <td className="p-2">{supplier.city || "-"}</td>
+                      <td className="p-2 text-right">
+                        <TableActions
+                          onView={() => openViewModal(supplier)}
+                          onEdit={() => openEditModal(supplier)}
+                          onDelete={() => openDeleteModal(supplier)}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-  {pagination && (
-    <div className="mt-3 flex flex-col md:flex-row items-center justify-between gap-3 p-3">
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-muted-foreground">Rows per page</p>
-        <Select
-          value={limit.toString()}
-          onValueChange={(value) => setLimit(Number(value))}
-        >
-          <SelectTrigger className="h-7 w-[65px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[10, 25, 50, 100].map((size) => (
-              <SelectItem key={size} value={size.toString()} className="text-xs">
-                {size}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {pagination && (
+            <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-muted-foreground">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries
+              </div>
 
-      <UIPagination>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setPage((old) => Math.max(old - 1, 1))}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="h-3 w-3 mr-1" />
-              Previous
-            </Button>
-          </PaginationItem>
-          
-          <span className="text-xs text-muted-foreground mx-3">
-            Page {page} of {pagination.totalPages}
-          </span>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => setLimit(Number(value))}
+                >
+                  <SelectTrigger className="h-7 w-[60px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 15, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()} className="text-xs">
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setPage((old) => old + 1)}
-              disabled={page >= (pagination.totalPages || 1)}
-            >
-              Next
-              <ChevronRight className="h-3 w-3 ml-1" />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </UIPagination>
-    </div>
-  )}
-</div>
+                <UIPagination>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-3 w-3 mr-1" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1 px-2">
+                      <span className="text-xs">Page {page} of {pagination.totalPages}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (pagination.totalPages || 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+                </UIPagination>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Create Supplier Modal */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
@@ -551,7 +532,7 @@ export default function SupplierList() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={isDeleting}

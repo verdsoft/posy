@@ -36,7 +36,7 @@ interface PurchaseItem {
   discount: number
   tax: number
   subtotal: number
-  
+
 }
 
 interface FormValues {
@@ -65,14 +65,16 @@ export default function CreatePurchase() {
 
   const suppliers = suppliersData?.data || []
   const warehouses = warehousesData || []
-  const filteredProducts = productsData?.data?.slice(0, 5) || []
+  const filteredProducts = searchQuery.length >= 2
+    ? (productsData?.data?.filter(p => !selectedProducts.some(sp => sp.product_id === String(p.id))).slice(0, 5) || [])
+    : []
 
   const {
     register,
     handleSubmit,
     control,
     watch,
-    
+
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
@@ -85,7 +87,7 @@ export default function CreatePurchase() {
       status: "received",
       payment_status: "unpaid",
       notes: "",
-      created_by: "1", 
+      created_by: "1",
     }
   })
 
@@ -95,10 +97,10 @@ export default function CreatePurchase() {
   const tax_rate = watch("tax_rate")
   const discount = watch("discount")
   const shipping = watch("shipping")
-  
+
   const tax_amount = subtotal * (tax_rate / 100)
   const total = Number(subtotal) + Number(tax_amount) + Number(shipping) - Number(discount) // shipping - discount
-  
+
 
   // Add product to purchase items
   const addProduct = (product: any) => {
@@ -218,7 +220,7 @@ export default function CreatePurchase() {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
-                          <Card>
+            <Card>
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-base">Purchase Information</CardTitle>
               </CardHeader>
@@ -226,14 +228,14 @@ export default function CreatePurchase() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-xs font-medium">Date *</label>
-                    <Input 
-                      type="date" 
-                      className="mt-1 h-9 text-sm" 
+                    <Input
+                      type="date"
+                      className="mt-1 h-9 text-sm"
                       {...register("date", { required: "Date is required" })}
                     />
                     {errors.date && <span className="text-red-500 text-xs">{errors.date.message}</span>}
                   </div>
-                  
+
                   <div>
                     <label className="text-xs font-medium">Supplier *</label>
                     <Controller
@@ -259,7 +261,7 @@ export default function CreatePurchase() {
                       <span className="text-red-500 text-xs">{errors.supplier_id.message}</span>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="text-xs font-medium">Warehouse *</label>
                     <Controller
@@ -289,252 +291,252 @@ export default function CreatePurchase() {
               </CardContent>
             </Card>
 
-              <Card>
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base">Product Search</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Scan/Search Product by Code Name" 
-                      className="pl-10 h-9 text-sm" 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  
-                  {/* Search results dropdown */}
-                  {filteredProducts.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                      {filteredProducts.map(product => (
-                        <div 
-                          key={product.id}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                          onClick={() => addProduct(product)}
-                        >
-                          <div>
-                            <div className="font-medium text-sm">{product.name}</div>
-                            <div className="text-xs text-muted-foreground">{product.code}</div>
-                          </div>
-                          <div className="text-sm">
-                            ${product.cost}
-                            <span className="ml-2 text-gray-500">Stock: {product.stock}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base">Order Items *</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left p-3 border text-xs font-medium">#</th>
-                          <th className="text-left p-3 border text-xs font-medium">Product</th>
-                          <th className="text-left p-3 border text-xs font-medium">Net Unit Cost</th>
-                          <th className="text-left p-3 border text-xs font-medium">Qty</th>
-                          <th className="text-left p-3 border text-xs font-medium">Subtotal</th>
-                          <th className="text-left p-3 border text-xs font-medium">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedProducts.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="text-center py-8 text-muted-foreground border">
-                              No items added
-                            </td>
-                          </tr>
-                        ) : (
-                          selectedProducts.map((item, index) => (
-                            <tr key={item.id} className="border-b">
-                              <td className="p-3 border text-sm">{index + 1}</td>
-                              <td className="p-3 border">
-                                <div className="font-medium text-sm">{item.product_name}</div>
-                                <div className="text-xs text-muted-foreground">{item.product_code}</div>
-                              </td>
-                              <td className="p-3 border">
-                                <Input 
-                                  type="number" 
-                                  min="0"
-                                  step="0.01"
-                                  value={item.unit_cost}
-                                  onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
-                                  className="w-24 h-8 text-sm"
-                                />
-                              </td>
-                            
-                              <td className="p-3 border">
-                                <Input 
-                                  type="number" 
-                                  min="1"
-                                  value={item.quantity}
-                                  onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value))}
-                                  className="w-20 h-8 text-sm"
-                                />
-                              </td>
-                              <td className="p-3 border text-sm">${Number(item.subtotal)}</td>
-                              <td className="p-3 border">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => removeItem(item.id)}
-                                  className="text-destructive hover:text-destructive/80"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Order Tax</label>
-                      <div className="flex mt-1">
-                        <Input 
-                          placeholder="0" 
-                          className="rounded-r-none" 
-                          {...register("tax_rate", { 
-                            min: 0, 
-                            max: 100,
-                            valueAsNumber: true
-                          })}
-                        />
-                        <Button 
-                          variant="outline" 
-                          className="rounded-l-none px-3 bg-transparent"
-                          type="button"
-                        >
-                          %
-                        </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Discount</label>
-                      <div className="flex mt-1">
-                        <Input 
-                          placeholder="0" 
-                          className="rounded-r-none" 
-                          {...register("discount", { 
-                            min: 0,
-                            valueAsNumber: true
-                          })}
-                        />
-                        <Button 
-                          variant="outline" 
-                          className="rounded-l-none px-3 bg-transparent"
-                          type="button"
-                        >
-                          $
-                        </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Shipping</label>
-                      <div className="flex mt-1">
-                        <Input 
-                          placeholder="0" 
-                          className="rounded-r-none" 
-                          {...register("shipping", { 
-                            min: 0,
-                            valueAsNumber: true
-                          })}
-                        />
-                        <Button 
-                          variant="outline" 
-                          className="rounded-l-none px-3 bg-transparent"
-                          type="button"
-                        >
-                          $
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Status *</label>
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="received">Received</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Note</label>
-                    <Textarea 
-                      placeholder="A few words ..." 
-                      className="mt-1" 
-                      rows={4} 
-                      {...register("notes")}
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="bg-[#1a237e] hover:bg-purple-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Processing..." : "Submit"}
-                  </Button>
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Product Search</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Scan/Search Product by Code Name"
+                    className="pl-10 h-9 text-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span>${Number(subtotal)}</span>
+                {/* Search results dropdown */}
+                {filteredProducts.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {filteredProducts.map(product => (
+                      <div
+                        key={product.id}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                        onClick={() => addProduct(product)}
+                      >
+                        <div>
+                          <div className="font-medium text-sm">{product.name}</div>
+                          <div className="text-xs text-muted-foreground">{product.code}</div>
+                        </div>
+                        <div className="text-sm">
+                          ${product.cost}
+                          <span className="ml-2 text-gray-500">Stock: {product.stock}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Order Tax</span>
-                        <span>${Number(tax_amount)} ({tax_rate}%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Discount</span>
-                        <span>${Number(discount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Shipping</span>
-                        <span>${Number(shipping)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Grand Total</span>
-                        <span>${Number(total)}</span>
-                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Order Items *</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full border">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-3 border text-xs font-medium">#</th>
+                        <th className="text-left p-3 border text-xs font-medium">Product</th>
+                        <th className="text-left p-3 border text-xs font-medium">Net Unit Cost</th>
+                        <th className="text-left p-3 border text-xs font-medium">Qty</th>
+                        <th className="text-left p-3 border text-xs font-medium">Subtotal</th>
+                        <th className="text-left p-3 border text-xs font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center py-8 text-muted-foreground border">
+                            No items added
+                          </td>
+                        </tr>
+                      ) : (
+                        selectedProducts.map((item, index) => (
+                          <tr key={item.id} className="border-b">
+                            <td className="p-3 border text-sm">{index + 1}</td>
+                            <td className="p-3 border">
+                              <div className="font-medium text-sm">{item.product_name}</div>
+                              <div className="text-xs text-muted-foreground">{item.product_code}</div>
+                            </td>
+                            <td className="p-3 border">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.unit_cost}
+                                onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
+                                className="w-24 h-8 text-sm"
+                              />
+                            </td>
+
+                            <td className="p-3 border">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value))}
+                                className="w-20 h-8 text-sm"
+                              />
+                            </td>
+                            <td className="p-3 border text-sm">${Number(item.subtotal)}</td>
+                            <td className="p-3 border">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeItem(item.id)}
+                                className="text-destructive hover:text-destructive/80"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Order Tax</label>
+                    <div className="flex mt-1">
+                      <Input
+                        placeholder="0"
+                        className="rounded-r-none"
+                        {...register("tax_rate", {
+                          min: 0,
+                          max: 100,
+                          valueAsNumber: true
+                        })}
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-l-none px-3 bg-transparent"
+                        type="button"
+                      >
+                        %
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Discount</label>
+                    <div className="flex mt-1">
+                      <Input
+                        placeholder="0"
+                        className="rounded-r-none"
+                        {...register("discount", {
+                          min: 0,
+                          valueAsNumber: true
+                        })}
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-l-none px-3 bg-transparent"
+                        type="button"
+                      >
+                        $
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Shipping</label>
+                    <div className="flex mt-1">
+                      <Input
+                        placeholder="0"
+                        className="rounded-r-none"
+                        {...register("shipping", {
+                          min: 0,
+                          valueAsNumber: true
+                        })}
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-l-none px-3 bg-transparent"
+                        type="button"
+                      >
+                        $
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Status *</label>
+                  <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="received">Received</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Note</label>
+                  <Textarea
+                    placeholder="A few words ..."
+                    className="mt-1"
+                    rows={4}
+                    {...register("notes")}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="bg-[#1a237e] hover:bg-purple-700"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Processing..." : "Submit"}
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>${Number(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Order Tax</span>
+                      <span>${Number(tax_amount)} ({tax_rate}%)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Discount</span>
+                      <span>${Number(discount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Shipping</span>
+                      <span>${Number(shipping)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-lg border-t pt-2">
+                      <span>Grand Total</span>
+                      <span>${Number(total)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </form>
-        </div>
-      </DashboardLayout>
-  
+          </div>
+        </form>
+      </div>
+    </DashboardLayout>
+
   )
 }

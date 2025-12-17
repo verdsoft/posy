@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Search, Edit, Trash2, FileDown, Plus } from "lucide-react"
+import { Search, FileDown, Plus } from "lucide-react"
+import type React from "react"
+import { TableActions } from "@/components/ui/table-actions"
 import {
   useGetCategoriesQuery,
   useCreateCategoryMutation,
@@ -106,17 +108,17 @@ export default function Categories() {
   const handleExportPDF = () => {
     try {
       const doc = new jsPDF()
-      
+
       // Add title
       doc.text('Categories List', 14, 16)
-      
+
       // Prepare table data
       const tableData = filteredCategories.map(category => [
         category.id,
         category.code || "-",
         category.name || "-"
       ])
-      
+
       // Add table using autoTable as separate function
       autoTable(doc, {
         head: [['ID', 'Category Code', 'Category Name']],
@@ -125,7 +127,7 @@ export default function Categories() {
         styles: { fontSize: 8 },
         headStyles: { fillColor: [26, 35, 126] }
       })
-      
+
       // Save the PDF
       doc.save(`categories-${new Date().getTime()}.pdf`)
       toast.success("PDF exported successfully")
@@ -145,7 +147,7 @@ export default function Categories() {
           'Category Name': category.name || "-"
         }))
       )
-      
+
       const workbook = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(workbook, worksheet, "Categories")
       XLSX.writeFile(workbook, `categories-${new Date().getTime()}.xlsx`)
@@ -164,34 +166,35 @@ export default function Categories() {
 
   return (
     <DashboardLayout>
-      <div className="p-4">
+      <div className="p-4 md:p-6">
         <div className="mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span>Settings</span>
             <span>|</span>
-            <span>Category</span>
+            <span>Categories</span>
           </div>
+          {/* <h1 className="text-xl font-semibold">Categories</h1> */}
         </div>
 
         <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="p-3 border-b flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+          <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
-                  placeholder="Search this table"
-                  className="w-48 h-8 text-sm pl-7"
+                  placeholder="Search categories..."
+                  className="w-full md:w-64 h-8 text-sm pl-8"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
                 onClick={handleExportPDF}
               >
                 <FileDown className="h-3 w-3 mr-1" />
@@ -200,18 +203,18 @@ export default function Categories() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
                 onClick={handleExportExcel}
               >
                 <FileDown className="h-3 w-3 mr-1" />
-                EXCEL
+                Excel
               </Button>
               {/* Create Dialog */}
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#1a237e] hover:bg-blue-700 h-8 px-2 text-xs">
+                  <Button className="bg-[#1a237e] hover:bg-blue-700 h-8 px-3 text-xs flex-1 md:flex-none">
                     <Plus className="h-3 w-3 mr-1" />
-                    Create
+                    Create Category
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
@@ -221,35 +224,35 @@ export default function Categories() {
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="code" className="text-xs">Category Code *</Label>
-                      <Input 
-                        id="code" 
-                        value={form.code} 
-                        onChange={handleFormChange} 
-                        placeholder="Enter category code" 
-                        className="h-8 text-sm" 
+                      <Input
+                        id="code"
+                        value={form.code}
+                        onChange={handleFormChange}
+                        placeholder="Enter category code"
+                        className="h-8 text-sm"
                       />
                     </div>
                     <div>
                       <Label htmlFor="name" className="text-xs">Category Name *</Label>
-                      <Input 
-                        id="name" 
-                        value={form.name} 
-                        onChange={handleFormChange} 
-                        placeholder="Enter category name" 
-                        className="h-8 text-sm" 
+                      <Input
+                        id="name"
+                        value={form.name}
+                        onChange={handleFormChange}
+                        placeholder="Enter category name"
+                        className="h-8 text-sm"
                       />
                     </div>
                     <div className="flex gap-2 pt-3">
-                      <Button 
-                        className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+                      <Button
+                        className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs"
                         onClick={handleCreate}
                         disabled={isCreating}
                       >
                         {isCreating ? "Creating..." : "Submit"}
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setIsCreateOpen(false)} 
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateOpen(false)}
                         className="flex-1 h-8 text-xs"
                       >
                         Cancel
@@ -269,49 +272,33 @@ export default function Categories() {
                   <th className="text-left p-2 font-medium">
                     <input type="checkbox" className="rounded scale-75" />
                   </th>
-                  <th className="text-left p-2 font-medium">ID</th>
                   <th className="text-left p-2 font-medium">Category Code</th>
                   <th className="text-left p-2 font-medium">Category Name</th>
-                  <th className="text-left p-2 font-medium">Action</th>
+                  <th className="text-right p-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="text-center p-4 text-sm">Loading...</td>
+                    <td colSpan={4} className="text-center p-8 text-muted-foreground">Loading...</td>
                   </tr>
                 ) : filteredCategories.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center p-4 text-sm">No categories found.</td>
+                    <td colSpan={4} className="text-center p-8 text-muted-foreground">No categories found.</td>
                   </tr>
                 ) : (
                   filteredCategories.map((category) => (
-                    <tr key={category.id} className="border-b hover:bg-gray-50">
+                    <tr key={category.id} className="border-b hover:bg-gray-50 transition-colors">
                       <td className="p-2">
                         <input type="checkbox" className="rounded scale-75" />
                       </td>
-                      <td className="p-2">{category.id}</td>
                       <td className="p-2">{category.code}</td>
-                      <td className="p-2">{category.name}</td>
-                      <td className="p-2">
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0" 
-                            onClick={() => openEdit(category)}
-                          >
-                            <Edit className="h-3 w-3 text-green-600" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0" 
-                            onClick={() => openDelete(category.id)}
-                          >
-                            <Trash2 className="h-3 w-3 text-red-600" />
-                          </Button>
-                        </div>
+                      <td className="p-2 font-medium">{category.name}</td>
+                      <td className="p-2 text-right">
+                        <TableActions
+                          onEdit={() => openEdit(category)}
+                          onDelete={() => openDelete(category.id)}
+                        />
                       </td>
                     </tr>
                   ))
@@ -321,20 +308,17 @@ export default function Categories() {
           </div>
 
           {/* Pagination */}
-          <div className="p-3 border-t flex items-center justify-between">
-            <div className="text-xs text-gray-600">Rows per page: 10</div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-600">
-                1 - {filteredCategories.length} of {filteredCategories.length}
-              </span>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
-                  prev
-                </Button>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
-                  next
-                </Button>
-              </div>
+          <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-muted-foreground">
+              Showing {filteredCategories.length > 0 ? `1 to ${filteredCategories.length}` : "0"} of {filteredCategories.length} entries
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
+                Previous
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
+                Next
+              </Button>
             </div>
           </div>
         </div>
@@ -349,35 +333,35 @@ export default function Categories() {
           <div className="space-y-3">
             <div>
               <Label htmlFor="code" className="text-xs">Category Code *</Label>
-              <Input 
-                id="code" 
-                value={form.code} 
-                onChange={handleFormChange} 
-                placeholder="Enter category code" 
-                className="h-8 text-sm" 
+              <Input
+                id="code"
+                value={form.code}
+                onChange={handleFormChange}
+                placeholder="Enter category code"
+                className="h-8 text-sm"
               />
             </div>
             <div>
               <Label htmlFor="name" className="text-xs">Category Name *</Label>
-              <Input 
-                id="name" 
-                value={form.name} 
-                onChange={handleFormChange} 
-                placeholder="Enter category name" 
-                className="h-8 text-sm" 
+              <Input
+                id="name"
+                value={form.name}
+                onChange={handleFormChange}
+                placeholder="Enter category name"
+                className="h-8 text-sm"
               />
             </div>
             <div className="flex gap-2 pt-3">
-              <Button 
-                className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+              <Button
+                className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs"
                 onClick={handleEdit}
                 disabled={isUpdating}
               >
                 {isUpdating ? "Saving..." : "Save"}
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditOpen(false)} 
+              <Button
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
                 className="flex-1 h-8 text-xs"
               >
                 Cancel
@@ -397,16 +381,16 @@ export default function Categories() {
             Are you sure you want to delete this category?
           </div>
           <div className="flex gap-2 pt-3">
-            <Button 
-              className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs" 
+            <Button
+              className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs"
               onClick={handleDeleteConfirmed}
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDeleteOpen(false)} 
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteOpen(false)}
               className="flex-1 h-8 text-xs"
             >
               Cancel

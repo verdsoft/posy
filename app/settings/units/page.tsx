@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Edit, Trash2, FileDown, Plus } from "lucide-react"
+import { Search, FileDown, Plus } from "lucide-react"
 import type React from "react"
+import { TableActions } from "@/components/ui/table-actions"
 import {
   useGetUnitsQuery,
   useCreateUnitMutation,
@@ -72,7 +73,7 @@ export default function Units() {
       setIsCreateOpen(false)
       setForm({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
       toast.success("Unit created successfully")
-    } catch (error :unknown) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
       console.error("Error creating unit:", error)
       toast.error(message)
@@ -139,9 +140,9 @@ export default function Units() {
   const handleExportPDF = () => {
     try {
       const doc = new jsPDF()
-      
+
       doc.text('Units List', 14, 16)
-      
+
       const tableData = filteredUnits.map(unit => [
         unit.id,
         unit.name || "-",
@@ -150,7 +151,7 @@ export default function Units() {
         unit.operator || "-",
         unit.operation_value || "-"
       ])
-      
+
       autoTable(doc, {
         head: [['ID', 'Name', 'Short Name', 'Base Unit', 'Operator', 'Operation Value']],
         body: tableData,
@@ -158,7 +159,7 @@ export default function Units() {
         styles: { fontSize: 8 },
         headStyles: { fillColor: [26, 35, 126] }
       })
-      
+
       doc.save(`units-${new Date().getTime()}.pdf`)
       toast.success("PDF exported successfully")
     } catch (error) {
@@ -180,7 +181,7 @@ export default function Units() {
           'Operation Value': unit.operation_value || "-"
         }))
       )
-      
+
       const workbook = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(workbook, worksheet, "Units")
       XLSX.writeFile(workbook, `units-${new Date().getTime()}.xlsx`)
@@ -200,34 +201,35 @@ export default function Units() {
 
   return (
     <DashboardLayout>
-      <div className="p-4">
+      <div className="p-4 md:p-6">
         <div className="mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span>Settings</span>
             <span>|</span>
-            <span>Unit</span>
+            <span>Units</span>
           </div>
+          {/* <h1 className="text-xl font-semibold">Units</h1> */}
         </div>
 
         <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="p-3 border-b flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+          <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
-                  placeholder="Search this table"
-                  className="w-48 h-8 text-sm pl-7"
+                  placeholder="Search units..."
+                  className="w-full md:w-64 h-8 text-sm pl-8"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
                 onClick={handleExportPDF}
               >
                 <FileDown className="h-3 w-3 mr-1" />
@@ -236,17 +238,17 @@ export default function Units() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
                 onClick={handleExportExcel}
               >
                 <FileDown className="h-3 w-3 mr-1" />
-                EXCEL
+                Excel
               </Button>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#1a237e] hover:bg-purple-700 h-8 px-2 text-xs">
+                  <Button className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs flex-1 md:flex-none">
                     <Plus className="h-3 w-3 mr-1" />
-                    Create
+                    Create Unit
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
@@ -256,22 +258,22 @@ export default function Units() {
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="name" className="text-xs">Unit Name *</Label>
-                      <Input 
-                        id="name" 
-                        value={form.name} 
-                        onChange={handleFormChange} 
-                        placeholder="Enter unit name" 
-                        className="h-8 text-sm" 
+                      <Input
+                        id="name"
+                        value={form.name}
+                        onChange={handleFormChange}
+                        placeholder="Enter unit name"
+                        className="h-8 text-sm"
                       />
                     </div>
                     <div>
                       <Label htmlFor="short_name" className="text-xs">Short Name *</Label>
-                      <Input 
-                        id="short_name" 
-                        value={form.short_name} 
-                        onChange={handleFormChange} 
-                        placeholder="Enter short name" 
-                        className="h-8 text-sm" 
+                      <Input
+                        id="short_name"
+                        value={form.short_name}
+                        onChange={handleFormChange}
+                        placeholder="Enter short name"
+                        className="h-8 text-sm"
                       />
                     </div>
                     <div>
@@ -304,26 +306,26 @@ export default function Units() {
                     </div>
                     <div>
                       <Label htmlFor="operation_value" className="text-xs">Operation Value *</Label>
-                      <Input 
-                        id="operation_value" 
-                        type="number" 
-                        value={form.operation_value} 
-                        onChange={handleFormChange} 
-                        placeholder="Enter operation value" 
+                      <Input
+                        id="operation_value"
+                        type="number"
+                        value={form.operation_value}
+                        onChange={handleFormChange}
+                        placeholder="Enter operation value"
                         className="h-8 text-sm"
                       />
                     </div>
                     <div className="flex gap-2 pt-3">
-                      <Button 
-                        className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+                      <Button
+                        className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs"
                         onClick={handleCreate}
                         disabled={!safeTrim(form.name) || !safeTrim(form.short_name) || !safeTrim(form.operator) || !form.operation_value || isCreating}
                       >
                         {isCreating ? "Creating..." : "Submit"}
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setIsCreateOpen(false)} 
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateOpen(false)}
                         className="flex-1 h-8 text-xs"
                       >
                         Cancel
@@ -343,55 +345,39 @@ export default function Units() {
                   <th className="text-left p-2 font-medium">
                     <input type="checkbox" className="rounded scale-75" />
                   </th>
-                  <th className="text-left p-2 font-medium">ID</th>
                   <th className="text-left p-2 font-medium">Name</th>
                   <th className="text-left p-2 font-medium">Short Name</th>
                   <th className="text-left p-2 font-medium">Base Unit</th>
                   <th className="text-left p-2 font-medium">Operator</th>
                   <th className="text-left p-2 font-medium">Operation Value</th>
-                  <th className="text-left p-2 font-medium">Action</th>
+                  <th className="text-right p-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="text-center p-4 text-sm">Loading...</td>
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">Loading...</td>
                   </tr>
                 ) : filteredUnits.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center p-4 text-sm">No units found.</td>
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">No units found.</td>
                   </tr>
                 ) : (
                   filteredUnits.map((unit) => (
-                    <tr key={unit.id} className="border-b hover:bg-gray-50">
+                    <tr key={unit.id} className="border-b hover:bg-gray-50 transition-colors">
                       <td className="p-2">
                         <input type="checkbox" className="rounded scale-75" />
                       </td>
-                      <td className="p-2">{unit.id}</td>
-                      <td className="p-2">{unit.name}</td>
+                      <td className="p-2 font-medium">{unit.name}</td>
                       <td className="p-2">{unit.short_name}</td>
                       <td className="p-2">{unit.base_unit}</td>
                       <td className="p-2">{unit.operator}</td>
                       <td className="p-2">{unit.operation_value}</td>
-                      <td className="p-2">
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0" 
-                            onClick={() => openEdit(unit)}
-                          >
-                            <Edit className="h-3 w-3 text-green-600" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0" 
-                            onClick={() => openDelete(unit.id)}
-                          >
-                            <Trash2 className="h-3 w-3 text-red-600" />
-                          </Button>
-                        </div>
+                      <td className="p-2 text-right">
+                        <TableActions
+                          onEdit={() => openEdit(unit)}
+                          onDelete={() => openDelete(unit.id)}
+                        />
                       </td>
                     </tr>
                   ))
@@ -401,22 +387,17 @@ export default function Units() {
           </div>
 
           {/* Pagination */}
-          <div className="p-3 border-t flex items-center justify-between">
-            <div className="text-xs text-gray-600">Rows per page: 10</div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-600">
-                {filteredUnits.length > 0
-                  ? `1 - ${filteredUnits.length} of ${filteredUnits.length}`
-                  : "0"}
-              </span>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
-                  prev
-                </Button>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
-                  next
-                </Button>
-              </div>
+          <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-muted-foreground">
+              Showing {filteredUnits.length > 0 ? `1 to ${filteredUnits.length}` : "0"} of {filteredUnits.length} entries
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
+                Previous
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
+                Next
+              </Button>
             </div>
           </div>
         </div>
@@ -431,22 +412,22 @@ export default function Units() {
           <div className="space-y-3">
             <div>
               <Label htmlFor="name" className="text-xs">Unit Name *</Label>
-              <Input 
-                id="name" 
-                value={form.name} 
-                onChange={handleFormChange} 
-                placeholder="Enter unit name" 
-                className="h-8 text-sm" 
+              <Input
+                id="name"
+                value={form.name}
+                onChange={handleFormChange}
+                placeholder="Enter unit name"
+                className="h-8 text-sm"
               />
             </div>
             <div>
               <Label htmlFor="short_name" className="text-xs">Short Name *</Label>
-              <Input 
-                id="short_name" 
-                value={form.short_name} 
-                onChange={handleFormChange} 
-                placeholder="Enter short name" 
-                className="h-8 text-sm" 
+              <Input
+                id="short_name"
+                value={form.short_name}
+                onChange={handleFormChange}
+                placeholder="Enter short name"
+                className="h-8 text-sm"
               />
             </div>
             <div>
@@ -479,26 +460,26 @@ export default function Units() {
             </div>
             <div>
               <Label htmlFor="operation_value" className="text-xs">Operation Value *</Label>
-              <Input 
-                id="operation_value" 
-                type="number" 
-                value={form.operation_value} 
-                onChange={handleFormChange} 
-                placeholder="Enter operation value" 
+              <Input
+                id="operation_value"
+                type="number"
+                value={form.operation_value}
+                onChange={handleFormChange}
+                placeholder="Enter operation value"
                 className="h-8 text-sm"
               />
             </div>
             <div className="flex gap-2 pt-3">
-              <Button 
-                className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" 
+              <Button
+                className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs"
                 onClick={handleEdit}
                 disabled={!safeTrim(form.name) || !safeTrim(form.short_name) || !safeTrim(form.operator) || !form.operation_value || isUpdating}
               >
                 {isUpdating ? "Saving..." : "Save"}
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditOpen(false)} 
+              <Button
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
                 className="flex-1 h-8 text-xs"
               >
                 Cancel
@@ -518,16 +499,16 @@ export default function Units() {
             Are you sure you want to delete this unit?
           </div>
           <div className="flex gap-2 pt-3">
-            <Button 
-              className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs" 
+            <Button
+              className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs"
               onClick={handleDeleteConfirmed}
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDeleteOpen(false)} 
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteOpen(false)}
               className="flex-1 h-8 text-xs"
             >
               Cancel

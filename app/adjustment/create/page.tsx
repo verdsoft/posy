@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useCreateAdjustmentMutation } from "@/lib/slices/adjustmentsApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
 
 interface AdjustmentProduct {
   id: string
@@ -54,28 +55,9 @@ export default function CreateAdjustment() {
 
   // RTK Query hooks
   const [createAdjustment, { isLoading: isCreating }] = useCreateAdjustmentMutation()
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const { data: warehousesData } = useGetWarehousesQuery()
 
-  // Fetch warehouses on component mount
-  useEffect(() => {
-    const fetchWarehouses = async () => {
-      try {
-        const response = await fetch('/api/v2/settings/warehouses')
-        const data = await response.json()
-        // Ensure data is an array before setting it
-        if (Array.isArray(data)) {
-          setWarehouses(data)
-        } else {
-          console.error('Warehouses data is not an array:', data)
-          setWarehouses([])
-        }
-      } catch (error) {
-        console.error('Failed to fetch warehouses:', error)
-        setWarehouses([])
-      }
-    }
-    fetchWarehouses()
-  }, [])
+  const warehouses = warehousesData || []
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -148,7 +130,7 @@ export default function CreateAdjustment() {
       toast.error("Please add at least one product")
       return
     }
-    
+
     try {
       const result = await createAdjustment({
         warehouse_id,
@@ -160,7 +142,7 @@ export default function CreateAdjustment() {
         })),
         notes
       }).unwrap()
-      
+
       toast.success(`Adjustment ${result.reference} created successfully`)
       router.push("/adjustment/list")
     } catch (error) {
@@ -237,8 +219,8 @@ export default function CreateAdjustment() {
                       <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
                     )}
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleSearch}
                     disabled={isSearching}
                   >

@@ -5,7 +5,7 @@ import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Edit, Eye, Trash2, FileDown, Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileDown, Plus, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
@@ -14,6 +14,8 @@ import { useGetCustomersQuery, useCreateCustomerMutation, useUpdateCustomerMutat
 import { Customer } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
+import { TableActions } from "@/components/ui/table-actions"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -61,7 +63,7 @@ export default function CustomerList() {
 
   const handleEdit = async () => {
     if (!selectedCustomer) return
-    
+
     try {
       await updateCustomer({ id: selectedCustomer.id, data: formData }).unwrap()
       setShowEditModal(false)
@@ -75,7 +77,7 @@ export default function CustomerList() {
 
   const handleDelete = async () => {
     if (!selectedCustomer) return
-    
+
     try {
       await deleteCustomer(selectedCustomer.id).unwrap()
       setShowDeleteModal(false)
@@ -122,9 +124,9 @@ export default function CustomerList() {
 
   const handleExportPDF = () => {
     const doc = new jsPDF()
-    
+
     doc.text('Customers List', 14, 16)
-    
+
     const tableData = customers.map(customer => [
       customer.id,
       customer.name,
@@ -133,7 +135,7 @@ export default function CustomerList() {
       customer.country || "-",
       customer.city || "-"
     ])
-    
+
     autoTable(doc, {
       head: [['ID', 'Name', 'Phone', 'Email', 'Country', 'City']],
       body: tableData,
@@ -141,7 +143,7 @@ export default function CustomerList() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [26, 35, 126] }
     })
-    
+
     doc.save('customers.pdf')
   }
 
@@ -156,7 +158,7 @@ export default function CustomerList() {
         City: customer.city || "-"
       }))
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Customers")
     XLSX.writeFile(workbook, "customers.xlsx")
@@ -164,186 +166,167 @@ export default function CustomerList() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <span>Customer List</span>
+      <div className="p-4 md:p-6">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span>People</span>
             <span>|</span>
-            <span>Customer Management</span>
+            <span>Customer List</span>
           </div>
-          {/* <h1 className="text-2xl font-bold">Customer Management</h1> */}
+          {/* <h1 className="text-xl font-semibold">Customer Management</h1> */}
         </div>
 
-      <div className="bg-white rounded-lg shadow">
-  <div className="p-3 border-b flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className="relative">
-        <Input 
-          placeholder="Search this table..." 
-          className="w-48 h-8 text-sm" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 px-2 text-xs"
-        onClick={handleExportPDF}
-      >
-        <FileDown className="h-3 w-3 mr-1" />
-        PDF
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 px-2 text-xs"
-        onClick={handleExportExcel}
-      >
-        <FileDown className="h-3 w-3 mr-1" />
-        EXCEL
-      </Button>
-      <Button 
-        className="bg-[#1a237e] hover:bg-purple-700 h-8 px-2 text-xs"
-        onClick={() => setShowCreateModal(true)}
-      >
-        <Plus className="h-3 w-3 mr-1" />
-        Create
-      </Button>
-    </div>
-  </div>
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers..."
+                  className="w-full md:w-64 h-8 text-sm pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
+                onClick={handleExportPDF}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs flex-1 md:flex-none"
+                onClick={handleExportExcel}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                Excel
+              </Button>
+              <Button
+                className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs flex-1 md:flex-none"
+                onClick={() => setShowCreateModal(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Customer
+              </Button>
+            </div>
+          </div>
 
-  <div className="overflow-x-auto">
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="text-left p-2">
-            <input type="checkbox" className="scale-75" />
-          </th>
-          {/* <th className="text-left p-2">ID</th> */}
-          <th className="text-left p-2">Name</th>
-          <th className="text-left p-2">Phone</th>
-          <th className="text-left p-2">Email</th>
-          <th className="text-left p-2">Country</th>
-          <th className="text-left p-2">City</th>
-          <th className="text-left p-2">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {isLoading ? (
-          <tr>
-            <td colSpan={8} className="text-center p-4 text-sm">Loading...</td>
-          </tr>
-        ) : customers.length === 0 ? (
-          <tr>
-            <td colSpan={8} className="text-center p-4 text-sm">No customers found.</td>
-          </tr>
-        ) : (
-          customers.map((customer) => (
-            <tr key={customer.id} className="border-b hover:bg-gray-50">
-              <td className="p-2">
-                <input type="checkbox" className="scale-75" />
-              </td>
-              {/* <td className="p-2">{customer.id}</td> */}
-              <td className="p-2">{customer.name}</td>
-              <td className="p-2">{customer.phone || "-"}</td>
-              <td className="p-2">{customer.email}</td>
-              <td className="p-2">{customer.country || "-"}</td>
-              <td className="p-2">{customer.city || "-"}</td>
-              <td className="p-2">
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => openViewModal(customer)}
-                  >
-                    <Eye className="h-3 w-3 text-blue-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => openEditModal(customer)}
-                  >
-                    <Edit className="h-3 w-3 text-green-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => openDeleteModal(customer)}
-                  >
-                    <Trash2 className="h-3 w-3 text-red-600" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
-  </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-2 font-medium">
+                    <input type="checkbox" className="rounded scale-75" />
+                  </th>
+                  {/* <th className="text-left p-2 font-medium">ID</th> */}
+                  <th className="text-left p-2 font-medium">Name</th>
+                  <th className="text-left p-2 font-medium">Phone</th>
+                  <th className="text-left p-2 font-medium">Email</th>
+                  <th className="text-left p-2 font-medium">Country</th>
+                  <th className="text-left p-2 font-medium">City</th>
+                  <th className="text-right p-2 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">Loading...</td>
+                  </tr>
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-8 text-red-500">Failed to load customers</td>
+                  </tr>
+                ) : customers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">No customers found.</td>
+                  </tr>
+                ) : (
+                  customers.map((customer) => (
+                    <tr key={customer.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-2">
+                        <input type="checkbox" className="rounded scale-75" />
+                      </td>
+                      {/* <td className="p-2">{customer.id}</td> */}
+                      <td className="p-2 font-medium">{customer.name}</td>
+                      <td className="p-2">{customer.phone || "-"}</td>
+                      <td className="p-2">{customer.email}</td>
+                      <td className="p-2">{customer.country || "-"}</td>
+                      <td className="p-2">{customer.city || "-"}</td>
+                      <td className="p-2 text-right">
+                        <TableActions
+                          onView={() => openViewModal(customer)}
+                          onEdit={() => openEditModal(customer)}
+                          onDelete={() => openDeleteModal(customer)}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-  {pagination && (
-    <div className="mt-3 flex flex-col md:flex-row items-center justify-between gap-3 p-3">
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-muted-foreground">Rows per page</p>
-        <Select
-          value={limit.toString()}
-          onValueChange={(value) => setLimit(Number(value))}
-        >
-          <SelectTrigger className="h-7 w-[65px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[10, 15, 25, 50, 100].map((size) => (
-              <SelectItem key={size} value={size.toString()} className="text-xs">
-                {size}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {pagination && (
+            <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-muted-foreground">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries
+              </div>
 
-      <UIPagination>
-        <PaginationContent>
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setPage((old) => Math.max(old - 1, 1))}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="h-3 w-3 mr-1" />
-              Previous
-            </Button>
-          </PaginationItem>
-          
-          <span className="text-xs text-muted-foreground mx-3">
-            Page {page} of {pagination.totalPages}
-          </span>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => setLimit(Number(value))}
+                >
+                  <SelectTrigger className="h-7 w-[60px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 15, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()} className="text-xs">
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-          <PaginationItem>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setPage((old) => old + 1)}
-              disabled={page >= (pagination.totalPages || 1)}
-            >
-              Next
-              <ChevronRight className="h-3 w-3 ml-1" />
-            </Button>
-          </PaginationItem>
-        </PaginationContent>
-      </UIPagination>
-    </div>
-  )}
-</div>
+                <UIPagination>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-3 w-3 mr-1" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1 px-2">
+                      <span className="text-xs">Page {page} of {pagination.totalPages}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (pagination.totalPages || 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+                </UIPagination>
+              </div>
+            </div>
+          )}
+        </div>
 
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
           <DialogContent className="max-w-2xl">
@@ -356,7 +339,7 @@ export default function CustomerList() {
                 <Input
                   placeholder="Customer Name"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1"
                 />
               </div>
@@ -366,17 +349,17 @@ export default function CustomerList() {
                   placeholder="Email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">Phone</label>
-                <Input 
-                  placeholder="Phone" 
-                  value={formData.phone} 
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                  className="mt-1" 
+                <Input
+                  placeholder="Phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="mt-1"
                 />
               </div>
               <div>
@@ -384,17 +367,17 @@ export default function CustomerList() {
                 <Input
                   placeholder="Country"
                   value={formData.country}
-                  onChange={(e) => setFormData({...formData, country: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">City</label>
-                <Input 
-                  placeholder="City" 
-                  value={formData.city} 
-                  onChange={(e) => setFormData({...formData, city: e.target.value})} 
-                  className="mt-1" 
+                <Input
+                  placeholder="City"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="mt-1"
                 />
               </div>
               <div className="col-span-2">
@@ -402,13 +385,13 @@ export default function CustomerList() {
                 <Input
                   placeholder="Address"
                   value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div className="col-span-2">
-                <Button 
-                  className="bg-[#1a237e] hover:bg-purple-700" 
+                <Button
+                  className="bg-[#1a237e] hover:bg-purple-700 w-full"
                   onClick={handleCreate}
                   disabled={isCreating || !formData.name || !formData.email}
                 >
@@ -430,7 +413,7 @@ export default function CustomerList() {
                 <Input
                   placeholder="Customer Name"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1"
                 />
               </div>
@@ -440,17 +423,17 @@ export default function CustomerList() {
                   placeholder="Email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">Phone</label>
-                <Input 
-                  placeholder="Phone" 
-                  value={formData.phone} 
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                  className="mt-1" 
+                <Input
+                  placeholder="Phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="mt-1"
                 />
               </div>
               <div>
@@ -458,17 +441,17 @@ export default function CustomerList() {
                 <Input
                   placeholder="Country"
                   value={formData.country}
-                  onChange={(e) => setFormData({...formData, country: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">City</label>
-                <Input 
-                  placeholder="City" 
-                  value={formData.city} 
-                  onChange={(e) => setFormData({...formData, city: e.target.value})} 
-                  className="mt-1" 
+                <Input
+                  placeholder="City"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="mt-1"
                 />
               </div>
               <div className="col-span-2">
@@ -476,13 +459,13 @@ export default function CustomerList() {
                 <Input
                   placeholder="Address"
                   value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div className="col-span-2">
-                <Button 
-                  className="bg-[#1a237e] hover:bg-purple-700" 
+                <Button
+                  className="bg-[#1a237e] hover:bg-purple-700 w-full"
                   onClick={handleEdit}
                   disabled={isUpdating || !formData.name || !formData.email}
                 >
@@ -536,33 +519,27 @@ export default function CustomerList() {
         )}
 
         {selectedCustomer && (
-          <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Delete Customer</DialogTitle>
-              </DialogHeader>
-              <div className="p-4">
-                <p className="text-sm text-gray-600 mb-4">
-                  Are you sure you want to delete customer "{selectedCustomer.name}"? This action cannot be undone.
-                </p>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowDeleteModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    className="bg-red-600 hover:bg-red-700" 
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete consumer "{selectedCustomer.name}"
+                  and remove their data from our servers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete Customer"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
     </DashboardLayout>
