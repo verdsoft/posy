@@ -68,7 +68,7 @@ export default function CreateSale() {
       discount: 0,
       shipping: 0,
       status: "completed",
-      payment_status: "pending",
+      payment_status: "unpaid",
       notes: "",
     }
   })
@@ -183,9 +183,10 @@ export default function CreateSale() {
       const result = await createSale(saleData).unwrap()
       toast.success(`Sale created successfully`)
       router.push('/sales/list')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating sale:', error)
-      toast.error('Failed to create sale')
+      const message = error?.data?.error || 'Failed to create sale'
+      toast.error(message)
     }
   }
 
@@ -522,7 +523,7 @@ export default function CreateSale() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="unpaid">Unpaid</SelectItem>
                               <SelectItem value="paid">Paid</SelectItem>
                               <SelectItem value="partial">Partial</SelectItem>
                             </SelectContent>

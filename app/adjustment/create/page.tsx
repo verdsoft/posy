@@ -145,9 +145,10 @@ export default function CreateAdjustment() {
 
       toast.success(`Adjustment ${result.reference} created successfully`)
       router.push("/adjustment/list")
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error)
-      toast.error('Failed to create adjustment')
+      const message = error?.data?.error || 'Failed to create adjustment'
+      toast.error(message)
     }
   }
 

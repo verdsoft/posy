@@ -145,16 +145,19 @@ export default function CreateTransferPage() {
         subtotal: it.subtotal
       })),
       grand_total,
-      items_count: items.reduce((acc, item) => acc + item.quantity, 0)
+      items_count: items.reduce((acc, item) => acc + item.quantity, 0),
+      reference: `TR-${Date.now()}`,
+      user_id: localStorage.getItem('UserId')
     }
 
     try {
       await createTransfer(payload).unwrap()
       toast.success("Transfer created successfully")
       router.push("/transfer/list")
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create transfer:", err)
-      toast.error("Failed to create transfer")
+      const message = err?.data?.error || "Failed to create transfer"
+      toast.error(message)
     }
   }
 

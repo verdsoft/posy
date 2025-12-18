@@ -64,9 +64,10 @@ export default function Warehouses() {
       setIsCreateOpen(false)
       setForm({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
       toast.success("Warehouse created successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating warehouse:", error)
-      toast.error("Failed to create warehouse")
+      const message = error?.data?.error || "Failed to create warehouse"
+      toast.error(message)
     }
   }
 
@@ -91,9 +92,10 @@ export default function Warehouses() {
       setEditId(null)
       setForm({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
       toast.success("Warehouse updated successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating warehouse:", error)
-      toast.error("Failed to update warehouse")
+      const message = error?.data?.error || "Failed to update warehouse"
+      toast.error(message)
     }
   }
 
@@ -253,19 +255,19 @@ export default function Warehouses() {
                       <td className="p-2">{warehouse.email}</td>
                       <td className="p-2">{warehouse.zip_code}</td>
                       <td className="p-2">
-                      <div className="flex gap-1">
-                        <TableActions
-                          onEdit={() => openEdit(warehouse)}
-                          onDelete={() => openDelete(warehouse.id)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <div className="flex gap-1">
+                          <TableActions
+                            onEdit={() => openEdit(warehouse)}
+                            onDelete={() => openDelete(warehouse.id)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination */}
           <div className="p-3 border-t flex items-center justify-between">

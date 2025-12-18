@@ -50,9 +50,10 @@ export default function Brands() {
       setIsCreateOpen(false)
       setForm({ name: "", description: "" })
       toast.success("Brand created successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating brand:", error)
-      toast.error("Failed to create brand")
+      const message = error?.data?.error || "Failed to create brand"
+      toast.error(message)
     }
   }
 
@@ -70,9 +71,10 @@ export default function Brands() {
       setEditId(null)
       setForm({ name: "", description: "" })
       toast.success("Brand updated successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating brand:", error)
-      toast.error("Failed to update brand")
+      const message = error?.data?.error || "Failed to update brand"
+      toast.error(message)
     }
   }
 

@@ -73,9 +73,9 @@ export default function Units() {
       setIsCreateOpen(false)
       setForm({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
       toast.success("Unit created successfully")
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
+    } catch (error: any) {
       console.error("Error creating unit:", error)
+      const message = error?.data?.error || "Failed to create unit"
       toast.error(message)
     }
   }
@@ -112,9 +112,10 @@ export default function Units() {
       setEditId(null)
       setForm({ name: "", short_name: "", base_unit: "-", operator: "*", operation_value: 1 })
       toast.success("Unit updated successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating unit:", error)
-      toast.error("Failed to update unit")
+      const message = error?.data?.error || "Failed to update unit"
+      toast.error(message)
     }
   }
 

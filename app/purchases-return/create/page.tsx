@@ -261,8 +261,9 @@ export default function CreatePurchaseReturn() {
       await createPurchaseReturn(returnData).unwrap()
       toast.success("Purchase return created successfully")
       router.push('/purchases-return/list')
-    } catch (error) {
-      toast.error("Failed to create purchase return")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create purchase return"
+      toast.error(message)
       console.error(error)
     } finally {
       setIsLoading(false)

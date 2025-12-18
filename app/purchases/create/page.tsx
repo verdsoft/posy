@@ -17,6 +17,7 @@ import { useCreatePurchaseMutation } from "@/lib/slices/purchasesApi"
 import { useGetSuppliersQuery } from "@/lib/slices/suppliersApi"
 import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
+import { PurchaseStatus } from "@/lib/types/prisma"
 
 interface Product {
   id: string
@@ -195,13 +196,16 @@ export default function CreatePurchase() {
           tax: Number(item.tax),
           subtotal: Number(item.subtotal)
         })),
+        status: data.status as PurchaseStatus,
+        payment_status: data.payment_status as any, // Cast payment_status as well just in case
         created_by: Number(user_id),
       }
 
       await createPurchase(payload).unwrap()
       toast.success("Purchase created successfully")
-    } catch (error) {
-      toast.error("Failed to create purchase")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create purchase"
+      toast.error(message)
       console.error(error)
     }
   }

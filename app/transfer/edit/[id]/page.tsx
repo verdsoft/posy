@@ -71,7 +71,7 @@ export default function EditTransferPage() {
                     name: item.products?.name || "",
                     stock: 0, // We don't have stock info in transfer item, would need separate fetch or ignore
                     quantity: Number(item.quantity),
-                    cost: Number(item.unit_price || 0),
+                    cost: Number(item.unit_cost || 0),
                     discount: Number(item.discount || 0),
                     tax: Number(item.tax || 0),
                     subtotal: Number(item.subtotal || 0),
@@ -182,9 +182,10 @@ export default function EditTransferPage() {
             await updateTransfer({ id, data: payload }).unwrap()
             toast.success("Transfer updated successfully")
             router.push("/transfer/list")
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to update transfer:", err)
-            toast.error("Failed to update transfer")
+            const message = err?.data?.error || "Failed to update transfer"
+            toast.error(message)
         }
     }
 

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, FileDown, Plus } from "lucide-react"
-import type React from "react"
+
 import { TableActions } from "@/components/ui/table-actions"
 import {
   useGetCategoriesQuery,
@@ -52,9 +52,10 @@ export default function Categories() {
       setIsCreateOpen(false)
       setForm({ code: "", name: "" })
       toast.success("Category created successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating category:", error)
-      toast.error("Failed to create category")
+      const message = error?.data?.error || "Failed to create category"
+      toast.error(message)
     }
   }
 
@@ -77,9 +78,10 @@ export default function Categories() {
       setEditId(null)
       setForm({ code: "", name: "" })
       toast.success("Category updated successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating category:", error)
-      toast.error("Failed to update category")
+      const message = error?.data?.error || "Failed to update category"
+      toast.error(message)
     }
   }
 

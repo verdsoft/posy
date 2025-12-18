@@ -150,11 +150,11 @@ export default function EditProduct() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
-  
+
     setError(null);
     const requiredFields: (keyof FormData)[] = ["name", "code", "category_id", "unit_id", "cost", "price"];
     const missingFields = requiredFields.filter(field => !form[field]?.toString().trim());
-  
+
     if (missingFields.length > 0) {
       setError(`Please fill all required fields: ${missingFields.join(", ")}`);
       toast({
@@ -164,19 +164,19 @@ export default function EditProduct() {
       });
       return;
     }
-  
+
     setSubmitting(true);
-  
+
     try {
       const formData = new FormData();
-      
+
       // Append all form fields except image
       Object.entries(form).forEach(([key, value]) => {
         if (value !== undefined && value !== null && key !== 'image') {
           formData.append(key, value.toString());
         }
       });
-  
+
       // Handle image separately
       if (newImage) {
         console.log("Adding image to form data:", newImage.name, newImage.size);
@@ -185,23 +185,23 @@ export default function EditProduct() {
         // If no new image but existing image, send the existing image path
         formData.append("existingImage", form.image);
       }
-  
+
       // Debug: Log all form data entries
       console.log("Form data entries:");
       for (const [key, value] of formData.entries()) {
         console.log(`${key}:`, value);
       }
-  
+
       // Use RTK Query mutation
       await updateProduct({ id: productId, data: formData }).unwrap();
-  
+
       toast({
         title: "Success",
         description: "Product updated successfully",
       });
       router.push("/products/list");
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update product";
+    } catch (error: any) {
+      const errorMessage = error?.data?.error || error?.message || "Failed to update product";
       setError(errorMessage);
       toast({
         title: "Error",
@@ -273,10 +273,10 @@ export default function EditProduct() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium block mb-1">Barcode</label>
-                      <Input 
-                        id="barcode" 
-                        value={form.barcode} 
-                        onChange={handleInput} 
+                      <Input
+                        id="barcode"
+                        value={form.barcode}
+                        onChange={handleInput}
                         placeholder="Optional barcode"
                       />
                     </div>
@@ -284,8 +284,8 @@ export default function EditProduct() {
                       <label className="text-xs font-medium block mb-1">
                         Category <span className="text-red-500">*</span>
                       </label>
-                      <Select 
-                        value={form.category_id} 
+                      <Select
+                        value={form.category_id}
                         onValueChange={v => handleSelect("category_id", v)}
                       >
                         <SelectTrigger>
@@ -305,8 +305,8 @@ export default function EditProduct() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium block mb-1">Brand</label>
-                      <Select 
-                        value={form.brand_id} 
+                      <Select
+                        value={form.brand_id}
                         onValueChange={v => handleSelect("brand_id", v)}
                       >
                         <SelectTrigger>
@@ -325,8 +325,8 @@ export default function EditProduct() {
                       <label className="text-xs font-medium block mb-1">
                         Unit <span className="text-red-500">*</span>
                       </label>
-                      <Select 
-                        value={form.unit_id} 
+                      <Select
+                        value={form.unit_id}
                         onValueChange={v => handleSelect("unit_id", v)}
                       >
                         <SelectTrigger>
@@ -353,8 +353,8 @@ export default function EditProduct() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium block mb-1">Warehouse</label>
-                      <Select 
-                        value={form.warehouse_id} 
+                      <Select
+                        value={form.warehouse_id}
                         onValueChange={v => handleSelect("warehouse_id", v)}
                       >
                         <SelectTrigger>
@@ -375,14 +375,14 @@ export default function EditProduct() {
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-2 text-muted-foreground text-xs">$</span>
-                        <Input 
-                          id="cost" 
-                          value={form.cost} 
-                          onChange={handleInput} 
-                          placeholder="0.00" 
+                        <Input
+                          id="cost"
+                          value={form.cost}
+                          onChange={handleInput}
+                          placeholder="0.00"
                           className="pl-8"
-                          type="number" 
-                          min="0" 
+                          type="number"
+                          min="0"
                         />
                       </div>
                     </div>
@@ -395,26 +395,26 @@ export default function EditProduct() {
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-2 text-muted-foreground text-xs">$</span>
-                        <Input 
-                          id="price" 
-                          value={form.price} 
-                          onChange={handleInput} 
-                          placeholder="0.00" 
+                        <Input
+                          id="price"
+                          value={form.price}
+                          onChange={handleInput}
+                          placeholder="0.00"
                           className="pl-8"
-                          type="number" 
-                          min="0" 
+                          type="number"
+                          min="0"
                         />
                       </div>
                     </div>
                     <div>
                       <label className="text-xs font-medium block mb-1">Stock</label>
-                      <Input 
-                        id="stock" 
-                        value={form.stock} 
-                        onChange={handleInput} 
-                        placeholder="0" 
-                        type="number" 
-                        min="0" 
+                      <Input
+                        id="stock"
+                        value={form.stock}
+                        onChange={handleInput}
+                        placeholder="0"
+                        type="number"
+                        min="0"
                       />
                     </div>
                   </div>
@@ -422,19 +422,19 @@ export default function EditProduct() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium block mb-1">Low Stock Alert</label>
-                      <Input 
-                        id="alert_quantity" 
-                        value={form.alert_quantity} 
-                        onChange={handleInput} 
-                        placeholder="0" 
-                        type="number" 
-                        min="0" 
+                      <Input
+                        id="alert_quantity"
+                        value={form.alert_quantity}
+                        onChange={handleInput}
+                        placeholder="0"
+                        type="number"
+                        min="0"
                       />
                     </div>
                     <div>
                       <label className="text-xs font-medium block mb-1">Status</label>
-                      <Select 
-                        value={form.status} 
+                      <Select
+                        value={form.status}
                         onValueChange={v => handleSelect("status", v)}
                       >
                         <SelectTrigger>
@@ -455,11 +455,11 @@ export default function EditProduct() {
                   <CardTitle className="text-base">Description</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <Textarea 
-                    id="description" 
-                    value={form.description} 
-                    onChange={handleInput} 
-                    placeholder="Enter product description..." 
+                  <Textarea
+                    id="description"
+                    value={form.description}
+                    onChange={handleInput}
+                    placeholder="Enter product description..."
                     className="min-h-[100px]"
                   />
                 </CardContent>

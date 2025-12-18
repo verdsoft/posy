@@ -238,8 +238,9 @@ export default function CreateSalesReturn() {
       await createSalesReturn(returnData).unwrap()
       toast.success("Sales return created successfully")
       router.push('/sales-return/list')
-    } catch (error) {
-      toast.error("Failed to create sales return")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create sales return"
+      toast.error(message)
       console.error(error)
     }
   }

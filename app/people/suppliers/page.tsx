@@ -57,8 +57,9 @@ export default function SupplierList() {
       setShowCreateModal(false)
       resetForm()
       toast.success("Supplier created successfully")
-    } catch (error) {
-      toast.error("Failed to create supplier")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create supplier"
+      toast.error(message)
       console.error(error)
     }
   }
@@ -71,8 +72,9 @@ export default function SupplierList() {
       setShowEditModal(false)
       resetForm()
       toast.success("Supplier updated successfully")
-    } catch (error) {
-      toast.error("Failed to update supplier")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to update supplier"
+      toast.error(message)
       console.error(error)
     }
   }

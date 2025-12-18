@@ -45,7 +45,7 @@ export default function EditSale() {
     const [discount, setDiscount] = useState(0)
     const [shipping, setShipping] = useState(0)
     const [status, setStatus] = useState("completed")
-    const [paymentStatus, setPaymentStatus] = useState("pending")
+    const [paymentStatus, setPaymentStatus] = useState("unpaid")
     const [notes, setNotes] = useState("")
 
     // RTK Query hooks
@@ -68,7 +68,7 @@ export default function EditSale() {
             setDiscount(Number(saleData.discount) || 0)
             setShipping(Number(saleData.shipping) || 0)
             setStatus(saleData.status || "completed")
-            setPaymentStatus(saleData.payment_status || "pending")
+            setPaymentStatus(saleData.payment_status || "unpaid")
             setNotes(saleData.notes || "")
 
             // Convert sale items to cart items
@@ -196,8 +196,9 @@ export default function EditSale() {
             await updateSale({ id: id as string, data: updateData }).unwrap()
             toast.success("Sale updated successfully")
             router.push('/sales/list')
-        } catch (error) {
-            toast.error("Failed to update sale")
+        } catch (error: any) {
+            const message = error?.data?.error || "Failed to update sale"
+            toast.error(message)
             console.error(error)
         }
     }

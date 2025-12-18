@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         paid: body.paid ?? 0,
         due: body.due ?? 0,
         status: body.status || "completed",
-        payment_status: body.payment_status || "paid",
+        payment_status: body.payment_status || "unpaid",
         notes: body.notes ?? null,
         created_by: validCreatedBy,
         sale_items: {

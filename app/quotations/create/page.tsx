@@ -88,7 +88,7 @@ export default function CreateQuotation() {
     return subtotal + taxAmount - discountValue + shippingValue;
   }, [subtotal, taxAmount, discount, shipping]);
 
- 
+
   // Modify your updateItem function to ensure numbers
   const updateItem = (id: string, field: string, value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
@@ -155,80 +155,80 @@ export default function CreateQuotation() {
 
 
   // Update the handleSubmit function
-const handleSubmit = async () => {
-  console.log("1 - Start of handleSubmit");
+  const handleSubmit = async () => {
+    console.log("1 - Start of handleSubmit");
 
-  if (!customerId || !warehouseId || items.length === 0) {
-    toast.error("Please fill all required fields and add at least one product");
-    return;
-  }
+    if (!customerId || !warehouseId || items.length === 0) {
+      toast.error("Please fill all required fields and add at least one product");
+      return;
+    }
 
-  try {
-    console.log("2 - Before getting user_id");
-    const user_id = localStorage.getItem('UserId');
-    if (!user_id) throw new Error("User authentication required");
+    try {
+      console.log("2 - Before getting user_id");
+      const user_id = localStorage.getItem('UserId');
+      if (!user_id) throw new Error("User authentication required");
 
-    console.log("3 - Before calculations");
-    
-    // Ensure all calculations use proper decimal formatting
-    const subtotal = parseFloat(
-      items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0).toFixed(2)
-    );
+      console.log("3 - Before calculations");
 
-    const tax_amount = Number(
-      (subtotal * (Number(orderTax) / 100)).toFixed(2)
-    );
+      // Ensure all calculations use proper decimal formatting
+      const subtotal = parseFloat(
+        items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0).toFixed(2)
+      );
 
-    const total = Number(
-      (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
-    );
+      const tax_amount = Number(
+        (subtotal * (Number(orderTax) / 100)).toFixed(2)
+      );
+
+      const total = Number(
+        (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
+      );
 
 
-    console.log("4 - Before fetch", {
-      customerId,
-      warehouseId,
-      subtotal,
-      items
-    });
+      console.log("4 - Before fetch", {
+        customerId,
+        warehouseId,
+        subtotal,
+        items
+      });
 
-    // Format all numbers to 2 decimal places before sending
-    const payload = {
-      reference: `QT-${Date.now().toString().slice(-6)}`,
-      date,
-      valid_until: validUntil || null,
-      customer_id: customerId,
-      warehouse_id: warehouseId,
-      subtotal: Number(subtotal),
-      tax_rate: Number(Number(orderTax)),
-      tax_amount: Number(tax_amount),
-      discount: Number(Number(discount)),
-      shipping: Number(Number(shipping)),
-      total: Number(total),
-      status,
-      notes: note || null,
-      created_by: user_id,
-      items: items.map(item => ({
-        product_id: item.id,
-        quantity: Number(Number(item.quantity)),
-        unit_price: Number(Number(item.price)),
-        discount: Number(Number(item.discount || 0)),
-        tax: Number(Number(item.tax || 0)),
-        subtotal: Number((
-          Number(item.price) * Number(item.quantity) - 
-          Number(item.discount || 0) + 
-          Number(item.tax || 0)
-        ))
-      }))
-    };
+      // Format all numbers to 2 decimal places before sending
+      const payload = {
+        reference: `QT-${Date.now().toString().slice(-6)}`,
+        date,
+        valid_until: validUntil || null,
+        customer_id: customerId,
+        warehouse_id: warehouseId,
+        subtotal: Number(subtotal),
+        tax_rate: Number(Number(orderTax)),
+        tax_amount: Number(tax_amount),
+        discount: Number(Number(discount)),
+        shipping: Number(Number(shipping)),
+        total: Number(total),
+        status,
+        notes: note || null,
+        created_by: user_id,
+        items: items.map(item => ({
+          product_id: item.id,
+          quantity: Number(Number(item.quantity)),
+          unit_price: Number(Number(item.price)),
+          discount: Number(Number(item.discount || 0)),
+          tax: Number(Number(item.tax || 0)),
+          subtotal: Number((
+            Number(item.price) * Number(item.quantity) -
+            Number(item.discount || 0) +
+            Number(item.tax || 0)
+          ))
+        }))
+      };
 
-    await createQuotation(payload).unwrap()
-    toast.success("Quotation created successfully")
-  } catch (error: unknown) {
-    console.error("Full Error:", error);
-    const message = error instanceof Error ? error.message : "An unexpected error occurred";
-    toast.error(message);
-  }
-};
+      await createQuotation(payload).unwrap()
+      toast.success("Quotation created successfully")
+    } catch (error: any) {
+      console.error("Full Error:", error);
+      const message = error?.data?.error || error?.message || "Failed to create quotation";
+      toast.error(message);
+    }
+  };
 
 
   if (loading) {
@@ -241,7 +241,7 @@ const handleSubmit = async () => {
 
   return (
 
-    
+
     <DashboardLayout>
       <div className="p-6">
         <div className="mb-6">

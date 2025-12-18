@@ -104,13 +104,40 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    // Ensure we have a valid user ID
+    let validUserId = body.user_id ? parseInt(body.user_id.toString()) : null
+    if (!validUserId) {
+      // Try to find the first admin user
+      const adminUser = await prisma.users.findFirst({
+        where: { role: 'admin' }
+      })
+      if (adminUser) {
+        validUserId = adminUser.id
+      } else {
+        // If no admin user exists, try to find any user
+        const anyUser = await prisma.users.findFirst()
+        if (anyUser) {
+          validUserId = anyUser.id
+        } else {
+          return NextResponse.json(
+            { error: 'No valid user found. Please ensure at least one user exists in the system.' },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // Create transfer
       const transfer = await tx.transfers.create({
         data: {
-          reference: body.reference,
-          from_warehouse_id: body.from_warehouse_id,
-          to_warehouse_id: body.to_warehouse_id,
+          reference: body.reference || `TR-${Date.now()}`,
+          warehouses_transfers_from_warehouse_idTowarehouses: {
+            connect: { id: parseInt(body.from_warehouse_id) }
+          },
+          warehouses_transfers_to_warehouse_idTowarehouses: {
+            connect: { id: parseInt(body.to_warehouse_id) }
+          },
           date: new Date(body.date),
           subtotal: parseFloat(body.subtotal || 0),
           tax_rate: parseFloat(body.tax_rate || 0),
@@ -119,7 +146,10 @@ export async function POST(req: NextRequest) {
           shipping: parseFloat(body.shipping || 0),
           total: parseFloat(body.total || 0),
           status: body.status || 'pending',
-          notes: body.notes || null
+          notes: body.notes || null,
+          users: {
+            connect: { id: validUserId }
+          }
         }
       })
 
@@ -131,7 +161,7 @@ export async function POST(req: NextRequest) {
               transfer_id: transfer.id,
               product_id: item.product_id,
               quantity: parseFloat(item.quantity),
-              unit_price: parseFloat(item.unit_price || 0),
+              unit_cost: parseFloat(item.net_unit_cost || item.unit_cost || 0),
               discount: parseFloat(item.discount || 0),
               tax: parseFloat(item.tax || 0),
               subtotal: parseFloat(item.subtotal)
@@ -146,7 +176,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: result })
   } catch (error: any) {
     console.error("Error creating transfer:", error)
-    return NextResponse.json({ error: "Failed to create transfer" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Failed to create transfer" }, { status: 500 })
   }
 }
 
@@ -188,7 +218,7 @@ export async function PUT(req: NextRequest) {
               transfer_id: transfer.id,
               product_id: item.product_id,
               quantity: parseFloat(item.quantity),
-              unit_price: parseFloat(item.unit_price || 0),
+              unit_cost: parseFloat(item.net_unit_cost || item.unit_cost || 0),
               discount: parseFloat(item.discount || 0),
               tax: parseFloat(item.tax || 0),
               subtotal: parseFloat(item.subtotal)

@@ -50,8 +50,9 @@ export default function CreateExpense() {
       }).unwrap()
       toast.success("Expense created successfully!")
       router.push("/expenses/list")
-    } catch (error) {
-      toast.error("Failed to create expense.")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create expense."
+      toast.error(message)
     }
   }
 

@@ -114,7 +114,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
     const fetchReferenceData = async () => {
       try {
         setLoading(true)
-        
+
         // Fetch customers and warehouses in parallel
         const [customersRes, warehousesRes] = await Promise.all([
           fetch('/api/v2/customers'),
@@ -127,7 +127,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
 
         const customersData = await customersRes.json()
         const warehousesData = await warehousesRes.json()
-        
+
         setCustomers(customersData.data || [])
         setWarehouses(warehousesData)
       } catch (error) {
@@ -151,7 +151,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
         if (typeof date === 'string') return date
         return date.toISOString().split('T')[0]
       }
-      
+
       setDate(formatDate(quotationData.date))
       setValidUntil(quotationData.valid_until ? formatDate(quotationData.valid_until) : "")
       setCustomerId(quotationData.customer_id || "")
@@ -169,7 +169,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
   useEffect(() => {
     const loadQuotationItems = async () => {
       if (!id) return
-      
+
       try {
         const response = await fetch(`/api/quotations/items?quotation_id=${id}`)
         if (response.ok) {
@@ -309,9 +309,9 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
 
       toast.success("Quotation updated successfully")
       router.push("/quotations/list")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update error:", error)
-      const errorMessage = error instanceof Error ? error.message : "Failed to update quotation"
+      const errorMessage = error?.data?.error || error?.message || "Failed to update quotation"
       toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
@@ -341,7 +341,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
           <h1 className="text-2xl font-bold">Edit Quotation</h1>
         </div>
 
-         <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <div>
               <Label className="text-sm font-medium">Date *</Label>
@@ -423,7 +423,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
                       >
                         <div className="font-medium">{product.name}</div>
                         <div className="text-sm text-gray-500">
-                          {product.code} • Stock: {product.stock} 
+                          {product.code} • Stock: {product.stock}
                         </div>
                       </div>
                     ))}
@@ -507,12 +507,12 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
                           />
                         </td>
                         <td className="p-3 border">
-                                ${(
-                                  (Number(item.price || 0) * Number(item.quantity || 0)) - 
-                                  Number(item.discount || 0) + 
-                                  Number(item.tax || 0)
-                                )}
-                              </td>
+                          ${(
+                            (Number(item.price || 0) * Number(item.quantity || 0)) -
+                            Number(item.discount || 0) +
+                            Number(item.tax || 0)
+                          )}
+                        </td>
                         <td className="p-3 border">
                           <Button
                             size="sm"
@@ -630,7 +630,7 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
             </div>
           </div>
         </div>
-        
+
       </div>
     </DashboardLayout>
   )

@@ -55,8 +55,9 @@ export default function CustomerList() {
       setShowCreateModal(false)
       resetForm()
       toast.success("Customer created successfully")
-    } catch (error) {
-      toast.error("Failed to create customer")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create customer"
+      toast.error(message)
       console.error(error)
     }
   }
@@ -69,8 +70,9 @@ export default function CustomerList() {
       setShowEditModal(false)
       resetForm()
       toast.success("Customer updated successfully")
-    } catch (error) {
-      toast.error("Failed to update customer")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to update customer"
+      toast.error(message)
       console.error(error)
     }
   }

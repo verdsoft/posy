@@ -164,7 +164,7 @@ export default function CreateProduct() {
       toast.error("Please fill all required fields.")
       return
     }
-    
+
     try {
       const formData = new FormData()
       Object.entries(form).forEach(([key, value]) => {
@@ -173,17 +173,18 @@ export default function CreateProduct() {
       if (images.length > 0) {
         formData.append("image", images[0])
       }
-      
+
       // Use mutation
       await createProduct(formData).unwrap()
       setForm(initialForm)
       setImages([])
       toast.success("Product created successfully!")
       router.push("/products/list")
-    } catch (err) {
-      setError("Failed to create product")
-      toast.error("Failed to create product")
+    } catch (err: any) {
       console.log("Error creating product:", err)
+      const message = err?.data?.error || "Failed to create product"
+      setError(message)
+      toast.error(message)
     }
   }
 
@@ -215,11 +216,11 @@ export default function CreateProduct() {
                         <label className="text-xs font-medium block mb-1">
                           Name <span className="text-red-500">*</span>
                         </label>
-                        <Input 
-                          id="name" 
-                          value={form.name} 
-                          onChange={handleInput} 
-                          placeholder="Product name" 
+                        <Input
+                          id="name"
+                          value={form.name}
+                          onChange={handleInput}
+                          placeholder="Product name"
                           className="h-9 text-sm"
                         />
                       </div>
@@ -227,25 +228,25 @@ export default function CreateProduct() {
                         <label className="text-xs font-medium block mb-1">
                           Code <span className="text-red-500">*</span>
                         </label>
-                        <Input 
-                          id="code" 
-                          value={form.code} 
-                          onChange={handleInput} 
+                        <Input
+                          id="code"
+                          value={form.code}
+                          onChange={handleInput}
                           placeholder="Product code"
-                          className="h-9 text-sm" 
+                          className="h-9 text-sm"
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-medium block mb-1">Barcode</label>
-                        <Input 
-                          id="barcode" 
-                          value={form.barcode} 
-                          onChange={handleInput} 
+                        <Input
+                          id="barcode"
+                          value={form.barcode}
+                          onChange={handleInput}
                           placeholder="Optional barcode"
-                          className="h-9 text-sm" 
+                          className="h-9 text-sm"
                         />
                       </div>
                       <div>
@@ -264,7 +265,7 @@ export default function CreateProduct() {
                         </Select>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-medium block mb-1">Brand</label>
@@ -323,19 +324,19 @@ export default function CreateProduct() {
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-2 text-muted-foreground text-xs">$</span>
-                          <Input 
-                            id="cost" 
-                            value={form.cost} 
-                            onChange={handleInput} 
-                            placeholder="0.00" 
+                          <Input
+                            id="cost"
+                            value={form.cost}
+                            onChange={handleInput}
+                            placeholder="0.00"
                             className="h-9 text-sm pl-7"
-                            type="number" 
-                            min="0" 
+                            type="number"
+                            min="0"
                           />
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-medium block mb-1">
@@ -343,42 +344,42 @@ export default function CreateProduct() {
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-2 text-muted-foreground text-xs">$</span>
-                          <Input 
-                            id="price" 
-                            value={form.price} 
-                            onChange={handleInput} 
-                            placeholder="0.00" 
+                          <Input
+                            id="price"
+                            value={form.price}
+                            onChange={handleInput}
+                            placeholder="0.00"
                             className="h-9 text-sm pl-7"
-                            type="number" 
-                            min="0" 
+                            type="number"
+                            min="0"
                           />
                         </div>
                       </div>
                       <div>
                         <label className="text-xs font-medium block mb-1">Stock</label>
-                        <Input 
-                          id="stock" 
-                          value={form.stock} 
-                          onChange={handleInput} 
-                          placeholder="0" 
-                          className="h-9 text-sm" 
-                          type="number" 
-                          min="0" 
+                        <Input
+                          id="stock"
+                          value={form.stock}
+                          onChange={handleInput}
+                          placeholder="0"
+                          className="h-9 text-sm"
+                          type="number"
+                          min="0"
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-medium block mb-1">Low Stock Alert</label>
-                        <Input 
-                          id="alert_quantity" 
-                          value={form.alert_quantity} 
-                          onChange={handleInput} 
-                          placeholder="0" 
-                          className="h-9 text-sm" 
-                          type="number" 
-                          min="0" 
+                        <Input
+                          id="alert_quantity"
+                          value={form.alert_quantity}
+                          onChange={handleInput}
+                          placeholder="0"
+                          className="h-9 text-sm"
+                          type="number"
+                          min="0"
                         />
                       </div>
                       <div>
@@ -402,23 +403,23 @@ export default function CreateProduct() {
                     <CardTitle className="text-base">Description</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
-                    <Textarea 
-                      id="description" 
-                      value={form.description} 
-                      onChange={handleInput} 
-                      placeholder="Enter product description..." 
+                    <Textarea
+                      id="description"
+                      value={form.description}
+                      onChange={handleInput}
+                      placeholder="Enter product description..."
                       className="min-h-[100px] text-sm"
                     />
                   </CardContent>
                 </Card>
-                
+
                 {error && (
                   <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">
                     <X className="w-3 h-3" />
                     <span>{error}</span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" type="button" size="sm">
                     Cancel
@@ -444,11 +445,10 @@ export default function CreateProduct() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div
-                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
-                        images.length > 0 
-                          ? "border-primary bg-primary/10" 
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${images.length > 0
+                          ? "border-primary bg-primary/10"
                           : "border-muted hover:border-primary/50"
-                      }`}
+                        }`}
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
@@ -482,14 +482,14 @@ export default function CreateProduct() {
                         accept="image/*"
                       />
                     </div>
-                    
+
                     {images.length > 0 && (
                       <div className="mt-3">
                         <h4 className="text-xs font-medium mb-1">Preview</h4>
                         <div className="grid grid-cols-3 gap-2">
                           {images.map((file, idx) => (
-                            <div 
-                              key={idx} 
+                            <div
+                              key={idx}
                               className="aspect-square rounded-md bg-muted overflow-hidden border"
                             >
                               <img

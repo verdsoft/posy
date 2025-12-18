@@ -11,7 +11,7 @@ import { useForm, Controller } from "react-hook-form"
 import { toast } from "sonner"
 import type React from "react"
 import { useParams, useRouter } from "next/navigation"
-import {Purchase} from "@/lib/types/index"
+import { Purchase } from "@/lib/types/index"
 import { useGetPurchaseByIdQuery, useUpdatePurchaseMutation } from "@/lib/slices/purchasesApi"
 import { useGetSuppliersQuery } from "@/lib/slices/suppliersApi"
 import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
@@ -67,7 +67,7 @@ export default function EditPurchase() {
   const suppliers = suppliersData?.data || []
   const warehouses = warehousesData || []
   const filteredProducts = productsData?.data?.slice(0, 5) || []
-  
+
 
   const {
     register,
@@ -116,14 +116,14 @@ export default function EditPurchase() {
   const tax_rate = watch("tax_rate") || 0
   const discount = watch("discount") || 0
   const shipping = watch("shipping") || 0
-  
+
   const tax_amount = subtotal * (tax_rate / 100)
   const total = Number(subtotal) + Number(tax_amount) + Number(shipping) - Number(discount)
 
   // Add product to purchase items
   const addProduct = (product: Product) => {
     const existingItem = selectedProducts.find(item => item.product_id === product.id)
-    
+
     if (existingItem) {
       updateItemQuantity(existingItem.id, existingItem.quantity + 1)
     } else {
@@ -140,7 +140,7 @@ export default function EditPurchase() {
       }
       setSelectedProducts([...selectedProducts, newItem])
     }
-    
+
     setSearchQuery("")
     setFilteredProducts([])
   }
@@ -210,378 +210,379 @@ export default function EditPurchase() {
       await updatePurchase({ id: purchaseId, data: payload }).unwrap()
       toast.success("Purchase updated successfully")
       router.push('/purchases/list')
-    } catch (error) {
-      toast.error("Failed to update purchase")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to update purchase"
+      toast.error(message)
       console.error(error)
     }
   }
 
   if (!purchaseData) {
     return (
-     
-        <DashboardLayout>
-          <div className="p-6">
-            <div className="flex justify-center items-center h-64">
-              <p>Loading purchase data...</p>
-            </div>
+
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="flex justify-center items-center h-64">
+            <p>Loading purchase data...</p>
           </div>
-        </DashboardLayout>
+        </div>
+      </DashboardLayout>
 
     )
   }
 
 
 
-const onError = (errors: unknown) => {
-  console.log("Validation errors", errors)
-  toast.error("Please fix validation errors")
-}
+  const onError = (errors: unknown) => {
+    console.log("Validation errors", errors)
+    toast.error("Please fix validation errors")
+  }
 
   return (
- 
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-              <span>Purchase List</span>
-              <span>|</span>
-              <span>Edit Purchase </span>
-            </div>
-            <h1 className="text-2xl font-bold">Edit Purchase</h1>
-          </div>
 
-          <form onSubmit={handleSubmit(onSubmit,onError)}>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div>
-                  <label className="text-sm font-medium">Date *</label>
-                  <Input 
-                    type="date" 
-                    className="mt-1" 
-                    {...register("date", { required: "Date is required" })}
-                  />
-                  {errors.date && <span className="text-red-500 text-xs">{errors.date.message}</span>}
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Supplier *</label>
-                  <Controller
-                    name="supplier_id"
-                    control={control}
-                    rules={{ required: "Supplier is required" }}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Choose Supplier" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {suppliers.map(supplier => (
-                            <SelectItem key={supplier.id} value={supplier.id}>
-                              {supplier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.supplier_id && (
-                    <span className="text-red-500 text-xs">{errors.supplier_id.message}</span>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Warehouse *</label>
-                  <Controller
-                    name="warehouse_id"
-                    control={control}
-                    rules={{ required: "Warehouse is required" }}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Choose Warehouse" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {warehouses.map(warehouse => (
-                            <SelectItem key={warehouse.id} value={warehouse.id}>
-                              {warehouse.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.warehouse_id && (
-                    <span className="text-red-500 text-xs">{errors.warehouse_id.message}</span>
-                  )}
-                </div>
+    <DashboardLayout>
+      <div className="p-6">
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+            <span>Purchase List</span>
+            <span>|</span>
+            <span>Edit Purchase </span>
+          </div>
+          <h1 className="text-2xl font-bold">Edit Purchase</h1>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit, onError)}>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label className="text-sm font-medium">Date *</label>
+                <Input
+                  type="date"
+                  className="mt-1"
+                  {...register("date", { required: "Date is required" })}
+                />
+                {errors.date && <span className="text-red-500 text-xs">{errors.date.message}</span>}
               </div>
 
-              <div className="mb-6 relative">
-                <label className="text-sm font-medium">Product</label>
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Scan/Search Product by Code Name" 
-                    className="pl-10" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                
-                {/* Search results dropdown */}
-                {filteredProducts.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                    {filteredProducts.map(product => (
-                      <div 
-                        key={product.id}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                        onClick={() => addProduct(product)}
-                      >
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">{product.code}</div>
-                        </div>
-                        <div className="text-sm">
-                          ${product.cost}
-                          <span className="ml-2 text-gray-500">Stock: {product.quantity}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <div>
+                <label className="text-sm font-medium">Supplier *</label>
+                <Controller
+                  name="supplier_id"
+                  control={control}
+                  rules={{ required: "Supplier is required" }}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Choose Supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map(supplier => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.supplier_id && (
+                  <span className="text-red-500 text-xs">{errors.supplier_id.message}</span>
                 )}
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-sm font-medium mb-3">Order Items *</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border">
-                    <thead className="bg-gray-50">
+              <div>
+                <label className="text-sm font-medium">Warehouse *</label>
+                <Controller
+                  name="warehouse_id"
+                  control={control}
+                  rules={{ required: "Warehouse is required" }}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Choose Warehouse" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {warehouses.map(warehouse => (
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.warehouse_id && (
+                  <span className="text-red-500 text-xs">{errors.warehouse_id.message}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-6 relative">
+              <label className="text-sm font-medium">Product</label>
+              <div className="relative mt-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Scan/Search Product by Code Name"
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* Search results dropdown */}
+              {filteredProducts.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredProducts.map(product => (
+                    <div
+                      key={product.id}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      onClick={() => addProduct(product)}
+                    >
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-sm text-gray-500">{product.code}</div>
+                      </div>
+                      <div className="text-sm">
+                        ${product.cost}
+                        <span className="ml-2 text-gray-500">Stock: {product.quantity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-sm font-medium mb-3">Order Items *</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left p-3 border">#</th>
+                      <th className="text-left p-3 border">Product</th>
+                      <th className="text-left p-3 border">Net Unit Cost</th>
+                      <th className="text-left p-3 border">Qty</th>
+                      <th className="text-left p-3 border">Subtotal</th>
+                      <th className="text-left p-3 border">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedProducts.length === 0 ? (
                       <tr>
-                        <th className="text-left p-3 border">#</th>
-                        <th className="text-left p-3 border">Product</th>
-                        <th className="text-left p-3 border">Net Unit Cost</th>
-                        <th className="text-left p-3 border">Qty</th>
-                        <th className="text-left p-3 border">Subtotal</th>
-                        <th className="text-left p-3 border">Action</th>
+                        <td colSpan={7} className="text-center py-8 text-gray-500 border">
+                          No items added
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {selectedProducts.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="text-center py-8 text-gray-500 border">
-                            No items added
+                    ) : (
+                      selectedProducts.map((item, index) => (
+                        <tr key={item.id} className="border-b">
+                          <td className="p-3 border">{index + 1}</td>
+                          <td className="p-3 border">
+                            <div className="font-medium">{item.product_name}</div>
+                            <div className="text-sm text-gray-500">{item.product_code}</div>
+                          </td>
+                          <td className="p-3 border">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unit_cost}
+                              onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
+                              className="w-24"
+                            />
+                          </td>
+                          <td className="p-3 border">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value))}
+                              className="w-20"
+                            />
+                          </td>
+                          <td className="p-3 border">${Number(item.subtotal)}</td>
+                          <td className="p-3 border">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeItem(item.id)}
+                            >
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
                           </td>
                         </tr>
-                      ) : (
-                        selectedProducts.map((item, index) => (
-                          <tr key={item.id} className="border-b">
-                            <td className="p-3 border">{index + 1}</td>
-                            <td className="p-3 border">
-                              <div className="font-medium">{item.product_name}</div>
-                              <div className="text-sm text-gray-500">{item.product_code}</div>
-                            </td>
-                            <td className="p-3 border">
-                              <Input 
-                                type="number" 
-                                min="0"
-                                step="0.01"
-                                value={item.unit_cost}
-                                onChange={(e) => updateItemCost(item.id, parseFloat(e.target.value))}
-                                className="w-24"
-                              />
-                            </td>
-                            <td className="p-3 border">
-                              <Input 
-                                type="number" 
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value))}
-                                className="w-20"
-                              />
-                            </td>
-                            <td className="p-3 border">${Number(item.subtotal)}</td>
-                            <td className="p-3 border">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => removeItem(item.id)}
-                              >
-                                <X className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Order Tax</label>
+                    <div className="flex mt-1">
+                      <Input
+                        placeholder="0"
+                        className="rounded-r-none"
+                        {...register("tax_rate", {
+                          min: 0,
+                          max: 100,
+                          valueAsNumber: true
+                        })}
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-l-none px-3 bg-transparent"
+                        type="button"
+                      >
+                        %
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Discount</label>
+                    <div className="flex mt-1">
+                      <Input
+                        placeholder="0"
+                        className="rounded-r-none"
+                        {...register("discount", {
+                          min: 0,
+                          valueAsNumber: true
+                        })}
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-l-none px-3 bg-transparent"
+                        type="button"
+                      >
+                        $
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Shipping</label>
+                    <div className="flex mt-1">
+                      <Input
+                        placeholder="0"
+                        className="rounded-r-none"
+                        {...register("shipping", {
+                          min: 0,
+                          valueAsNumber: true
+                        })}
+                      />
+                      <Button
+                        variant="outline"
+                        className="rounded-l-none px-3 bg-transparent"
+                        type="button"
+                      >
+                        $
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Status *</label>
+                  <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="received">Received</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Payment Status</label>
+                  <Controller
+                    name="payment_status"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="partial">Partial</SelectItem>
+                          <SelectItem value="unpaid">Unpaid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Note</label>
+                  <Textarea
+                    placeholder="A few words ..."
+                    className="mt-1"
+                    rows={4}
+                    {...register("notes")}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="submit"
+                    className="bg-[#1a237e] hover:bg-purple-700"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Updating..." : "Update Purchase"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => router.push('/purchases')}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Order Tax</label>
-                      <div className="flex mt-1">
-                        <Input 
-                          placeholder="0" 
-                          className="rounded-r-none" 
-                          {...register("tax_rate", { 
-                            min: 0, 
-                            max: 100,
-                            valueAsNumber: true
-                          })}
-                        />
-                        <Button 
-                          variant="outline" 
-                          className="rounded-l-none px-3 bg-transparent"
-                          type="button"
-                        >
-                          %
-                        </Button>
-                      </div>
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>${Number(subtotal)}</span>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Discount</label>
-                      <div className="flex mt-1">
-                        <Input 
-                          placeholder="0" 
-                          className="rounded-r-none" 
-                          {...register("discount", { 
-                            min: 0,
-                            valueAsNumber: true
-                          })}
-                        />
-                        <Button 
-                          variant="outline" 
-                          className="rounded-l-none px-3 bg-transparent"
-                          type="button"
-                        >
-                          $
-                        </Button>
-                      </div>
+                    <div className="flex justify-between">
+                      <span>Order Tax</span>
+                      <span>${Number(tax_amount)} ({tax_rate}%)</span>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Shipping</label>
-                      <div className="flex mt-1">
-                        <Input 
-                          placeholder="0" 
-                          className="rounded-r-none" 
-                          {...register("shipping", { 
-                            min: 0,
-                            valueAsNumber: true
-                          })}
-                        />
-                        <Button 
-                          variant="outline" 
-                          className="rounded-l-none px-3 bg-transparent"
-                          type="button"
-                        >
-                          $
-                        </Button>
-                      </div>
+                    <div className="flex justify-between">
+                      <span>Discount</span>
+                      <span>${Number(discount)}</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Status *</label>
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="received">Received</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Payment Status</label>
-                    <Controller
-                      name="payment_status"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="paid">Paid</SelectItem>
-                            <SelectItem value="partial">Partial</SelectItem>
-                            <SelectItem value="unpaid">Unpaid</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Note</label>
-                    <Textarea 
-                      placeholder="A few words ..." 
-                      className="mt-1" 
-                      rows={4} 
-                      {...register("notes")}
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button 
-                      type="submit" 
-                      className="bg-[#1a237e] hover:bg-purple-700"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Updating..." : "Update Purchase"}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      type="button"
-                      onClick={() => router.push('/purchases')}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span>${Number(subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Order Tax</span>
-                        <span>${Number(tax_amount)} ({tax_rate}%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Discount</span>
-                        <span>${Number(discount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Shipping</span>
-                        <span>${Number(shipping)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Grand Total</span>
-                        <span>${Number(total)}</span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span>Shipping</span>
+                      <span>${Number(shipping)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-lg border-t pt-2">
+                      <span>Grand Total</span>
+                      <span>${Number(total)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </form>
-        </div>
-      </DashboardLayout>
-    
+          </div>
+        </form>
+      </div>
+    </DashboardLayout>
+
   )
 }
