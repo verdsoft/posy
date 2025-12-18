@@ -118,7 +118,7 @@ export default function CreateSale() {
   const updateItemQuantity = (id: string, quantity: number) => {
     setCartItems(cartItems.map(item => {
       if (item.id === id) {
-        const newQuantity = Math.max(1, quantity)
+        const newQuantity = isNaN(quantity) ? 1 : Math.max(1, quantity)
         const newSubtotal = newQuantity * item.price
         return {
           ...item,
@@ -133,7 +133,7 @@ export default function CreateSale() {
   const updateItemPrice = (id: string, price: number) => {
     setCartItems(cartItems.map(item => {
       if (item.id === id) {
-        const newPrice = Math.max(0, price)
+        const newPrice = isNaN(price) ? 0 : Math.max(0, price)
         const newSubtotal = item.quantity * newPrice
         return {
           ...item,

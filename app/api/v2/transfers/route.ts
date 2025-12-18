@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
       const transfer = await prisma.transfers.findUnique({
         where: { id: parseInt(id) },
         include: {
-          warehouses_transfers_from_warehouse_idTowerehouses: {
+          warehouses_transfers_from_warehouse_idTowarehouses: {
             select: { id: true, name: true }
           },
-          warehouses_transfers_to_warehouse_idTowerehouses: {
+          warehouses_transfers_to_warehouse_idTowarehouses: {
             select: { id: true, name: true }
           },
           transfer_items: {
@@ -28,7 +28,12 @@ export async function GET(req: NextRequest) {
       if (!transfer) {
         return NextResponse.json({ error: "Transfer not found" }, { status: 404 })
       }
-      return NextResponse.json(transfer)
+      const formattedTransfer = {
+        ...transfer,
+        from_warehouse: transfer.warehouses_transfers_from_warehouse_idTowarehouses,
+        to_warehouse: transfer.warehouses_transfers_to_warehouse_idTowarehouses,
+      }
+      return NextResponse.json(formattedTransfer)
     }
 
     const page = parseInt(searchParams.get("page") || "1", 10)
@@ -39,8 +44,8 @@ export async function GET(req: NextRequest) {
     const whereCondition = search ? {
       OR: [
         { reference: { contains: search, mode: 'insensitive' as const } },
-        { warehouses_transfers_from_warehouse_idTowerehouses: { name: { contains: search, mode: 'insensitive' as const } } },
-        { warehouses_transfers_to_warehouse_idTowerehouses: { name: { contains: search, mode: 'insensitive' as const } } }
+        { warehouses_transfers_from_warehouse_idTowarehouses: { name: { contains: search, mode: 'insensitive' as const } } },
+        { warehouses_transfers_to_warehouse_idTowarehouses: { name: { contains: search, mode: 'insensitive' as const } } }
       ]
     } : {}
 
@@ -48,10 +53,10 @@ export async function GET(req: NextRequest) {
       prisma.transfers.findMany({
         where: whereCondition,
         include: {
-          warehouses_transfers_from_warehouse_idTowerehouses: {
+          warehouses_transfers_from_warehouse_idTowarehouses: {
             select: { id: true, name: true }
           },
-          warehouses_transfers_to_warehouse_idTowerehouses: {
+          warehouses_transfers_to_warehouse_idTowarehouses: {
             select: { id: true, name: true }
           },
           transfer_items: {
@@ -71,8 +76,14 @@ export async function GET(req: NextRequest) {
       })
     ])
 
+    const formattedTransfers = transfers.map(t => ({
+      ...t,
+      from_warehouse: t.warehouses_transfers_from_warehouse_idTowarehouses,
+      to_warehouse: t.warehouses_transfers_to_warehouse_idTowarehouses,
+    }))
+
     return NextResponse.json({
-      data: transfers,
+      data: formattedTransfers,
       pagination: {
         total,
         page,

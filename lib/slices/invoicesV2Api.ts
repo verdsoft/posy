@@ -61,8 +61,8 @@ export interface Transfer {
   notes?: string
   created_at?: string
   updated_at?: string
-  warehouses_transfers_from_warehouse_idTowerehouses?: { id: number; name: string }
-  warehouses_transfers_to_warehouse_idTowerehouses?: { id: number; name: string }
+  warehouses_transfers_from_warehouse_idTowarehouses?: { id: number; name: string }
+  warehouses_transfers_to_warehouse_idTowarehouses?: { id: number; name: string }
   transfer_items?: TransferItem[]
 }
 
@@ -120,9 +120,9 @@ export const invoicesV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Invoice' as const, id })),
-              { type: 'Invoice', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Invoice' as const, id })),
+            { type: 'Invoice', id: 'LIST' },
+          ]
           : [{ type: 'Invoice', id: 'LIST' }],
     }),
     getInvoiceById: builder.query<Invoice, string>({
@@ -176,9 +176,9 @@ export const invoicesV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Transfer' as const, id })),
-              { type: 'Transfer', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Transfer' as const, id })),
+            { type: 'Transfer', id: 'LIST' },
+          ]
           : [{ type: 'Transfer', id: 'LIST' }],
     }),
     createTransfer: builder.mutation<{ success: boolean; data: Transfer }, Omit<Transfer, 'id'> & { items: Omit<TransferItem, 'id' | 'transfer_id'>[] }>({

@@ -16,6 +16,8 @@ import { useGetPurchaseReturnsQuery, useDeletePurchaseReturnMutation } from "@/l
 import { PurchaseReturn } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
+import { TableActions } from "@/components/ui/table-actions"
+import { ViewPurchaseReturnDialog } from "@/components/returns/view-purchase-return-dialog"
 
 export default function PurchaseReturnList() {
   const router = useRouter()
@@ -112,8 +114,10 @@ export default function PurchaseReturnList() {
                       <TableCell>{ret.status}</TableCell>
                       <TableCell>${ret.total}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedReturn(ret); setIsViewDialogOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(ret)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                        <TableActions
+                          onView={() => { setSelectedReturn(ret); setIsViewDialogOpen(true); }}
+                          onDelete={() => openDeleteDialog(ret)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))
@@ -121,7 +125,7 @@ export default function PurchaseReturnList() {
               </TableBody>
             </Table>
           </div>
-          
+
           {pagination && (
             <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
               <div className="flex items-center gap-2">
@@ -156,7 +160,7 @@ export default function PurchaseReturnList() {
                       Previous
                     </Button>
                   </PaginationItem>
-                  
+
                   <span className="text-sm text-muted-foreground mx-4">
                     Page {page} of {pagination.totalPages}
                   </span>
@@ -178,35 +182,29 @@ export default function PurchaseReturnList() {
           )}
         </div>
       </div>
-      
+
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Delete Purchase Return</DialogTitle>
-                  <DialogDescription>
-                      Are you sure you want to delete this purchase return? This action cannot be undone.
-                  </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Delete"}
-                  </Button>
-              </DialogFooter>
-          </DialogContent>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Purchase Return</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this purchase return? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
-      {selectedReturn && isViewDialogOpen && (
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Purchase Return Details</DialogTitle></DialogHeader>
-                <p>Date: {selectedReturn.date}</p>
-                <p>Reference: {selectedReturn.reference}</p>
-                <p>Status: {selectedReturn.status}</p>
-                <p>Total: ${selectedReturn.total}</p>
-            </DialogContent>
-        </Dialog>
-      )}
+      <ViewPurchaseReturnDialog
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        purchaseReturn={selectedReturn}
+      />
     </DashboardLayout>
   )
 }

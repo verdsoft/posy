@@ -183,7 +183,7 @@ export default function CreateAdjustment() {
                     </SelectTrigger>
                     <SelectContent>
                       {warehouses?.map(warehouse => (
-                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                        <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
                           {warehouse.name}
                         </SelectItem>
                       ))}

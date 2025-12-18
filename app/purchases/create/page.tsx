@@ -136,7 +136,7 @@ export default function CreatePurchase() {
   const updateItemQuantity = (id: string, quantity: number) => {
     setSelectedProducts(selectedProducts.map(item => {
       if (item.id === id) {
-        const newQuantity = Math.max(1, quantity)
+        const newQuantity = isNaN(quantity) ? 1 : Math.max(1, quantity)
         const newSubtotal = newQuantity * item.unit_cost
         return {
           ...item,
@@ -152,7 +152,7 @@ export default function CreatePurchase() {
   const updateItemCost = (id: string, cost: number) => {
     setSelectedProducts(selectedProducts.map(item => {
       if (item.id === id) {
-        const newCost = Math.max(0, cost)
+        const newCost = isNaN(cost) ? 0 : Math.max(0, cost)
         const newSubtotal = item.quantity * newCost
         return {
           ...item,

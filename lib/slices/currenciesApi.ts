@@ -14,6 +14,7 @@ export interface CreateCurrencyInput {
   code: string
   name: string
   symbol: string
+  exchange_rate?: number
 }
 
 export interface UpdateCurrencyInput {
@@ -21,6 +22,7 @@ export interface UpdateCurrencyInput {
   code: string
   name: string
   symbol: string
+  exchange_rate?: number
 }
 
 export const currenciesApi = createApi({

@@ -18,6 +18,16 @@ export interface PDFGenerationOptions {
 
 export class PDFGenerator {
   private static instance: PDFGenerator
+  private colors = {
+    primary: '#1a237e', // Navy blue
+    secondary: '#5c6bc0',
+    text: '#333333',
+    lightText: '#666666',
+    border: '#e0e0e0',
+    tableHeader: '#f5f5f5',
+    tableRowEven: '#ffffff',
+    tableRowOdd: '#fafafa'
+  }
 
   private constructor() {
     console.log('PDFGenerator initialized with PDFKit')
@@ -35,38 +45,24 @@ export class PDFGenerator {
       data,
       format = 'A4',
       orientation = 'portrait',
-      margins = {
-        top: 50,
-        right: 50,
-        bottom: 50,
-        left: 50
-      }
+      margins = { top: 50, right: 50, bottom: 50, left: 50 }
     } = options
 
     return new Promise((resolve, reject) => {
       try {
-        // Create PDF document
         const doc = new PDFDocument({
           size: format,
           layout: orientation,
-          margins: {
-            top: margins.top || 50,
-            bottom: margins.bottom || 50,
-            left: margins.left || 50,
-            right: margins.right || 50
-          }
+          margins,
+          bufferPages: true
         })
 
-        // Collect PDF data in buffer
         const chunks: Buffer[] = []
         doc.on('data', (chunk) => chunks.push(chunk))
         doc.on('end', () => resolve(Buffer.concat(chunks)))
         doc.on('error', reject)
 
-        // Generate content based on template
         this.generateContent(doc, options.template, data)
-
-        // Finalize the PDF
         doc.end()
       } catch (error) {
         console.error('PDF Generation Error:', error)
@@ -76,154 +72,232 @@ export class PDFGenerator {
   }
 
   private generateContent(doc: PDFKit.PDFDocument, template: string, data: any): void {
-    // Add company logo if available
+    // Defines
+    const pageWidth = doc.page.width
+    const pageHeight = doc.page.height
+    const margins = doc.page.margins
+
+    // --- Header Section ---
+    let yPos = margins.top
+
+    // 1. Logo (Left)
     if (data.organization?.logo) {
       try {
-        const logoPath = path.join(process.cwd(), 'public', data.organization.logo)
+        // Try to resolve absolute path or from public dir
+        let logoPath = data.organization.logo
+        if (!path.isAbsolute(logoPath)) {
+          logoPath = path.join(process.cwd(), 'public', logoPath)
+        }
+
         if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, 50, 45, { width: 100 })
+          doc.image(logoPath, margins.left, yPos, { width: 80 })
         }
       } catch (error) {
-        console.error('Error loading logo:', error)
+        console.warn('Could not load logo:', error)
       }
     }
 
-    // Header
-    doc.fontSize(20).text(data.organization?.name || 'Company Name', 200, 50)
-    doc.fontSize(10)
-      .text(data.organization?.address || '', 200, 75)
-      .text(data.organization?.email || '', 200, 90)
-      .text(data.organization?.phone || '', 200, 105)
+    // 2. Company Info (Right)
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(this.colors.primary)
+      .text(data.organization?.name || 'Company Name', 0, yPos, { align: 'right', width: pageWidth - margins.right })
+
+    doc.moveDown(0.5)
+    doc.font('Helvetica').fontSize(9).fillColor(this.colors.lightText)
+    const companyInfoY = doc.y
+    const infoOptions = { align: 'right' as const, width: pageWidth - margins.right }
+
+    if (data.organization?.address) doc.text(data.organization.address, 0, doc.y, infoOptions)
+    if (data.organization?.city) doc.text(`${data.organization.city} ${data.organization.country || ''}`, 0, doc.y, infoOptions)
+    if (data.organization?.phone) doc.text(data.organization.phone, 0, doc.y, infoOptions)
+    if (data.organization?.email) doc.text(data.organization.email, 0, doc.y, infoOptions)
+
+    // --- Title & Meta Section ---
+    doc.moveDown(2)
+    yPos = Math.max(doc.y, 130) // Ensure we clear the header area
+    doc.y = yPos
+
+    // Draw separator line
+    doc.moveTo(margins.left, yPos).lineTo(pageWidth - margins.right, yPos).lineWidth(1).strokeColor(this.colors.border).stroke()
+    doc.moveDown(1.5)
+
+    const title = template === 'invoice' ? 'INVOICE' :
+      template === 'quotation' ? 'QUOTATION' :
+        template === 'receipt' ? 'RECEIPT' :
+          template === 'return' ? 'RETURN' : 'DOCUMENT'
+
+    doc.font('Helvetica-Bold').fontSize(24).fillColor(this.colors.primary).text(title, margins.left, doc.y)
+
+    // Document Details (Right aligned under title line effectively)
+    const metaY = doc.y - 25 // Align roughly with title
+    doc.font('Helvetica').fontSize(10).fillColor(this.colors.text)
+
+    const metaX = pageWidth - margins.right - 150
+    const metaWidth = 150
+
+    if (template === 'invoice' && data.invoiceNumber) {
+      this.drawMetaRow(doc, 'Invoice #:', data.invoiceNumber, metaX, metaY, metaWidth)
+      this.drawMetaRow(doc, 'Date:', this.formatDate(data.invoiceDate), metaX, doc.y, metaWidth)
+      if (data.dueDate) this.drawMetaRow(doc, 'Due Date:', this.formatDate(data.dueDate), metaX, doc.y, metaWidth)
+    } else if (template === 'quotation' && data.quotationNumber) {
+      this.drawMetaRow(doc, 'Quotation #:', data.quotationNumber, metaX, metaY, metaWidth)
+      this.drawMetaRow(doc, 'Date:', this.formatDate(data.quotationDate), metaX, doc.y, metaWidth)
+      if (data.validUntil) this.drawMetaRow(doc, 'Valid Until:', this.formatDate(data.validUntil), metaX, doc.y, metaWidth)
+    } else if (data.reference) {
+      this.drawMetaRow(doc, 'Reference:', data.reference, metaX, metaY, metaWidth)
+      this.drawMetaRow(doc, 'Date:', this.formatDate(data.date), metaX, doc.y, metaWidth)
+    }
 
     doc.moveDown(2)
 
-    // Document title
-    const title = template === 'invoice' ? 'INVOICE' :
-                  template === 'quotation' ? 'QUOTATION' :
-                  template === 'receipt' ? 'RECEIPT' : 'DOCUMENT'
+    // --- Bill To Section ---
+    if (data.customer || data.supplier) {
+      const party = data.customer || data.supplier
+      const label = data.supplier ? 'From:' : 'Bill To:'
 
-    doc.fontSize(16).text(title, { align: 'center' })
-    doc.moveDown()
-
-    // Document details
-    doc.fontSize(10)
-    const yPos = 180
-
-    if (template === 'invoice' && data.invoiceNumber) {
-      doc.text(`Invoice #: ${data.invoiceNumber}`, 50, yPos)
-      doc.text(`Date: ${this.formatDate(data.invoiceDate)}`, 50, yPos + 15)
-      if (data.dueDate) {
-        doc.text(`Due Date: ${this.formatDate(data.dueDate)}`, 50, yPos + 30)
-      }
-    } else if (template === 'quotation' && data.quotationNumber) {
-      doc.text(`Quotation #: ${data.quotationNumber}`, 50, yPos)
-      doc.text(`Date: ${this.formatDate(data.quotationDate)}`, 50, yPos + 15)
-      if (data.validUntil) {
-        doc.text(`Valid Until: ${this.formatDate(data.validUntil)}`, 50, yPos + 30)
-      }
-    } else if (template === 'receipt' && data.receiptNumber) {
-      doc.text(`Receipt #: ${data.receiptNumber}`, 50, yPos)
-      doc.text(`Date: ${this.formatDate(data.saleDate)}`, 50, yPos + 15)
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(this.colors.primary).text(label, margins.left, doc.y)
+      doc.moveDown(0.5)
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(this.colors.text).text(party.name || '', margins.left, doc.y)
+      doc.font('Helvetica').fontSize(10).fillColor(this.colors.lightText)
+      if (party.address) doc.text(party.address)
+      if (party.city) doc.text(`${party.city} ${party.country || ''}`)
+      if (party.phone) doc.text(party.phone)
+      if (party.email) doc.text(party.email)
     }
 
-    // Customer details
-    if (data.customer) {
-      doc.text('Bill To:', 350, yPos)
-      doc.text(data.customer.name || '', 350, yPos + 15)
-      if (data.customer.email) doc.text(data.customer.email, 350, yPos + 30)
-      if (data.customer.phone) doc.text(data.customer.phone, 350, yPos + 45)
-    }
+    // --- Items Table ---
+    doc.moveDown(2)
+    const tableTop = doc.y + 10
+    this.generateItemsTable(doc, data.items || [], tableTop, pageWidth, margins)
 
-    // Items table
-    doc.moveDown(5)
-    const tableTop = 280
-
-    this.generateItemsTable(doc, data.items || [], tableTop)
-
-    // Totals
+    // --- Totals ---
     const totalsY = doc.y + 20
-    const rightX = 400
+    const rightX = pageWidth - margins.right - 200
+    const valueX = pageWidth - margins.right
 
-    doc.fontSize(10)
-    doc.text('Subtotal:', rightX, totalsY, { width: 90, align: 'right' })
-    doc.text(`$${this.formatCurrency(data.subtotal || 0)}`, rightX + 100, totalsY, { align: 'right' })
+    doc.font('Helvetica').fontSize(10)
 
+    this.drawTotalRow(doc, 'Subtotal:', data.subtotal || 0, rightX, totalsY, valueX)
+
+    let currentY = doc.y
     if (data.taxAmount) {
-      doc.text('Tax:', rightX, totalsY + 15, { width: 90, align: 'right' })
-      doc.text(`$${this.formatCurrency(data.taxAmount)}`, rightX + 100, totalsY + 15, { align: 'right' })
+      this.drawTotalRow(doc, 'Tax:', data.taxAmount, rightX, currentY + 5, valueX)
+      currentY = doc.y
     }
 
     if (data.discountAmount) {
-      doc.text('Discount:', rightX, totalsY + 30, { width: 90, align: 'right' })
-      doc.text(`-$${this.formatCurrency(data.discountAmount)}`, rightX + 100, totalsY + 30, { align: 'right' })
+      this.drawTotalRow(doc, 'Discount:', -data.discountAmount, rightX, currentY + 5, valueX)
+      currentY = doc.y
     }
 
-    doc.fontSize(12).font('Helvetica-Bold')
-    const totalY = totalsY + (data.taxAmount ? 45 : 30)
-    doc.text('Total:', rightX, totalY, { width: 90, align: 'right' })
-    doc.text(`$${this.formatCurrency(data.totalAmount || 0)}`, rightX + 100, totalY, { align: 'right' })
+    if (data.shipping) {
+      this.drawTotalRow(doc, 'Shipping:', data.shipping, rightX, currentY + 5, valueX)
+      currentY = doc.y
+    }
 
-    // Notes
+    // Grand Total
+    const totalAmount = data.totalAmount || data.total || 0
+    doc.moveDown(0.5)
+    doc.rect(rightX, doc.y, 200, 25).fill(this.colors.primary) // Background bar
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(12)
+    doc.text('Total:', rightX + 10, doc.y - 18, { width: 80, align: 'left' })
+    doc.text(`$${this.formatCurrency(totalAmount)}`, rightX + 90, doc.y - 18, { width: 100, align: 'right' })
+
+    // --- Notes ---
     if (data.notes) {
-      doc.font('Helvetica').fontSize(10)
-      doc.moveDown(2)
-      doc.text('Notes:', 50)
-      doc.text(data.notes, 50, doc.y, { width: 500 })
+      doc.moveDown(3)
+      doc.fillColor(this.colors.text).font('Helvetica-Bold').fontSize(10).text('Notes:', margins.left)
+      doc.font('Helvetica').fontSize(9).fillColor(this.colors.lightText).text(data.notes, margins.left, doc.y + 5, { width: 400 })
     }
 
-    // Footer
-    doc.fontSize(8).fillColor('gray')
-    doc.text('Thank you for your business!', 50, doc.page.height - 50, {
-      align: 'center',
-      width: doc.page.width - 100
-    })
+    // --- Footer ---
+    const footerText = data.organization?.footer || 'Thank you for your business!'
+    doc.fillColor(this.colors.lightText).font('Helvetica').fontSize(8)
+      .text(footerText, margins.left, pageHeight - margins.bottom, { align: 'center', width: pageWidth - (margins.left * 2) })
   }
 
-  private generateItemsTable(doc: PDFKit.PDFDocument, items: any[], startY: number): void {
-    const headers = ['Item', 'Quantity', 'Price', 'Total']
-    const colWidths = [250, 80, 80, 80]
-    const startX = 50
+  private drawMetaRow(doc: PDFKit.PDFDocument, label: string, value: string, x: number, y: number, width: number) {
+    doc.font('Helvetica-Bold').text(label, x, y, { width: 60, align: 'left' })
+    doc.font('Helvetica').text(value, x + 65, y, { width: width - 65, align: 'right' })
+  }
 
-    // Draw header
-    doc.fontSize(10).font('Helvetica-Bold')
+  private drawTotalRow(doc: PDFKit.PDFDocument, label: string, amount: number, x: number, y: number, endX: number) {
+    doc.fillColor(this.colors.text).text(label, x, y, { width: 100, align: 'right' })
+    doc.text(`$${this.formatCurrency(amount)}`, x + 110, y, { width: 90, align: 'right' })
+  }
+
+  private generateItemsTable(doc: PDFKit.PDFDocument, items: any[], startY: number, pageWidth: number, margins: any): void {
+    const headers = ['Item', 'Quantity', 'Price', 'Total']
+    const availableWidth = pageWidth - margins.left - margins.right
+    // Columns: Item (40%), Qty (15%), Price (20%), Total (25%)
+    const colWidths = [
+      availableWidth * 0.4,
+      availableWidth * 0.15,
+      availableWidth * 0.20,
+      availableWidth * 0.25
+    ]
+    const startX = margins.left
+
+    // Draw header background
+    doc.rect(startX, startY, availableWidth, 20).fill(this.colors.tableHeader)
+
+    // Draw headers
+    doc.fillColor(this.colors.text).font('Helvetica-Bold').fontSize(9)
+    let currentX = startX
     headers.forEach((header, i) => {
-      const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-      doc.text(header, x, startY, { width: colWidths[i] })
+      const align = i === 0 ? 'left' : (i === 1 ? 'center' : 'right')
+      doc.text(header, currentX + 5, startY + 5, { width: colWidths[i] - 10, align: align as any })
+      currentX += colWidths[i]
     })
 
-    // Draw line under header
-    doc.moveTo(startX, startY + 15)
-       .lineTo(startX + colWidths.reduce((a, b) => a + b, 0), startY + 15)
-       .stroke()
-
     // Draw items
-    doc.font('Helvetica').fontSize(9)
     let y = startY + 25
+    doc.font('Helvetica').fontSize(9)
 
-    items.forEach((item) => {
+    items.forEach((item, index) => {
+      // Alternating row background
+      if (index % 2 === 1) {
+        doc.rect(startX, y - 5, availableWidth, 20).fill(this.colors.tableRowOdd)
+      }
+
+      doc.fillColor(this.colors.text)
+
       const itemName = item.product?.name || item.name || 'Item'
       const quantity = item.quantity || 0
       const price = item.price || item.unit_price || 0
-      const total = item.total || (quantity * price)
+      const total = item.total || (quantity * price) // Pre-calculated or calc
 
-      doc.text(itemName, startX, y, { width: colWidths[0] })
-      doc.text(quantity.toString(), startX + colWidths[0], y, { width: colWidths[1], align: 'center' })
-      doc.text(`$${this.formatCurrency(price)}`, startX + colWidths[0] + colWidths[1], y, { width: colWidths[2], align: 'right' })
-      doc.text(`$${this.formatCurrency(total)}`, startX + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3], align: 'right' })
+      currentX = startX
+
+      // Item Name
+      doc.text(itemName, currentX + 5, y, { width: colWidths[0] - 10, align: 'left' })
+      currentX += colWidths[0]
+
+      // Qty
+      doc.text(quantity.toString(), currentX + 5, y, { width: colWidths[1] - 10, align: 'center' })
+      currentX += colWidths[1]
+
+      // Price
+      doc.text(this.formatCurrency(price), currentX + 5, y, { width: colWidths[2] - 10, align: 'right' })
+      currentX += colWidths[2]
+
+      // Total
+      doc.text(this.formatCurrency(total), currentX + 5, y, { width: colWidths[3] - 10, align: 'right' })
 
       y += 20
-    })
 
-    // Draw line after items
-    doc.moveTo(startX, y)
-       .lineTo(startX + colWidths.reduce((a, b) => a + b, 0), y)
-       .stroke()
+      // Check for page break
+      if (y > doc.page.height - margins.bottom - 50) {
+        doc.addPage()
+        y = margins.top
+        // Re-draw header? Optional, simplified for now
+      }
+    })
 
     doc.y = y + 10
   }
 
   private formatCurrency(amount: number): string {
-    return amount.toFixed(2)
+    return (Number(amount) || 0).toFixed(2) // Ensure number
   }
 
   private formatDate(date: Date | string): string {
@@ -237,8 +311,7 @@ export class PDFGenerator {
   }
 
   public registerHelpers() {
-    // Legacy method for compatibility - no longer needed with PDFKit
-    console.log('Helpers registered (PDFKit does not use Handlebars helpers)')
+    // Legacy support
   }
 }
 
