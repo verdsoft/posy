@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
     const shift = await prisma.office_shifts.create({
       data: {
         name: body.name,
-        start_time: new Date(body.start_time),
-        end_time: new Date(body.end_time),
+        start_time: new Date(`1970-01-01T${body.start_time}:00`),
+        end_time: new Date(`1970-01-01T${body.end_time}:00`),
         status: body.status || 'active'
       }
     })
@@ -72,8 +72,8 @@ export async function PUT(req: NextRequest) {
       where: { id: parseInt(body.id) },
       data: {
         name: body.name,
-        start_time: new Date(body.start_time),
-        end_time: new Date(body.end_time),
+        start_time: new Date(`1970-01-01T${body.start_time}:00`),
+        end_time: new Date(`1970-01-01T${body.end_time}:00`),
         status: body.status || 'active',
         updated_at: new Date()
       }

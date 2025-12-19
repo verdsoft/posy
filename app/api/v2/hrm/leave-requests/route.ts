@@ -59,8 +59,11 @@ export async function POST(req: NextRequest) {
         leave_type_id: body.leave_type_id,
         start_date: new Date(body.start_date),
         end_date: new Date(body.end_date),
+        days: Math.ceil((new Date(body.end_date).getTime() - new Date(body.start_date).getTime()) / (1000 * 3600 * 24)) + 1,
         reason: body.reason || null,
-        status: body.status || 'pending'
+        status: body.status || 'pending',
+        approved_by: 1, // Defaulting to system/admin for now as we don't have auth context
+        approved_at: body.status === 'approved' ? new Date() : null
       }
     })
 
@@ -83,6 +86,7 @@ export async function PUT(req: NextRequest) {
         leave_type_id: body.leave_type_id,
         start_date: new Date(body.start_date),
         end_date: new Date(body.end_date),
+        days: Math.ceil((new Date(body.end_date).getTime() - new Date(body.start_date).getTime()) / (1000 * 3600 * 24)) + 1,
         reason: body.reason || null,
         status: body.status || 'pending',
         updated_at: new Date()

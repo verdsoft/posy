@@ -9,6 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Edit, Trash2 } from "lucide-react"
 import { useGetDepartmentsQuery, useGetCompaniesQuery, useCreateDepartmentMutation, useUpdateDepartmentMutation, useDeleteDepartmentMutation } from "@/lib/slices/hrmV2Api"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -27,14 +35,15 @@ export default function Departments() {
 
   const openCreate = () => { setForm({ id: "", name: "", company_id: "", description: "", status: "active" }); setIsCreateOpen(true) }
   const openEdit = (dept: any) => { setForm({ id: String(dept.id), name: dept.name || dept.department || "", company_id: String(dept.company_id || ""), description: dept.description || "", status: dept.status || 'active' }); setIsCreateOpen(true) }
-  const handleDelete = async (id: string) => { await deleteDepartment(id).unwrap() }
+  const handleDelete = async (id: string) => { await deleteDepartment(parseInt(id)).unwrap() }
   const handleSubmit = async () => {
-    if (form.id) await updateDepartment(form as any).unwrap(); else { const { id, ...payload } = form; await createDepartment(payload as any).unwrap() }
+    const payload = { ...form, company_id: parseInt(form.company_id) || 0 }
+    if (form.id) await updateDepartment(payload as any).unwrap(); else { const { id, ...rest } = payload; await createDepartment(rest as any).unwrap() }
     setIsCreateOpen(false)
   }
 
   const handleExportPDF = () => {
-    const rows = (data?.data || []).map((d:any)=> [
+    const rows = (data?.data || []).map((d: any) => [
       d.name || d.department || '-',
       companyNameById[String(d.company_id)] || d.company || d.company_name || '-',
       d.description || '-',
@@ -42,13 +51,13 @@ export default function Departments() {
     ])
     const doc = new jsPDF()
     doc.text('Departments', 14, 16)
-    autoTable(doc, { head: [["Department","Company","Description","Status"]], body: rows, startY: 20 })
+    autoTable(doc, { head: [["Department", "Company", "Description", "Status"]], body: rows, startY: 20 })
     doc.save('departments.pdf')
   }
 
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      (data?.data || []).map((d:any)=> ({
+      (data?.data || []).map((d: any) => ({
         Department: d.name || d.department || '-',
         Company: companyNameById[String(d.company_id)] || d.company || d.company_name || '-',
         Description: d.description || '-',
@@ -62,39 +71,39 @@ export default function Departments() {
 
   const companyNameById = useMemo(() => {
     const map: Record<string, string> = {}
-    ;(companiesData?.data || []).forEach((c: any) => {
-      map[String(c.id)] = c.name
-    })
+      ; (companiesData?.data || []).forEach((c: any) => {
+        map[String(c.id)] = c.name
+      })
     return map
   }, [companiesData])
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+      <div className="p-4 md:p-6">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span>HRM</span>
             <span>|</span>
             <span>Department</span>
           </div>
-          <h1 className="text-2xl font-bold">Department</h1>
+          {/* <h1 className="text-2xl font-bold">Department</h1> */}
         </div>
 
         <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="p-6 border-b">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search this table" className="pl-10" value={search} onChange={(e)=>{setSearch(e.target.value); setPage(1)}} />
+          <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input placeholder="Search departments..." className="w-full md:w-64 h-8 text-sm pl-8" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleExportPDF}>PDF</Button>
-                <Button variant="outline" size="sm" onClick={handleExportExcel}>EXCEL</Button>
-              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button variant="outline" size="sm" onClick={handleExportPDF} className="h-8 px-2 text-xs flex-1 md:flex-none">PDF</Button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} className="h-8 px-2 text-xs flex-1 md:flex-none">EXCEL</Button>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#1a237e] hover:bg-purple-700" onClick={openCreate}>Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs flex-1 md:flex-none" onClick={openCreate}>Create Department</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
@@ -103,26 +112,26 @@ export default function Departments() {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="name">Department Name *</Label>
-                      <Input id="name" placeholder= "Enter department name" value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} />
+                      <Input id="name" placeholder="Enter department name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="description">Description</Label>
-                      <Input id= "description" placeholder= "Description" value={form.description} onChange={(e)=>setForm({...form, description: e.target.value})} />
+                      <Input id="description" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="company">Company *</Label>
-                      <Select value={form.company_id} onValueChange={(v: string)=>setForm({...form, company_id: v})}>
+                      <Select value={form.company_id} onValueChange={(v: string) => setForm({ ...form, company_id: v })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose Company" />
                         </SelectTrigger>
                         <SelectContent>
-                          {(companiesData?.data || []).map((c:any)=> (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
+                          {(companiesData?.data || []).map((c: any) => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <Label htmlFor="status">Status</Label>
-                      <Select value={form.status} onValueChange={(v: string)=>setForm({...form, status: v})}>
+                      <Select value={form.status} onValueChange={(v: string) => setForm({ ...form, status: v })}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -146,61 +155,70 @@ export default function Departments() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left p-4 font-medium">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px] p-2">
                     <input type="checkbox" className="rounded" />
-                  </th>
-                  <th className="text-left p-4 font-medium">Department</th>
-                  <th className="text-left p-4 font-medium">Company</th>
-                  <th className="text-left p-4 font-medium">Description</th>
-                  <th className="text-left p-4 font-medium">Status</th>
-                  <th className="text-left p-4 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                  <TableHead className="p-2">Department</TableHead>
+                  <TableHead className="p-2">Company</TableHead>
+                  <TableHead className="p-2">Description</TableHead>
+                  <TableHead className="p-2">Status</TableHead>
+                  <TableHead className="p-2">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {isLoading ? (
-                  <tr><td colSpan={5} className="text-center py-8 text-gray-500">Loading...</td></tr>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">Loading...</TableCell></TableRow>
                 ) : (data?.data || []).length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-8 text-gray-500">No data for table</td></tr>
-                ) : ((data?.data || []).map((dept:any) => (
-                  <tr key={dept.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No data for table</TableCell></TableRow>
+                ) : ((data?.data || []).map((dept: any) => (
+                  <TableRow key={dept.id} className="border-b hover:bg-gray-50">
+                    <TableCell className="p-2">
                       <input type="checkbox" className="rounded" />
-                    </td>
-                    <td className="p-4">{dept.name || dept.department}</td>
-                    <td className="p-4">{companyNameById[String(dept.company_id)] || dept.company || dept.company_name || '-'}</td>
-                    <td className="p-4">{dept.description || '-'}</td>
-                    <td className="p-4">{dept.status || 'active'}</td>
-                    <td className="p-4">
+                    </TableCell>
+                    <TableCell className="p-2">{dept.name || dept.department}</TableCell>
+                    <TableCell className="p-2">{companyNameById[String(dept.company_id)] || dept.company || dept.company_name || '-'}</TableCell>
+                    <TableCell className="p-2">{dept.description || '-'}</TableCell>
+                    <TableCell className="p-2">{dept.status || 'active'}</TableCell>
+                    <TableCell className="p-2">
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={()=>openEdit(dept)}>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(dept)}>
                           <Edit className="h-4 w-4 text-green-600" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={()=>handleDelete(dept.id)} disabled={isDeleting}>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(dept.id)} disabled={isDeleting}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination */}
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: {limit}</div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Page {page} of {data?.pagination?.totalPages || 1}</span>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page===1} onClick={()=>setPage((p)=>Math.max(1,p-1))}>
-                  prev
-                </Button>
-                <Button variant="outline" size="sm" disabled={page>=(data?.pagination?.totalPages||1)} onClick={()=>setPage((p)=>p+1)}>
-                  next
-                </Button>
+          <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-muted-foreground">
+              Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, data?.pagination?.total || 0)} of {data?.pagination?.total || 0} entries
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
+                <SelectTrigger className="h-7 w-[60px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((size) => (<SelectItem key={size} value={String(size)} className="text-xs">{size}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                {Array.from({ length: Math.min(5, data?.pagination?.totalPages || 1) }, (_, i) => {
+                  const p = i + 1;
+                  return (
+                    <Button key={p} variant={page === p ? "default" : "ghost"} size="sm" className={`h-7 w-7 text-xs p-0 ${page === p ? "bg-[#1a237e] hover:bg-purple-700" : ""}`} onClick={() => setPage(p)}>{p}</Button>
+                  )
+                })}
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={page >= (data?.pagination?.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>Next</Button>
               </div>
             </div>
           </div>
