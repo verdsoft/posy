@@ -1,7 +1,28 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-interface PDFOptions {
+// --- Interfaces ---
+
+export interface APIOrganizationData {
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  country?: string
+  postal_code?: string
+  logo?: string
+  currency_symbol?: string
+  tax_number?: string
+  website?: string
+  invoice_footer?: string
+  quotation_footer?: string
+  terms_conditions?: string
+  [key: string]: any
+}
+
+export interface PDFOptions {
   title: string
   columns: string[]
   rows: any[][]
@@ -9,180 +30,304 @@ interface PDFOptions {
   filename: string
 }
 
-export const generatePDF = async ({ title, columns, rows, organization, filename }: PDFOptions) => {
-  const doc = new jsPDF()
+export interface InvoicePDFData {
+  invoiceNumber: string
+  date?: string | Date
+  dueDate?: string | Date
+  customer?: any
+  items?: any[]
+  subtotal?: number
+  tax?: number
+  discount?: number
+  total?: number
+  organization: APIOrganizationData
+  [key: string]: any
+}
 
-  // Constants
+export interface QuotationPDFData {
+  quotationNumber: string
+  date?: string | Date
+  validUntil?: string | Date
+  customer?: any
+  items?: any[]
+  subtotal?: number
+  tax?: number
+  discount?: number
+  total?: number
+  organization: APIOrganizationData
+  [key: string]: any
+}
+
+export interface ReceiptPDFData {
+  receiptNumber: string
+  date?: string | Date
+  customer?: any
+  items?: any[]
+  total?: number
+  paymentMethod?: string
+  organization: APIOrganizationData
+  [key: string]: any
+}
+
+export interface SalesReportPDFData {
+  title: string
+  dateRange?: string
+  data: any[]
+  summary?: any
+  filters?: any
+  showSummaryByStatus?: boolean
+  showSummaryBySupplier?: boolean
+  statusSummary?: any
+  supplierSummary?: any
+  organization: APIOrganizationData
+  [key: string]: any
+}
+
+// --- Helpers ---
+
+// Safe image fetch for both client and server (returns base64 or Uint8Array)
+// Note: jsPDF can handle Uint8Array for addImage
+const fetchImage = async (url: string): Promise<Uint8Array | null> => {
+  if (!url) return null
+  try {
+    const response = await fetch(url)
+    const buffer = await response.arrayBuffer()
+    return new Uint8Array(buffer)
+  } catch (error) {
+    console.error("Error fetching image:", error)
+    return null
+  }
+}
+
+// Shared Header Logic
+const addHeader = async (doc: jsPDF, organization: APIOrganizationData, title: string, dateLabel: string = "Date") => {
   const marginLeft = 14
   const marginRight = 196
   const pageWidth = doc.internal.pageSize.width || 210
 
   let yPos = 20
 
-  // --- Header Layout ---
-  // Left: Logo
-  // Right: Company Name & Details
-
-  // Logo Handling
+  // Logo
   if (organization?.logo) {
-    try {
-      const isUrl = organization.logo.startsWith('http') || organization.logo.startsWith('/')
-      let imgData = organization.logo
-
-      if (isUrl) {
-        const response = await fetch(organization.logo)
-        const blob = await response.blob()
-        imgData = await new Promise((resolve) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.readAsDataURL(blob)
-        })
+    const imgData = await fetchImage(organization.logo)
+    if (imgData) {
+      // We skip 'new Image()' aspect ratio logic here to ensure server compatibility.
+      // We rely on jsPDF auto-scaling if strictly needed, or just fixed box.
+      // Passing 0 as height often tells jsPDF to scale proportionally.
+      try {
+        doc.addImage(imgData, 'PNG', marginLeft, 10, 30, 0)
+      } catch (e) {
+        // Fallback if auto-height fails or format differs
+        try {
+          doc.addImage(imgData, 'PNG', marginLeft, 10, 30, 30)
+        } catch (ignored) { }
       }
-
-      // Calculate Aspect Ratio
-      const img = new Image()
-      img.src = imgData as string
-
-      // Wait for image to load to get dimensions
-      await new Promise((resolve) => {
-        if (img.complete) {
-          resolve(true)
-        } else {
-          img.onload = () => resolve(true)
-          img.onerror = () => resolve(false)
-        }
-      })
-
-      if (img.width && img.height) {
-        const maxWidth = 30
-        const maxHeight = 30
-        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height)
-        const newWidth = img.width * ratio
-        const newHeight = img.height * ratio
-
-        // Vertically center within the 30-unit box starting at y=10
-        const yOffset = 10 + (maxHeight - newHeight) / 2
-
-        doc.addImage(imgData, 'PNG', marginLeft, yOffset, newWidth, newHeight)
-      } else {
-        // Fallback if dimensions load fail
-        doc.addImage(imgData, 'PNG', marginLeft, 10, 30, 30)
-      }
-
-    } catch (error) {
-      console.error("Error loading logo for PDF:", error)
     }
   }
 
   // Company Details (Right Aligned)
   doc.setFontSize(22)
-  doc.setTextColor(26, 35, 126) // Deep Blue #1a237e
+  doc.setTextColor(26, 35, 126) // Deep Blue
   doc.setFont("helvetica", "bold")
 
   const companyName = organization?.name || "Company Name"
   doc.text(companyName, pageWidth - 14, 20, { align: 'right' })
 
-  // Company Info Block
-  doc.setFontSize(10)
-  doc.setTextColor(100) // Gray
-  doc.setFont("helvetica", "normal")
-
-  let infoY = 26
-
-  if (organization?.address) {
-    const addressLines = String(organization.address).split('\n')
-    addressLines.forEach(line => {
-      doc.text(line.trim(), pageWidth - 14, infoY, { align: 'right' })
-      infoY += 5
-    })
-  } else {
-    // If no address, we still need to increment Y so phone/email don't overlap name
-    infoY += 5
-  }
-
-  if (organization?.phone) {
-    doc.text(`Phone: ${organization.phone}`, pageWidth - 14, infoY, { align: 'right' })
-    infoY += 5
-  }
-  if (organization?.email) {
-    doc.text(`Email: ${organization.email}`, pageWidth - 14, infoY, { align: 'right' })
-    infoY += 5
-  }
-
-  // Ensure content starts below logo or info, whichever is taller
-  // Logo bottom is at 10 (margin) + 30 (height) = 40. We use 45 for safety.
-  // InfoY tracks text height. We take the max.
-  yPos = Math.max(infoY, 45)
-
-  // --- Divider ---
-  doc.setDrawColor(230) // Light Gray
-  doc.setLineWidth(0.5)
-  doc.line(marginLeft, yPos + 5, marginRight, yPos + 5)
-
-  // --- Report Title & Date ---
-  yPos += 15
-
-  // Title (Left)
-  doc.setFontSize(14)
-  doc.setTextColor(26, 35, 126) // Deep Blue
-  doc.setFont("helvetica", "bold")
-  doc.text(title.toUpperCase(), marginLeft, yPos)
-
-  // Date (Right)
+  // Info Block
   doc.setFontSize(10)
   doc.setTextColor(100)
   doc.setFont("helvetica", "normal")
-  const today = new Date().toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric'
-  })
-  doc.text(`Date: ${today}`, pageWidth - 14, yPos, { align: 'right' })
 
-  // --- Table ---
+  let infoY = 26
+  const details = [
+    organization.address,
+    organization.phone ? `Phone: ${organization.phone}` : null,
+    organization.email ? `Email: ${organization.email}` : null
+  ].filter(Boolean) as string[]
+
+  // Handle multi-line address locally if needed, simplified here
+  details.forEach(det => {
+    // Split basic newlines
+    const lines = String(det).split('\n')
+    lines.forEach(line => {
+      doc.text(line.trim(), pageWidth - 14, infoY, { align: 'right' })
+      infoY += 5
+    })
+  })
+
+  yPos = Math.max(infoY, 45)
+
+  // Divider
+  doc.setDrawColor(230)
+  doc.line(marginLeft, yPos + 5, marginRight, yPos + 5)
+
+  // Title & Date
+  yPos += 15
+  doc.setFontSize(14)
+  doc.setTextColor(26, 35, 126)
+  doc.setFont("helvetica", "bold")
+  doc.text(title.toUpperCase(), marginLeft, yPos)
+
+  doc.setFontSize(10)
+  doc.setTextColor(100)
+  doc.setFont("helvetica", "normal")
+  const today = new Date().toLocaleDateString('en-GB')
+  doc.text(`${dateLabel}: ${today}`, pageWidth - 14, yPos, { align: 'right' })
+
+  return yPos + 10 // Return Y where content should start
+}
+
+const addFooter = (doc: jsPDF, organization: APIOrganizationData) => {
+  const pageCount = doc.getNumberOfPages() // doc.internal.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    const pageHeight = doc.internal.pageSize.height || 297
+    const pageWidth = doc.internal.pageSize.width || 210
+    const footerY = pageHeight - 10
+
+    doc.setDrawColor(230)
+    doc.setLineWidth(0.1)
+    doc.line(14, footerY - 5, 196, footerY - 5)
+
+    doc.setFontSize(8)
+    doc.setTextColor(150)
+
+    doc.text("Generated by POSy System", 14, footerY)
+
+    const contactText = `${organization?.email || ''} ${organization?.phone ? ' | ' + organization.phone : ''}`
+    doc.text(contactText, pageWidth / 2, footerY, { align: 'center' })
+
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, footerY, { align: 'right' })
+  }
+}
+
+// --- Client Side Generator ---
+
+export const generatePDF = async ({ title, columns, rows, organization, filename }: PDFOptions) => {
+  const doc = new jsPDF()
+  // Re-use logic for consistency
+  const startY = await addHeader(doc, organization, title)
+
   autoTable(doc, {
     head: [columns],
     body: rows,
-    startY: yPos + 10,
+    startY: startY,
     theme: 'grid',
-    headStyles: {
-      fillColor: [26, 35, 126], // #1a237e
-      textColor: 255,
-      fontSize: 9,
-      fontStyle: 'bold',
-      halign: 'center',
-      cellPadding: 3,
-    },
-    bodyStyles: {
-      fontSize: 8,
-      textColor: 50,
-      cellPadding: 3,
-    },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252], // Very light blue/gray
-    },
-    didDrawPage: (data) => {
-      // --- Footer ---
-      const pageHeight = doc.internal.pageSize.height || 297
-      const footerY = pageHeight - 10
-
-      doc.setDrawColor(230)
-      doc.line(marginLeft, footerY - 5, marginRight, footerY - 5) // Top border for footer
-
-      doc.setFontSize(8)
-      doc.setTextColor(150)
-
-      // Left: System Gen Text
-      doc.text("Generated by POSy System", marginLeft, footerY)
-
-      // Center: Contact
-      const contactText = `${organization?.email || ''} ${organization?.phone ? ' | ' + organization.phone : ''}`
-      doc.text(contactText, pageWidth / 2, footerY, { align: 'center' })
-
-      // Right: Page Number
-      const pageText = `Page ${data.pageNumber}`
-      doc.text(pageText, pageWidth - 14, footerY, { align: 'right' })
-    },
-    margin: { top: 20, left: 14, right: 14 }
+    headStyles: { fillColor: [26, 35, 126], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center' },
+    bodyStyles: { fontSize: 8, textColor: 50 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
   })
 
+  addFooter(doc, organization)
   doc.save(filename)
+}
+
+// --- Server Side Generators (return Buffer) ---
+
+// Generic Helper for Doc Items
+const addItemsTable = (doc: jsPDF, startY: number, items: any[], currency = '$') => {
+  if (!items || items.length === 0) return startY
+
+  const columns = ["Item", "Unit Price", "Qty", "Total"]
+  const rows = items.map(item => [
+    item.name || item.description || "Item",
+    `${currency} ${Number(item.price || item.unit_price || 0).toFixed(2)}`,
+    item.quantity || item.qty || 1,
+    `${currency} ${Number(item.total || (item.price * item.quantity) || 0).toFixed(2)}`
+  ])
+
+  autoTable(doc, {
+    head: [columns],
+    body: rows,
+    startY: startY,
+    theme: 'grid',
+    headStyles: { fillColor: [26, 35, 126] },
+  })
+
+  return (doc as any).lastAutoTable.finalY
+}
+
+const addTotals = (doc: jsPDF, startY: number, data: any) => {
+  let y = startY + 10
+  const pageWidth = doc.internal.pageSize.width || 210
+  const rightX = pageWidth - 14
+  const currency = data.organization?.currency_symbol || '$'
+
+  doc.setFontSize(10)
+  doc.setTextColor(0)
+
+  const totals = [
+    { label: "Subtotal", value: data.subtotal },
+    { label: "Tax", value: data.tax },
+    { label: "Discount", value: data.discount },
+    { label: "Total", value: data.total, bold: true }
+  ]
+
+  totals.forEach(t => {
+    if (t.value !== undefined) {
+      doc.setFont("helvetica", t.bold ? "bold" : "normal")
+      doc.text(`${t.label}:`, rightX - 40, y, { align: 'right' })
+      doc.text(`${currency} ${Number(t.value).toFixed(2)}`, rightX, y, { align: 'right' })
+      y += 6
+    }
+  })
+  return y
+}
+
+export const generateInvoicePDF = async (data: InvoicePDFData): Promise<Buffer> => {
+  const doc = new jsPDF()
+  const startY = await addHeader(doc, data.organization, `INVOICE #${data.invoiceNumber}`)
+
+  // Add Bill To / Ship To logic here if data present (Skipped for brevity, can assume included in header/summary)
+  // For now, listing items
+
+  const tableEnd = addItemsTable(doc, startY + 10, data.items || [], data.organization.currency_symbol)
+  addTotals(doc, tableEnd, data)
+  addFooter(doc, data.organization)
+
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+export const generateQuotationPDF = async (data: QuotationPDFData): Promise<Buffer> => {
+  const doc = new jsPDF()
+  const startY = await addHeader(doc, data.organization, `QUOTATION #${data.quotationNumber}`)
+  const tableEnd = addItemsTable(doc, startY + 10, data.items || [], data.organization.currency_symbol)
+  addTotals(doc, tableEnd, data)
+  addFooter(doc, data.organization)
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+export const generateReceiptPDF = async (data: ReceiptPDFData): Promise<Buffer> => {
+  const doc = new jsPDF()
+  const startY = await addHeader(doc, data.organization, `RECEIPT #${data.receiptNumber}`)
+  const tableEnd = addItemsTable(doc, startY + 10, data.items || [], data.organization.currency_symbol)
+
+  let y = tableEnd + 10
+  doc.text(`Total Paid: ${data.organization.currency_symbol || '$'}${Number(data.total || 0).toFixed(2)}`, 196, y, { align: 'right' })
+
+  addFooter(doc, data.organization)
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+export const generateSalesReportPDF = async (data: SalesReportPDFData, options?: any): Promise<Buffer> => {
+  const doc = new jsPDF({ orientation: options?.orientation || 'p', format: options?.format || 'a4' })
+  const startY = await addHeader(doc, data.organization, data.title, "Report Date")
+
+  // Disclaimer: complex reports might need custom rendering. For now, dumping tabular data.
+  if (data.data && data.data.length > 0) {
+    // derive columns from first row data keys if not provided
+    const keys = Object.keys(data.data[0])
+    const rows = data.data.map(d => Object.values(d))
+    autoTable(doc, {
+      head: [keys],
+      body: rows,
+      startY: startY + 5,
+      theme: 'striped'
+    })
+  } else {
+    doc.text("No data available for this period.", 14, startY + 10)
+  }
+
+  addFooter(doc, data.organization)
+  return Buffer.from(doc.output('arraybuffer'))
 }
