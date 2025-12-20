@@ -8,9 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, FileDown } from "lucide-react"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
 import {
   Table,
   TableBody,
@@ -19,8 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import autoTable from 'jspdf-autotable'
-import { useGetCompaniesQuery, useGetDepartmentsQuery, useGetShiftsQuery } from "@/lib/slices/hrmV2Api"
+import { useGetCompaniesQuery, useGetDepartmentsQuery, useGetShiftsQuery, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
 export default function Employees() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -31,6 +29,7 @@ export default function Employees() {
   const { data: companiesData } = useGetCompaniesQuery({ page: 1, limit: 100 })
   const { data: departmentsData } = useGetDepartmentsQuery({ page: 1, limit: 100 })
   const { data: shiftsData } = useGetShiftsQuery({ page: 1, limit: 100 })
+  const { data: orgData } = useGetOrganizationQuery()
 
   const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation()
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
@@ -103,10 +102,13 @@ export default function Employees() {
       e.designation || '-',
       e.shift || e.office_shift || '-',
     ])
-    const doc = new jsPDF()
-    doc.text('Employees', 14, 16)
-    autoTable(doc, { head: [["First Name", "Last Name", "Phone", "Company", "Department", "Designation", "Shift"]], body: rows, startY: 20 })
-    doc.save('employees.pdf')
+    generatePDF({
+      title: 'Employees List',
+      columns: ["First Name", "Last Name", "Phone", "Company", "Department", "Designation", "Shift"],
+      rows: rows,
+      organization: orgData,
+      filename: 'employees.pdf'
+    })
   }
 
   const handleExportExcel = () => {

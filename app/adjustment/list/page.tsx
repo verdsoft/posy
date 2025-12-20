@@ -6,9 +6,9 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { Search, ChevronLeft, ChevronRight, FileDown, Plus } from "lucide-react"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { toast } from "sonner"
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
 import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -49,11 +49,7 @@ import type { AdjustmentDetails } from "@/lib/types/adjustment"
 import { useGetAdjustmentsQuery, useDeleteAdjustmentMutation } from "@/lib/slices/adjustmentsApi"
 import { TableActions } from "@/components/ui/table-actions"
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+
 
 export default function AdjustmentList() {
   const [page, setPage] = useState(1)
@@ -72,12 +68,10 @@ export default function AdjustmentList() {
     limit,
     search: searchQuery
   })
+  const { data: orgData } = useGetOrganizationQuery()
   const [deleteAdjustment, { isLoading: isDeleting }] = useDeleteAdjustmentMutation()
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Adjustment List', 14, 16)
-
     const tableData = data?.data.map(adjustment => [
       format(new Date(adjustment.date), 'MMM dd, yyyy'),
       adjustment.reference,
@@ -86,15 +80,13 @@ export default function AdjustmentList() {
       adjustment.item_count?.toString() || '0'
     ]) || []
 
-    autoTable(doc, {
-      head: [['Date', 'Reference', 'Warehouse', 'Type', 'Total Products']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
+    generatePDF({
+      title: 'Adjustments List',
+      columns: ['Date', 'Reference', 'Warehouse', 'Type', 'Total Products'],
+      rows: tableData,
+      organization: orgData,
+      filename: 'adjustments.pdf'
     })
-
-    doc.save('adjustments.pdf')
   }
 
   const exportToExcel = () => {

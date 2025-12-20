@@ -26,9 +26,15 @@ import type {
  */
 export const settingsV2Api = createApi({
   reducerPath: 'settingsV2Api',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/settings' }),
-  tagTypes: ['Brand', 'Category', 'Currency', 'Unit', 'Warehouse'],
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2' }),
+  tagTypes: ['Brand', 'Category', 'Currency', 'Unit', 'Warehouse', 'Organization'],
   endpoints: (builder) => ({
+    // Organization endpoint
+    getOrganization: builder.query<any, void>({
+      query: () => '/organization',
+      providesTags: ['Organization'],
+    }),
+
     // Brands endpoints
     getBrands: builder.query<PaginatedResponse<Brand>, SearchParams>({
       query: (params) => {
@@ -36,23 +42,23 @@ export const settingsV2Api = createApi({
         if (params.page) searchParams.append('page', params.page.toString())
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.search) searchParams.append('search', params.search)
-        return `/brands?${searchParams.toString()}`
+        return `/settings/brands?${searchParams.toString()}`
       },
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Brand' as const, id })),
-              { type: 'Brand', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Brand' as const, id })),
+            { type: 'Brand', id: 'LIST' },
+          ]
           : [{ type: 'Brand', id: 'LIST' }],
     }),
     getBrandById: builder.query<Brand, number | string>({
-      query: (id) => `/brands?id=${id}`,
+      query: (id) => `/settings/brands?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Brand', id }],
     }),
     createBrand: builder.mutation<Brand, CreateBrandInput>({
       query: (brandData) => ({
-        url: '/brands',
+        url: '/settings/brands',
         method: 'POST',
         body: brandData,
       }),
@@ -60,7 +66,7 @@ export const settingsV2Api = createApi({
     }),
     updateBrand: builder.mutation<Brand, { id: number | string; data: UpdateBrandInput }>({
       query: ({ id, data }) => ({
-        url: `/brands?id=${id}`,
+        url: `/settings/brands?id=${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -68,7 +74,7 @@ export const settingsV2Api = createApi({
     }),
     updateBrandPartial: builder.mutation<Brand, { id: number | string; data: Partial<UpdateBrandInput> }>({
       query: ({ id, data }) => ({
-        url: `/brands?id=${id}`,
+        url: `/settings/brands?id=${id}`,
         method: 'PATCH',
         body: data,
       }),
@@ -76,7 +82,7 @@ export const settingsV2Api = createApi({
     }),
     deleteBrand: builder.mutation<ApiResponse, number | string>({
       query: (id) => ({
-        url: `/brands?id=${id}`,
+        url: `/settings/brands?id=${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Brand', id }, { type: 'Brand', id: 'LIST' }],
@@ -89,23 +95,23 @@ export const settingsV2Api = createApi({
         if (params.page) searchParams.append('page', params.page.toString())
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.search) searchParams.append('search', params.search)
-        return `/categories?${searchParams.toString()}`
+        return `/settings/categories?${searchParams.toString()}`
       },
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Category' as const, id })),
-              { type: 'Category', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Category' as const, id })),
+            { type: 'Category', id: 'LIST' },
+          ]
           : [{ type: 'Category', id: 'LIST' }],
     }),
     getCategoryById: builder.query<Category, number | string>({
-      query: (id) => `/categories?id=${id}`,
+      query: (id) => `/settings/categories?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Category', id }],
     }),
     createCategory: builder.mutation<Category, CreateCategoryInput>({
       query: (categoryData) => ({
-        url: '/categories',
+        url: '/settings/categories',
         method: 'POST',
         body: categoryData,
       }),
@@ -113,7 +119,7 @@ export const settingsV2Api = createApi({
     }),
     updateCategory: builder.mutation<Category, { id: number | string; data: UpdateCategoryInput }>({
       query: ({ id, data }) => ({
-        url: `/categories?id=${id}`,
+        url: `/settings/categories?id=${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -121,7 +127,7 @@ export const settingsV2Api = createApi({
     }),
     updateCategoryPartial: builder.mutation<Category, { id: number | string; data: Partial<UpdateCategoryInput> }>({
       query: ({ id, data }) => ({
-        url: `/categories?id=${id}`,
+        url: `/settings/categories?id=${id}`,
         method: 'PATCH',
         body: data,
       }),
@@ -129,7 +135,7 @@ export const settingsV2Api = createApi({
     }),
     deleteCategory: builder.mutation<ApiResponse, number | string>({
       query: (id) => ({
-        url: `/categories?id=${id}`,
+        url: `/settings/categories?id=${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Category', id }, { type: 'Category', id: 'LIST' }],
@@ -142,23 +148,23 @@ export const settingsV2Api = createApi({
         if (params.page) searchParams.append('page', params.page.toString())
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.search) searchParams.append('search', params.search)
-        return `/currencies?${searchParams.toString()}`
+        return `/settings/currencies?${searchParams.toString()}`
       },
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Currency' as const, id })),
-              { type: 'Currency', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Currency' as const, id })),
+            { type: 'Currency', id: 'LIST' },
+          ]
           : [{ type: 'Currency', id: 'LIST' }],
     }),
     getCurrencyById: builder.query<Currency, number | string>({
-      query: (id) => `/currencies?id=${id}`,
+      query: (id) => `/settings/currencies?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Currency', id }],
     }),
     createCurrency: builder.mutation<Currency, CreateCurrencyInput>({
       query: (currencyData) => ({
-        url: '/currencies',
+        url: '/settings/currencies',
         method: 'POST',
         body: currencyData,
       }),
@@ -166,7 +172,7 @@ export const settingsV2Api = createApi({
     }),
     updateCurrency: builder.mutation<Currency, { id: number | string; data: UpdateCurrencyInput }>({
       query: ({ id, data }) => ({
-        url: `/currencies?id=${id}`,
+        url: `/settings/currencies?id=${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -174,7 +180,7 @@ export const settingsV2Api = createApi({
     }),
     updateCurrencyPartial: builder.mutation<Currency, { id: number | string; data: Partial<UpdateCurrencyInput> }>({
       query: ({ id, data }) => ({
-        url: `/currencies?id=${id}`,
+        url: `/settings/currencies?id=${id}`,
         method: 'PATCH',
         body: data,
       }),
@@ -182,7 +188,7 @@ export const settingsV2Api = createApi({
     }),
     deleteCurrency: builder.mutation<ApiResponse, number | string>({
       query: (id) => ({
-        url: `/currencies?id=${id}`,
+        url: `/settings/currencies?id=${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Currency', id }, { type: 'Currency', id: 'LIST' }],
@@ -195,23 +201,23 @@ export const settingsV2Api = createApi({
         if (params.page) searchParams.append('page', params.page.toString())
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.search) searchParams.append('search', params.search)
-        return `/units?${searchParams.toString()}`
+        return `/settings/units?${searchParams.toString()}`
       },
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Unit' as const, id })),
-              { type: 'Unit', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Unit' as const, id })),
+            { type: 'Unit', id: 'LIST' },
+          ]
           : [{ type: 'Unit', id: 'LIST' }],
     }),
     getUnitById: builder.query<Unit, number | string>({
-      query: (id) => `/units?id=${id}`,
+      query: (id) => `/settings/units?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Unit', id }],
     }),
     createUnit: builder.mutation<Unit, CreateUnitInput>({
       query: (unitData) => ({
-        url: '/units',
+        url: '/settings/units',
         method: 'POST',
         body: unitData,
       }),
@@ -219,7 +225,7 @@ export const settingsV2Api = createApi({
     }),
     updateUnit: builder.mutation<Unit, { id: number | string; data: UpdateUnitInput }>({
       query: ({ id, data }) => ({
-        url: `/units?id=${id}`,
+        url: `/settings/units?id=${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -227,7 +233,7 @@ export const settingsV2Api = createApi({
     }),
     updateUnitPartial: builder.mutation<Unit, { id: number | string; data: Partial<UpdateUnitInput> }>({
       query: ({ id, data }) => ({
-        url: `/units?id=${id}`,
+        url: `/settings/units?id=${id}`,
         method: 'PATCH',
         body: data,
       }),
@@ -235,7 +241,7 @@ export const settingsV2Api = createApi({
     }),
     deleteUnit: builder.mutation<ApiResponse, number | string>({
       query: (id) => ({
-        url: `/units?id=${id}`,
+        url: `/settings/units?id=${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Unit', id }, { type: 'Unit', id: 'LIST' }],
@@ -248,23 +254,23 @@ export const settingsV2Api = createApi({
         if (params.page) searchParams.append('page', params.page.toString())
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.search) searchParams.append('search', params.search)
-        return `/warehouses?${searchParams.toString()}`
+        return `/settings/warehouses?${searchParams.toString()}`
       },
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Warehouse' as const, id })),
-              { type: 'Warehouse', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Warehouse' as const, id })),
+            { type: 'Warehouse', id: 'LIST' },
+          ]
           : [{ type: 'Warehouse', id: 'LIST' }],
     }),
     getWarehouseById: builder.query<Warehouse, number | string>({
-      query: (id) => `/warehouses?id=${id}`,
+      query: (id) => `/settings/warehouses?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Warehouse', id }],
     }),
     createWarehouse: builder.mutation<Warehouse, CreateWarehouseInput>({
       query: (warehouseData) => ({
-        url: '/warehouses',
+        url: '/settings/warehouses',
         method: 'POST',
         body: warehouseData,
       }),
@@ -272,7 +278,7 @@ export const settingsV2Api = createApi({
     }),
     updateWarehouse: builder.mutation<Warehouse, { id: number | string; data: UpdateWarehouseInput }>({
       query: ({ id, data }) => ({
-        url: `/warehouses?id=${id}`,
+        url: `/settings/warehouses?id=${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -280,7 +286,7 @@ export const settingsV2Api = createApi({
     }),
     updateWarehousePartial: builder.mutation<Warehouse, { id: number | string; data: Partial<UpdateWarehouseInput> }>({
       query: ({ id, data }) => ({
-        url: `/warehouses?id=${id}`,
+        url: `/settings/warehouses?id=${id}`,
         method: 'PATCH',
         body: data,
       }),
@@ -288,7 +294,7 @@ export const settingsV2Api = createApi({
     }),
     deleteWarehouse: builder.mutation<ApiResponse, number | string>({
       query: (id) => ({
-        url: `/warehouses?id=${id}`,
+        url: `/settings/warehouses?id=${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Warehouse', id }, { type: 'Warehouse', id: 'LIST' }],
@@ -297,6 +303,9 @@ export const settingsV2Api = createApi({
 });
 
 export const {
+  // Organization hooks
+  useGetOrganizationQuery,
+
   // Brands hooks
   useGetBrandsQuery,
   useGetBrandByIdQuery,

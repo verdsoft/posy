@@ -11,10 +11,10 @@ import { useToast } from "@/components/ui/use-toast"
 import { Product } from "@/lib/types/index"
 import AuthGuard from "@/components/AuthGuard"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,11 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TableActions } from "@/components/ui/table-actions"
 import type React from "react"
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+
 
 type ProductWithMeta = Product & {
   category_name?: string;
@@ -54,6 +50,7 @@ export default function ProductList() {
   const { toast } = useToast()
 
   const { data, isLoading, isError } = useGetProductsQuery({ page, limit, search });
+  const { data: orgData } = useGetOrganizationQuery()
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
 
   const products = data?.data || [];
@@ -86,9 +83,6 @@ export default function ProductList() {
   }
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Product List', 14, 16)
-
     const tableData = products.map(product => [
       product.name || '',
       product.code || '',
@@ -99,15 +93,13 @@ export default function ProductList() {
       Number(product.stock ?? 0)
     ])
 
-    autoTable(doc, {
-      head: [['Name', 'Code', 'Category', 'Brand', 'Price', 'Unit', 'Quantity']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
+    generatePDF({
+      title: 'Product List',
+      columns: ['Name', 'Code', 'Category', 'Brand', 'Price', 'Unit', 'Quantity'],
+      rows: tableData,
+      organization: orgData,
+      filename: 'products.pdf'
     })
-
-    doc.save('products.pdf')
   }
 
   const exportToExcel = () => {

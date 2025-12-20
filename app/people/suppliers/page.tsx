@@ -8,8 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FileDown, Plus, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation, useCreateSupplierMutation } from "@/lib/slices/suppliersApi"
 import { Supplier } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,11 +17,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { TableActions } from "@/components/ui/table-actions"
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
 export default function SupplierList() {
   const [page, setPage] = useState(1)
@@ -44,6 +39,7 @@ export default function SupplierList() {
   })
 
   const { data, isLoading, isError } = useGetSuppliersQuery({ page, limit, search: searchTerm })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createSupplier, { isLoading: isCreating }] = useCreateSupplierMutation()
   const [updateSupplier, { isLoading: isUpdating }] = useUpdateSupplierMutation()
   const [deleteSupplier, { isLoading: isDeleting }] = useDeleteSupplierMutation()
@@ -127,10 +123,6 @@ export default function SupplierList() {
   }
 
   const handleExportPDF = () => {
-    const doc = new jsPDF()
-
-    doc.text('Suppliers List', 14, 16)
-
     const tableData = suppliers.map(supplier => [
       supplier.id,
       supplier.name,
@@ -140,15 +132,13 @@ export default function SupplierList() {
       supplier.city || "-"
     ])
 
-    autoTable(doc, {
-      head: [['ID', 'Name', 'Phone', 'Email', 'Country', 'City']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
+    generatePDF({
+      title: 'Suppliers List',
+      columns: ['ID', 'Name', 'Phone', 'Email', 'Country', 'City'],
+      rows: tableData,
+      organization: orgData,
+      filename: 'suppliers.pdf'
     })
-
-    doc.save('suppliers.pdf')
   }
 
   const handleExportExcel = () => {

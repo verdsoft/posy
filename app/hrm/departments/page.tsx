@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Edit, Trash2 } from "lucide-react"
-import { useGetDepartmentsQuery, useGetCompaniesQuery, useCreateDepartmentMutation, useUpdateDepartmentMutation, useDeleteDepartmentMutation } from "@/lib/slices/hrmV2Api"
+import { useGetDepartmentsQuery, useGetCompaniesQuery, useCreateDepartmentMutation, useUpdateDepartmentMutation, useDeleteDepartmentMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import {
   Table,
   TableBody,
@@ -18,8 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export default function Departments() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -28,6 +27,7 @@ export default function Departments() {
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetDepartmentsQuery({ page, limit, search })
   const { data: companiesData } = useGetCompaniesQuery({ page: 1, limit: 100 })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createDepartment, { isLoading: isCreating }] = useCreateDepartmentMutation()
   const [updateDepartment, { isLoading: isUpdating }] = useUpdateDepartmentMutation()
   const [deleteDepartment, { isLoading: isDeleting }] = useDeleteDepartmentMutation()
@@ -49,10 +49,13 @@ export default function Departments() {
       d.description || '-',
       d.status || 'active'
     ])
-    const doc = new jsPDF()
-    doc.text('Departments', 14, 16)
-    autoTable(doc, { head: [["Department", "Company", "Description", "Status"]], body: rows, startY: 20 })
-    doc.save('departments.pdf')
+    generatePDF({
+      title: 'Departments List',
+      columns: ["Department", "Company", "Description", "Status"],
+      rows: rows,
+      organization: orgData,
+      filename: 'departments.pdf'
+    })
   }
 
   const handleExportExcel = () => {

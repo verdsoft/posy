@@ -8,8 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FileDown, Plus, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { useGetCustomersQuery, useCreateCustomerMutation, useUpdateCustomerMutation, useDeleteCustomerMutation } from "@/lib/slices/customersApi"
 import { Customer } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,11 +15,8 @@ import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@
 import { TableActions } from "@/components/ui/table-actions"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
 export default function CustomerList() {
   const [page, setPage] = useState(1)
@@ -42,6 +37,7 @@ export default function CustomerList() {
   })
 
   const { data, isLoading, isError } = useGetCustomersQuery({ page, limit, search: searchTerm })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createCustomer, { isLoading: isCreating }] = useCreateCustomerMutation()
   const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation()
   const [deleteCustomer, { isLoading: isDeleting }] = useDeleteCustomerMutation()
@@ -125,10 +121,6 @@ export default function CustomerList() {
   }
 
   const handleExportPDF = () => {
-    const doc = new jsPDF()
-
-    doc.text('Customers List', 14, 16)
-
     const tableData = customers.map(customer => [
       customer.id,
       customer.name,
@@ -138,15 +130,13 @@ export default function CustomerList() {
       customer.city || "-"
     ])
 
-    autoTable(doc, {
-      head: [['ID', 'Name', 'Phone', 'Email', 'Country', 'City']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
+    generatePDF({
+      title: 'Customers List',
+      columns: ['ID', 'Name', 'Phone', 'Email', 'Country', 'City'],
+      rows: tableData,
+      organization: orgData,
+      filename: 'customers.pdf'
     })
-
-    doc.save('customers.pdf')
   }
 
   const handleExportExcel = () => {

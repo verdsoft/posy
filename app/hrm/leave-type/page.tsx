@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useGetLeaveTypesQuery, useCreateLeaveTypeMutation, useUpdateLeaveTypeMutation, useDeleteLeaveTypeMutation } from "@/lib/slices/hrmV2Api"
+import { useGetLeaveTypesQuery, useCreateLeaveTypeMutation, useUpdateLeaveTypeMutation, useDeleteLeaveTypeMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,8 +20,6 @@ import {
 } from "@/components/ui/table"
 
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export default function LeaveType() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -28,6 +27,7 @@ export default function LeaveType() {
   const [limit, setLimit] = useState(10)
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetLeaveTypesQuery({ page, limit, search })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createLeaveType, { isLoading: isCreating }] = useCreateLeaveTypeMutation()
   const [updateLeaveType, { isLoading: isUpdating }] = useUpdateLeaveTypeMutation()
   const [deleteLeaveType, { isLoading: isDeleting }] = useDeleteLeaveTypeMutation()
@@ -45,10 +45,13 @@ export default function LeaveType() {
 
   const handleExportPDF = () => {
     const rows = (data?.data || []).map((lt: any) => [lt.name, lt.days_allowed, lt.status])
-    const doc = new jsPDF()
-    doc.text('Leave Types', 14, 16)
-    autoTable(doc, { head: [["Leave Type", "Days Allowed", "Status"]], body: rows, startY: 20 })
-    doc.save('leave-types.pdf')
+    generatePDF({
+      title: 'Leave Types List',
+      columns: ["Leave Type", "Days Allowed", "Status"],
+      rows: rows,
+      organization: orgData,
+      filename: 'leave-types.pdf'
+    })
   }
 
   const handleExportExcel = () => {

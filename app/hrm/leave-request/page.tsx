@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Search } from "lucide-react"
-import { useGetLeaveRequestsQuery, useGetLeaveTypesQuery, useGetEmployeesQuery, useCreateLeaveRequestMutation, useUpdateLeaveRequestMutation, useDeleteLeaveRequestMutation } from "@/lib/slices/hrmV2Api"
+import { useGetLeaveRequestsQuery, useGetLeaveTypesQuery, useGetEmployeesQuery, useCreateLeaveRequestMutation, useUpdateLeaveRequestMutation, useDeleteLeaveRequestMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import {
   Table,
   TableBody,
@@ -19,8 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export default function LeaveRequest() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -28,6 +27,7 @@ export default function LeaveRequest() {
   const [limit, setLimit] = useState(10)
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetLeaveRequestsQuery({ page, limit, search })
+  const { data: orgData } = useGetOrganizationQuery()
 
   const { data: leaveTypesData } = useGetLeaveTypesQuery({ page: 1, limit: 100 })
   const { data: employeesData } = useGetEmployeesQuery({ page: 1, limit: 100, search: "" })
@@ -69,10 +69,13 @@ export default function LeaveRequest() {
       new Date(r.end_date).toLocaleDateString(),
       r.status
     ])
-    const doc = new jsPDF()
-    doc.text('Leave Requests', 14, 16)
-    autoTable(doc, { head: [["Employee", "Leave Type", "Start", "End", "Status"]], body: rows, startY: 20 })
-    doc.save('leave-requests.pdf')
+    generatePDF({
+      title: 'Leave Requests List',
+      columns: ["Employee", "Leave Type", "Start", "End", "Status"],
+      rows: rows,
+      organization: orgData,
+      filename: 'leave-requests.pdf'
+    })
   }
 
   const handleExportExcel = () => {

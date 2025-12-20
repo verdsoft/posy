@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, FileText, Download, Plus, ChevronLeft, ChevronRight, FileDown } from "lucide-react"
 import Link from "next/link"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import DashboardLayout from "@/components/dashboard-layout"
 import { useGetTransfersQuery, useDeleteTransferMutation } from "@/lib/slices/transfersApi"
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import { TableActions } from "@/components/ui/table-actions"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -38,6 +38,7 @@ export default function TransferListPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<any | null>(null)
 
   const { data, isLoading, isError } = useGetTransfersQuery({ page, limit, search: searchTerm })
+  const { data: orgData } = useGetOrganizationQuery()
   const transfers = data?.data || []
   const pagination = data?.pagination
   const [deleteTransfer, { isLoading: isDeleting }] = useDeleteTransferMutation()
@@ -80,8 +81,6 @@ export default function TransferListPage() {
   }
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Transfer List', 14, 16)
     const rows = transfers.map((t: any) => [
       new Date(t.date).toLocaleDateString(),
       t.reference,
@@ -89,13 +88,14 @@ export default function TransferListPage() {
       t.to_warehouse?.name || '-',
       t.status
     ])
-    autoTable(doc, {
-      head: [["Date", "Reference", "From Warehouse", "To Warehouse", "Status"]],
-      body: rows,
-      startY: 20,
-      headStyles: { fillColor: [26, 35, 126] }
+
+    generatePDF({
+      title: 'Transfer List',
+      columns: ["Date", "Reference", "From Warehouse", "To Warehouse", "Status"],
+      rows: rows,
+      organization: orgData,
+      filename: 'transfers.pdf'
     })
-    doc.save('transfers.pdf')
   }
 
   const exportToExcel = () => {

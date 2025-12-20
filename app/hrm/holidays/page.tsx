@@ -17,9 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { useGetHolidaysQuery, useCreateHolidayMutation, useUpdateHolidayMutation, useDeleteHolidayMutation } from "@/lib/slices/hrmV2Api"
+import { useGetHolidaysQuery, useCreateHolidayMutation, useUpdateHolidayMutation, useDeleteHolidayMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
 export default function Holidays() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -27,6 +26,7 @@ export default function Holidays() {
   const [limit, setLimit] = useState(10)
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetHolidaysQuery({ page, limit, search })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createHoliday, { isLoading: isCreating }] = useCreateHolidayMutation()
   const [updateHoliday, { isLoading: isUpdating }] = useUpdateHolidayMutation()
   const [deleteHoliday, { isLoading: isDeleting }] = useDeleteHolidayMutation()
@@ -39,10 +39,13 @@ export default function Holidays() {
 
   const handleExportPDF = () => {
     const rows = (data?.data || []).map((h: any) => [h.name, new Date(h.start_date).toLocaleDateString(), new Date(h.end_date).toLocaleDateString()])
-    const doc = new jsPDF()
-    doc.text('Holidays', 14, 16)
-    autoTable(doc, { head: [["Holiday", "Start", "End"]], body: rows, startY: 20 })
-    doc.save('holidays.pdf')
+    generatePDF({
+      title: 'Holidays List',
+      columns: ["Holiday", "Start", "End"],
+      rows: rows,
+      organization: orgData,
+      filename: 'holidays.pdf'
+    })
   }
 
   const handleExportExcel = () => {

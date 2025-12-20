@@ -137,9 +137,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Company' as const, id })),
-              { type: 'Company', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Company' as const, id })),
+            { type: 'Company', id: 'LIST' },
+          ]
           : [{ type: 'Company', id: 'LIST' }],
     }),
     createCompany: builder.mutation<{ success: boolean; data: Company }, Omit<Company, 'id'>>({
@@ -184,9 +184,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Department' as const, id })),
-              { type: 'Department', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Department' as const, id })),
+            { type: 'Department', id: 'LIST' },
+          ]
           : [{ type: 'Department', id: 'LIST' }],
     }),
     createDepartment: builder.mutation<{ success: boolean; data: Department }, Omit<Department, 'id'>>({
@@ -231,9 +231,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Employee' as const, id })),
-              { type: 'Employee', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Employee' as const, id })),
+            { type: 'Employee', id: 'LIST' },
+          ]
           : [{ type: 'Employee', id: 'LIST' }],
     }),
     createEmployee: builder.mutation<{ success: boolean; data: Employee }, Omit<Employee, 'id'>>({
@@ -278,9 +278,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Shift' as const, id })),
-              { type: 'Shift', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Shift' as const, id })),
+            { type: 'Shift', id: 'LIST' },
+          ]
           : [{ type: 'Shift', id: 'LIST' }],
     }),
     createShift: builder.mutation<{ success: boolean; data: Shift }, Omit<Shift, 'id'>>({
@@ -325,9 +325,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Holiday' as const, id })),
-              { type: 'Holiday', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Holiday' as const, id })),
+            { type: 'Holiday', id: 'LIST' },
+          ]
           : [{ type: 'Holiday', id: 'LIST' }],
     }),
     createHoliday: builder.mutation<{ success: boolean; data: Holiday }, Omit<Holiday, 'id'>>({
@@ -372,9 +372,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'LeaveType' as const, id })),
-              { type: 'LeaveType', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'LeaveType' as const, id })),
+            { type: 'LeaveType', id: 'LIST' },
+          ]
           : [{ type: 'LeaveType', id: 'LIST' }],
     }),
     createLeaveType: builder.mutation<{ success: boolean; data: LeaveType }, Omit<LeaveType, 'id'>>({
@@ -420,9 +420,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'Attendance' as const, id })),
-              { type: 'Attendance', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'Attendance' as const, id })),
+            { type: 'Attendance', id: 'LIST' },
+          ]
           : [{ type: 'Attendance', id: 'LIST' }],
     }),
     createAttendance: builder.mutation<{ success: boolean; data: Attendance }, Omit<Attendance, 'id'>>({
@@ -468,9 +468,9 @@ export const hrmV2Api = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.data.map(({ id }) => ({ type: 'LeaveRequest' as const, id })),
-              { type: 'LeaveRequest', id: 'LIST' },
-            ]
+            ...result.data.map(({ id }) => ({ type: 'LeaveRequest' as const, id })),
+            { type: 'LeaveRequest', id: 'LIST' },
+          ]
           : [{ type: 'LeaveRequest', id: 'LIST' }],
     }),
     createLeaveRequest: builder.mutation<{ success: boolean; data: LeaveRequest }, Omit<LeaveRequest, 'id'>>({
@@ -554,3 +554,5 @@ export const {
   useUpdateLeaveRequestMutation,
   useDeleteLeaveRequestMutation,
 } = hrmV2Api
+
+export { useGetOrganizationQuery } from './settingsV2Api'

@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Edit, Trash2 } from "lucide-react"
-import { useGetCompaniesQuery, useCreateCompanyMutation, useUpdateCompanyMutation, useDeleteCompanyMutation } from "@/lib/slices/hrmV2Api"
+import { useGetCompaniesQuery, useCreateCompanyMutation, useUpdateCompanyMutation, useDeleteCompanyMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import {
   Table,
   TableBody,
@@ -18,8 +19,6 @@ import {
 } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export default function Company() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -27,6 +26,7 @@ export default function Company() {
   const [limit, setLimit] = useState(10)
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetCompaniesQuery({ page, limit, search })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createCompany, { isLoading: isCreating }] = useCreateCompanyMutation()
   const [updateCompany, { isLoading: isUpdating }] = useUpdateCompanyMutation()
   const [deleteCompany, { isLoading: isDeleting }] = useDeleteCompanyMutation()
@@ -58,10 +58,13 @@ export default function Company() {
 
   const handleExportPDF = () => {
     const rows = (data?.data || []).map((c: any) => [c.name, c.phone, c.country, c.email])
-    const doc = new jsPDF()
-    doc.text('Companies', 14, 16)
-    autoTable(doc, { head: [["Name", "Phone", "Country", "Email"]], body: rows, startY: 20 })
-    doc.save('companies.pdf')
+    generatePDF({
+      title: 'Companies List',
+      columns: ["Name", "Phone", "Country", "Email"],
+      rows: rows,
+      organization: orgData,
+      filename: 'companies.pdf'
+    })
   }
 
   const handleExportExcel = () => {

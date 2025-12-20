@@ -9,10 +9,10 @@ import { useState } from "react"
 import { toast } from "sonner"
 import type React from "react"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import AuthGuard from "@/components/AuthGuard"
 import { useGetSalesQuery, useDeleteSaleMutation } from "@/lib/slices/salesApi"
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,11 +30,7 @@ import { TableActions } from "@/components/ui/table-actions"
 import { ViewSaleDialog } from "@/components/sales/view-sale-dialog"
 import { Badge } from "@/components/ui/badge"
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+
 
 export default function SaleList() {
   const router = useRouter()
@@ -49,6 +45,7 @@ export default function SaleList() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
 
   const { data, isLoading, isError } = useGetSalesQuery({ page, limit, search: searchTerm })
+  const { data: orgData } = useGetOrganizationQuery()
   const [deleteSale, { isLoading: isDeleting }] = useDeleteSaleMutation()
 
   const sales = data?.data || [];
@@ -80,9 +77,6 @@ export default function SaleList() {
   }
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Sales List', 14, 16)
-
     const tableData = sales.map(sale => [
       new Date(sale.date).toLocaleDateString(),
       sale.reference,
@@ -94,15 +88,13 @@ export default function SaleList() {
       sale.payment_status
     ])
 
-    autoTable(doc, {
-      head: [['Date', 'Reference', 'Customer', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
+    generatePDF({
+      title: 'Sales List',
+      columns: ['Date', 'Reference', 'Customer', 'Status', 'Total', 'Paid', 'Due', 'Payment Status'],
+      rows: tableData,
+      organization: orgData,
+      filename: 'sales.pdf'
     })
-
-    doc.save('sales.pdf')
   }
 
   const exportToExcel = () => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useGetAttendanceQuery, useGetEmployeesQuery, useCreateAttendanceMutation, useUpdateAttendanceMutation, useDeleteAttendanceMutation } from "@/lib/slices/hrmV2Api"
+
 import { Edit, Trash2, FileDown } from "lucide-react"
 import {
   Table,
@@ -12,8 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { useGetAttendanceQuery, useGetEmployeesQuery, useCreateAttendanceMutation, useUpdateAttendanceMutation, useDeleteAttendanceMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,7 @@ export default function Attendances() {
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetAttendanceQuery({ page, limit, search })
   const { data: employeesData } = useGetEmployeesQuery({ page: 1, limit: 100 })
+  const { data: orgData } = useGetOrganizationQuery()
   const [createAttendance, { isLoading: isCreating }] = useCreateAttendanceMutation()
   const [updateAttendance, { isLoading: isUpdating }] = useUpdateAttendanceMutation()
   const [deleteAttendance, { isLoading: isDeleting }] = useDeleteAttendanceMutation()
@@ -76,10 +77,13 @@ export default function Attendances() {
       row.time_out ? new Date(row.time_out).toLocaleTimeString() : '-',
       row.status
     ])
-    const doc = new jsPDF()
-    doc.text('Attendance', 14, 16)
-    autoTable(doc, { head: [["Employee", "Date", "In", "Out", "Status"]], body: rows, startY: 20 })
-    doc.save('attendance.pdf')
+    generatePDF({
+      title: 'Attendance List',
+      columns: ["Employee", "Date", "In", "Out", "Status"],
+      rows: rows,
+      organization: orgData,
+      filename: 'attendance.pdf'
+    })
   }
 
   const handleExportExcel = () => {

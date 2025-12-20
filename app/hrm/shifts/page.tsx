@@ -17,9 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { useGetShiftsQuery, useCreateShiftMutation, useUpdateShiftMutation, useDeleteShiftMutation } from "@/lib/slices/hrmV2Api"
+import { useGetShiftsQuery, useCreateShiftMutation, useUpdateShiftMutation, useDeleteShiftMutation, useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
 export default function OfficeShift() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -27,6 +26,7 @@ export default function OfficeShift() {
   const [limit, setLimit] = useState(10)
   const [search, setSearch] = useState("")
   const { data, isLoading } = useGetShiftsQuery({ page, limit, search })
+  const { data: orgData } = useGetOrganizationQuery()
 
   const [createShift, { isLoading: isCreating }] = useCreateShiftMutation()
   const [updateShift, { isLoading: isUpdating }] = useUpdateShiftMutation()
@@ -52,10 +52,13 @@ export default function OfficeShift() {
       s.start_time ? new Date(s.start_time).toLocaleTimeString() : '-',
       s.end_time ? new Date(s.end_time).toLocaleTimeString() : '-'
     ])
-    const doc = new jsPDF()
-    doc.text('Office Shifts', 14, 16)
-    autoTable(doc, { head: [["Name", "Start", "End"]], body: rows, startY: 20 })
-    doc.save('office-shifts.pdf')
+    generatePDF({
+      title: 'Office Shifts List',
+      columns: ["Name", "Start", "End"],
+      rows: rows,
+      organization: orgData,
+      filename: 'office-shifts.pdf'
+    })
   }
 
   const handleExportExcel = () => {
