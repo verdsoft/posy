@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Replace next-transpile-modules with native transpilePackages
-  transpilePackages: ['jspdf', 'canvg', 'core-js'],
+  // transpilePackages: ['jspdf', 'canvg'],
 
   eslint: {
     ignoreDuringBuilds: true,
@@ -67,8 +67,8 @@ const nextConfig = {
 
     return config;
   },
- 
-  
+
+
 };
 
 
