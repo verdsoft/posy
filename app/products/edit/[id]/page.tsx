@@ -69,22 +69,20 @@ export default function EditProduct() {
           warehousesRes.json(),
         ])
 
-        setCategories(categoriesData.map((c: any) => ({ value: c.id, label: c.name })))
-        setBrands(brandsData.map((b: any) => ({ value: b.id, label: b.name })))
-        setUnits(unitsData.map((u: any) => ({ value: u.id, label: u.name })))
-        setWarehouses(warehousesData.map((w: any) => ({ value: w.id, label: w.name })))
+        setCategories((categoriesData.data || categoriesData || []).map((c: any) => ({ value: c.id, label: c.name })))
+        setBrands((brandsData.data || brandsData || []).map((b: any) => ({ value: b.id, label: b.name })))
+        setUnits((unitsData.data || unitsData || []).map((u: any) => ({ value: u.id, label: u.name })))
+        setWarehouses((warehousesData.data || warehousesData || []).map((w: any) => ({ value: w.id, label: w.name })))
       } catch (error) {
         console.error("Error loading dropdown data:", error)
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: "Failed to load form data",
-          variant: "destructive",
         })
       }
     }
 
     loadDropdownData()
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     if (productData) {
@@ -157,10 +155,8 @@ export default function EditProduct() {
 
     if (missingFields.length > 0) {
       setError(`Please fill all required fields: ${missingFields.join(", ")}`);
-      toast({
-        title: "Validation Error",
+      toast.error("Validation Error", {
         description: `Please fill all required fields: ${missingFields.join(", ")}`,
-        variant: "destructive",
       });
       return;
     }
@@ -195,18 +191,15 @@ export default function EditProduct() {
       // Use RTK Query mutation
       await updateProduct({ id: productId, data: formData }).unwrap();
 
-      toast({
-        title: "Success",
-        description: "Product updated successfully",
+      toast.success("Product updated successfully", {
+        description: "Your changes have been saved.",
       });
       router.push("/products/list");
     } catch (error: any) {
       const errorMessage = error?.data?.error || error?.message || "Failed to update product";
       setError(errorMessage);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: errorMessage,
-        variant: "destructive",
       });
       console.error("Update error:", error);
     } finally {
