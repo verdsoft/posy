@@ -59,8 +59,11 @@ COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 
-# Change ownership of the application directory to the non-root user
-RUN chown -R appuser:appgroup /app/public /app/.next
+# Create upload directories and ensure permissions
+RUN mkdir -p /app/public/uploads/logos && \
+    mkdir -p /app/public/uploads/products && \
+    chown -R appuser:appgroup /app/public && \
+    chmod -R 755 /app/public
 
 # If you need to run migrations at container start, uncomment and adjust:
 USER appuser
