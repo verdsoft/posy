@@ -317,7 +317,7 @@ export const generateSalesReportPDF = async (data: SalesReportPDFData, options?:
   if (data.data && data.data.length > 0) {
     // derive columns from first row data keys if not provided
     const keys = Object.keys(data.data[0])
-    const rows = data.data.map(d => Object.values(d))
+    const rows = data.data.map(d => Object.values(d) as any[])
     autoTable(doc, {
       head: [keys],
       body: rows,
