@@ -3,7 +3,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { getType } from 'mime'
+// Simple mime type lookup to avoid dependency issues
+function getMimeType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'png': return 'image/png'
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg'
+    case 'gif': return 'image/gif'
+    case 'webp': return 'image/webp'
+    case 'svg': return 'image/svg+xml'
+    case 'pdf': return 'application/pdf'
+    default: return 'application/octet-stream'
+  }
+}
+// import { getType } from 'mime'
 
 export async function GET(
   request: NextRequest,
@@ -27,7 +41,7 @@ export async function GET(
     const fileBuffer = await readFile(filePath)
 
     // Determine content type (image/png, image/jpeg, etc.)
-    const contentType = getType(filePath) || 'application/octet-stream'
+    const contentType = getMimeType(filePath)
 
     // Return the image data
     return new NextResponse(fileBuffer, {
