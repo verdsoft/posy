@@ -89,8 +89,19 @@ export default function CreatePurchaseReturn() {
       setDiscount(Number(purchaseData.discount) || 0)
       setShipping(Number(purchaseData.shipping) || 0)
 
-      // Clear cart when purchase changes
-      setCartItems([])
+      // Populate cart with purchase items
+      setCartItems(items.map((item: any) => ({
+        id: Date.now().toString() + Math.random(),
+        product_id: item.product_id,
+        purchase_item_id: item.id,
+        name: item.products?.name || `Product ${item.product_id}`,
+        cost: Number(item.unit_cost) || 0,
+        quantity: Number(item.quantity) || 0,
+        discount: Number(item.discount) || 0,
+        tax: Number(item.tax) || 0,
+        subtotal: Number(item.subtotal) || 0,
+        maxQuantity: Number(item.quantity) || 0
+      })))
     }
   }, [purchaseData])
 
@@ -358,7 +369,7 @@ export default function CreatePurchaseReturn() {
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers.map(supplier => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
+                    <SelectItem key={supplier.id} value={String(supplier.id)}>
                       {supplier.name}
                     </SelectItem>
                   ))}
@@ -376,7 +387,7 @@ export default function CreatePurchaseReturn() {
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map(warehouse => (
-                    <SelectItem key={warehouse.id} value={warehouse.id}>
+                    <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                       {warehouse.name}
                     </SelectItem>
                   ))}

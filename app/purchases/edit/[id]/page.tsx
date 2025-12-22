@@ -279,7 +279,7 @@ export default function EditPurchase() {
                       </SelectTrigger>
                       <SelectContent>
                         {suppliers.map(supplier => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
+                          <SelectItem key={supplier.id} value={String(supplier.id)}>
                             {supplier.name}
                           </SelectItem>
                         ))}
@@ -305,7 +305,7 @@ export default function EditPurchase() {
                       </SelectTrigger>
                       <SelectContent>
                         {warehouses.map(warehouse => (
-                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                          <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                             {warehouse.name}
                           </SelectItem>
                         ))}

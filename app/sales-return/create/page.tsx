@@ -86,6 +86,20 @@ export default function CreateSalesReturn() {
       setTaxRate(Number(saleData.tax_rate) || 0)
       setDiscount(Number(saleData.discount) || 0)
       setShipping(Number(saleData.shipping) || 0)
+
+      // Populate cart with sale items
+      setCartItems(items.map((item: any) => ({
+        id: Date.now().toString() + Math.random(),
+        product_id: item.product_id,
+        sale_item_id: item.id,
+        name: item.products?.name || `Product ${item.product_id}`,
+        price: Number(item.unit_price) || 0,
+        quantity: Number(item.quantity) || 0,
+        discount: Number(item.discount) || 0,
+        tax: Number(item.tax) || 0,
+        subtotal: Number(item.subtotal) || 0,
+        maxQuantity: Number(item.quantity) || 0
+      })))
     }
   }, [saleData])
 
@@ -207,8 +221,6 @@ export default function CreateSalesReturn() {
       toast.error("Please select customer, warehouse and sale")
       return
     }
-
-    setIsLoading(true)
 
     try {
       const returnData = {
@@ -333,7 +345,7 @@ export default function CreateSalesReturn() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
+                    <SelectItem key={customer.id} value={String(customer.id)}>
                       {customer.name}
                     </SelectItem>
                   ))}
@@ -351,7 +363,7 @@ export default function CreateSalesReturn() {
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map(warehouse => (
-                    <SelectItem key={warehouse.id} value={warehouse.id}>
+                    <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                       {warehouse.name}
                     </SelectItem>
                   ))}

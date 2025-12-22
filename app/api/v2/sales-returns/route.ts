@@ -25,44 +25,63 @@ export async function POST(req: NextRequest) {
     // Generate reference if not provided
     const reference = body.reference || `SR-${Date.now()}`
 
-    const salesReturn = await prisma.sales_returns.create({
-      data: {
-        reference,
-        sale_id: parseInt(body.sale_id.toString()),
-        customer_id: parseInt(body.customer_id.toString()),
-        warehouse_id: parseInt(body.warehouse_id.toString()),
-        date: new Date(body.date || new Date()),
-        subtotal: body.subtotal ?? 0,
-        tax_rate: body.tax_rate ?? 0,
-        tax_amount: body.tax_amount ?? 0,
-        discount: body.discount ?? 0,
-        shipping: body.shipping ?? 0,
-        total: body.total,
-        status: body.status || "completed",
-        notes: body.notes ?? null,
-        sales_return_items: {
-          create: body.items.map(item => ({
-            product_id: parseInt(item.product_id.toString()),
-            sale_item_id: item.sale_item_id ? parseInt(item.sale_item_id.toString()) : null,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            discount: item.discount || 0,
-            tax: item.tax || 0,
-            subtotal: (item.unit_price * item.quantity) - (item.discount || 0) + (item.tax || 0),
-          }))
-        }
-      },
-      include: {
-        sales_return_items: {
-          include: {
-            products: true,
-            sale_items: true
+    const salesReturn = await prisma.$transaction(async (tx) => {
+      // Create the sales return
+      const sr = await tx.sales_returns.create({
+        data: {
+          reference,
+          sale_id: parseInt(body.sale_id.toString()),
+          customer_id: parseInt(body.customer_id.toString()),
+          warehouse_id: parseInt(body.warehouse_id.toString()),
+          date: new Date(body.date || new Date()),
+          subtotal: body.subtotal ?? 0,
+          tax_rate: body.tax_rate ?? 0,
+          tax_amount: body.tax_amount ?? 0,
+          discount: body.discount ?? 0,
+          shipping: body.shipping ?? 0,
+          total: body.total,
+          status: body.status || "completed",
+          notes: body.notes ?? null,
+          sales_return_items: {
+            create: body.items.map(item => ({
+              product_id: parseInt(item.product_id.toString()),
+              sale_item_id: item.sale_item_id ? parseInt(item.sale_item_id.toString()) : null,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              discount: item.discount || 0,
+              tax: item.tax || 0,
+              subtotal: (item.unit_price * item.quantity) - (item.discount || 0) + (item.tax || 0),
+            }))
           }
         },
-        customers: true,
-        warehouses: true,
-        sales: true
+        include: {
+          sales_return_items: {
+            include: {
+              products: true,
+              sale_items: true
+            }
+          },
+          customers: true,
+          warehouses: true,
+          sales: true
+        }
+      })
+
+      // Update product stock if status is completed
+      if (sr.status === 'completed') {
+        for (const item of body.items) {
+          await tx.products.update({
+            where: { id: parseInt(item.product_id.toString()) },
+            data: {
+              stock: {
+                increment: item.quantity
+              }
+            }
+          })
+        }
       }
+
+      return sr
     })
 
     return NextResponse.json({
