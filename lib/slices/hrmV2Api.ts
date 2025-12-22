@@ -45,6 +45,7 @@ export interface Employee {
   updated_at?: string
   departments?: { id: number; name: string }
   office_shifts?: { id: number; name: string }
+  companies?: { id: number; name: string }
 }
 
 export interface Shift {

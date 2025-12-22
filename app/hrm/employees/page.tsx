@@ -62,7 +62,7 @@ export default function Employees() {
       last_name: last.join(" ") || "",
       email: emp.email || "",
       phone: emp.phone || "",
-      company_id: String(emp.company_id || ""),
+      company_id: String(emp.departments?.companies?.id || ""),
       department_id: String(emp.department_id || ""),
       designation: emp.position || "",
       shift_id: String(emp.shift_id || ""),
@@ -76,7 +76,7 @@ export default function Employees() {
       name: `${form.first_name} ${form.last_name}`.trim(),
       position: form.designation,
       employee_id: parseInt(form.employee_id) || 0,
-      company_id: parseInt(form.company_id) || 0,
+      // company_id: parseInt(form.company_id) || 0,
       department_id: parseInt(form.department_id) || 0,
       shift_id: parseInt(form.shift_id) || 0,
     }
@@ -286,13 +286,13 @@ export default function Employees() {
                 (data?.data || []).map((emp: any) => (
                   <TableRow key={emp.id} className="border-b hover:bg-gray-50">
                     <TableCell className="p-2"><input type="checkbox" className="rounded" /></TableCell>
-                    <TableCell className="p-2">{emp.first_name || emp.firstName || '-'}</TableCell>
-                    <TableCell className="p-2">{emp.last_name || emp.lastName || '-'}</TableCell>
+                    <TableCell className="p-2">{emp.name?.split(' ')[0] || '-'}</TableCell>
+                    <TableCell className="p-2">{emp.name?.split(' ').slice(1).join(' ') || '-'}</TableCell>
                     <TableCell className="p-2">{emp.phone || '-'}</TableCell>
-                    <TableCell className="p-2">{emp.company || emp.company_name || '-'}</TableCell>
-                    <TableCell className="p-2">{emp.department || '-'}</TableCell>
-                    <TableCell className="p-2">{emp.designation || '-'}</TableCell>
-                    <TableCell className="p-2">{emp.shift || emp.office_shift || '-'}</TableCell>
+                    <TableCell className="p-2">{emp.departments?.companies?.name || '-'}</TableCell>
+                    <TableCell className="p-2">{emp.departments?.name || emp.department || '-'}</TableCell>
+                    <TableCell className="p-2">{emp.position || emp.designation || '-'}</TableCell>
+                    <TableCell className="p-2">{emp.office_shifts?.name || emp.shift || '-'}</TableCell>
                     <TableCell className="p-2">
                       <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(emp)}>Edit</Button>

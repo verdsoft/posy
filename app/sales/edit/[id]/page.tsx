@@ -267,7 +267,7 @@ export default function EditSale() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {customers.map(customer => (
-                                        <SelectItem key={customer.id} value={customer.id}>
+                                        <SelectItem key={customer.id} value={String(customer.id)}>
                                             {customer.name}
                                         </SelectItem>
                                     ))}
@@ -285,7 +285,7 @@ export default function EditSale() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {warehouses.map(warehouse => (
-                                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                                        <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                                             {warehouse.name}
                                         </SelectItem>
                                     ))}
@@ -343,7 +343,7 @@ export default function EditSale() {
                                         <th className="text-left p-3 border">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="bg-white">
                                     {cartItems.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="text-center py-8 text-gray-500 border">
@@ -364,7 +364,7 @@ export default function EditSale() {
                                                         step="0.01"
                                                         value={item.price}
                                                         onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value))}
-                                                        className="w-24"
+                                                        className="w-24 border-gray-300"
                                                     />
                                                 </td>
                                                 <td className="p-3 border">
@@ -372,7 +372,7 @@ export default function EditSale() {
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="h-6 w-6 p-0"
+                                                            className="h-8 w-8 p-0"
                                                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                                         >
                                                             <Minus className="h-3 w-3" />
@@ -382,19 +382,19 @@ export default function EditSale() {
                                                             min="1"
                                                             value={item.quantity}
                                                             onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
-                                                            className="w-16 text-center"
+                                                            className="w-16 text-center h-8 border-gray-300"
                                                         />
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="h-6 w-6 p-0"
+                                                            className="h-8 w-8 p-0"
                                                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                                         >
                                                             <Plus className="h-3 w-3" />
                                                         </Button>
                                                     </div>
                                                 </td>
-                                                <td className="p-3 border">${item.subtotal}</td>
+                                                <td className="p-3 border">${item.subtotal.toFixed(2)}</td>
                                                 <td className="p-3 border">
                                                     <Button
                                                         variant="ghost"
@@ -413,7 +413,6 @@ export default function EditSale() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Left column */}
                         <div className="space-y-4">
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
@@ -425,44 +424,129 @@ export default function EditSale() {
                                             value={taxRate}
                                             onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
                                         />
-
-                                        <Button
-                                            className="bg-[#1a237e] hover:bg-purple-700"
-                                            onClick={handleSubmit}
-                                            disabled={isLoading}
-                                        >
-                                            {isLoading ? "Updating..." : "Update Sale"}
-                                        </Button>
-                                    </div>
-
-                                    {/* Right column - Order Summary */}
-                                    <div className="space-y-4">
-                                        <div className="bg-gray-50 p-4 rounded">
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between">
-                                                    <span>Subtotal</span>
-                                                    <span>${subtotal}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Order Tax</span>
-                                                    <span>${Number(taxAmount)} = ${taxAmount} ({taxRate}%)</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Discount</span>
-                                                    <span>${discount}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Shipping</span>
-                                                    <span>${shipping}</span>
-                                                </div>
-                                                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                                                    <span>Grand Total</span>
-                                                    <span>${total}</span>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center justify-center px-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r text-gray-500 text-sm">
+                                            %
                                         </div>
                                     </div>
                                 </div>
+                                <div>
+                                    <label className="text-sm font-medium">Discount</label>
+                                    <div className="flex mt-1">
+                                        <Input
+                                            placeholder="0"
+                                            className="rounded-r-none"
+                                            value={discount}
+                                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                        />
+                                        <div className="flex items-center justify-center px-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r text-gray-500 text-sm">
+                                            $
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Shipping</label>
+                                    <div className="flex mt-1">
+                                        <Input
+                                            placeholder="0"
+                                            className="rounded-r-none"
+                                            value={shipping}
+                                            onChange={(e) => setShipping(parseFloat(e.target.value) || 0)}
+                                        />
+                                        <div className="flex items-center justify-center px-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r text-gray-500 text-sm">
+                                            $
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Status *</label>
+                                <Select
+                                    value={status}
+                                    onValueChange={setStatus}
+                                >
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="ordered">Ordered</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Payment Status *</label>
+                                <Select
+                                    value={paymentStatus}
+                                    onValueChange={setPaymentStatus}
+                                >
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="paid">Paid</SelectItem>
+                                        <SelectItem value="partial">Partial</SelectItem>
+                                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                                        <SelectItem value="due">Due</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Note</label>
+                                <Textarea
+                                    placeholder="A few words ..."
+                                    className="mt-1"
+                                    rows={4}
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 p-4 rounded border border-gray-200">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Subtotal</span>
+                                        <span className="font-medium">${Number(subtotal).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Order Tax ({taxRate}%)</span>
+                                        <span className="font-medium">${Number(taxAmount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Discount</span>
+                                        <span className="font-medium text-red-500">-${Number(discount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Shipping</span>
+                                        <span className="font-medium">${Number(shipping).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center font-bold text-lg border-t pt-3 mt-2">
+                                        <span>Grand Total</span>
+                                        <span className="text-purple-700">${Number(total).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <Button
+                                    className="flex-1 bg-[#1a237e] hover:bg-purple-700 h-10 text-base"
+                                    onClick={handleSubmit}
+                                    disabled={isUpdating}
+                                >
+                                    {isUpdating ? <span className="flex items-center gap-2"><div className="animate-spin rounded-full h-4 w-4 border-2 border-white" />Updating...</span> : "Update Sale"}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 h-10 text-base"
+                                    onClick={() => router.push('/sales/list')}
+                                >
+                                    Cancel
+                                </Button>
                             </div>
                         </div>
                     </div>

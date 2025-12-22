@@ -194,16 +194,18 @@ export default function EditPurchase() {
         ...data,
         supplier_id: Number(data.supplier_id),
         warehouse_id: Number(data.warehouse_id),
-        subtotal: Number(subtotal),
-        tax_amount: Number(tax_amount),
-        total: Number(total),
+        subtotal: isNaN(Number(subtotal)) ? 0 : Number(subtotal),
+        tax_amount: isNaN(Number(tax_amount)) ? 0 : Number(tax_amount),
+        shipping: isNaN(Number(shipping)) ? 0 : Number(shipping),
+        discount: isNaN(Number(discount)) ? 0 : Number(discount),
+        total: isNaN(Number(total)) ? 0 : Number(total),
         items: selectedProducts.map(item => ({
           product_id: Number(item.product_id),
-          quantity: Number(item.quantity),
-          unit_cost: Number(item.unit_cost),
-          discount: Number(item.discount),
-          tax: Number(item.tax),
-          subtotal: Number(item.subtotal)
+          quantity: Number(item.quantity) || 1,
+          unit_cost: Number(item.unit_cost) || 0,
+          discount: Number(item.discount) || 0,
+          tax: Number(item.tax) || 0,
+          subtotal: Number(item.subtotal) || 0
         })),
       }
 

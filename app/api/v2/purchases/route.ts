@@ -49,7 +49,21 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
         )
       }
 
-      return NextResponse.json(purchase)
+      const formattedPurchase = {
+        ...purchase,
+        supplier_name: purchase.suppliers?.name || null,
+        warehouse_name: purchase.warehouses?.name || null,
+        purchase_items: purchase.purchase_items?.map(item => ({
+          ...item,
+          products: {
+            ...item.products,
+            name: item.products?.name || 'Unknown',
+            code: item.products?.code || 'N/A',
+          }
+        })) || []
+      }
+
+      return NextResponse.json(formattedPurchase)
     }
 
     // Build where clause for filters
@@ -89,7 +103,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
       }
     }
 
-    const [purchases, total] =await Promise.all([
+    const [purchases, total] = await Promise.all([
       prisma.purchases.findMany({
         where,
         skip: offset,

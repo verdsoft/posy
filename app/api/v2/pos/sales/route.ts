@@ -146,13 +146,27 @@ export async function GET(req: NextRequest) {
           warehouses: { select: { name: true } },
           sale_items: {
             include: {
-              products: { select: { name: true, code: true } }
+              products: { select: { name: true, code: true, price: true } }
             }
           },
         },
       })
       if (!sale) return NextResponse.json({ error: "Sale not found" }, { status: 404 })
-      return NextResponse.json({ success: true, data: sale })
+
+      const formattedSale = {
+        ...sale,
+        customer_name: sale.customers?.name || null,
+        warehouse_name: sale.warehouses?.name || null,
+        sale_items: sale.sale_items?.map(item => ({
+          ...item,
+          products: {
+            ...item.products,
+            name: item.products?.name || 'Unknown',
+            code: item.products?.code || 'N/A',
+          }
+        })) || []
+      }
+      return NextResponse.json(formattedSale)
     }
 
     const where: any = {}

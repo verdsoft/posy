@@ -23,7 +23,11 @@ export async function GET(req: NextRequest) {
         where: whereCondition,
         include: {
           departments: {
-            select: { id: true, name: true }
+            include: {
+              companies: {
+                select: { id: true, name: true }
+              }
+            }
           },
           office_shifts: {
             select: { id: true, name: true }
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: employee })
   } catch (error: any) {
     console.error("Error creating employee:", error)
-    return NextResponse.json({ error: "Failed to create employee" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to create employee", details: error.message }, { status: 500 })
   }
 }
 
