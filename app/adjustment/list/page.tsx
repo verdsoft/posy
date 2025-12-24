@@ -77,12 +77,12 @@ export default function AdjustmentList() {
       adjustment.reference,
       adjustment.warehouse_name,
       adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
-      adjustment.item_count?.toString() || '0'
+      adjustment.product_names || 'N/A'
     ]) || []
 
     generatePDF({
       title: 'Adjustments List',
-      columns: ['Date', 'Reference', 'Warehouse', 'Type', 'Total Products'],
+      columns: ['Date', 'Reference', 'Warehouse', 'Type', 'Products'],
       rows: tableData,
       organization: orgData,
       filename: 'adjustments.pdf'
@@ -96,7 +96,7 @@ export default function AdjustmentList() {
         Reference: adjustment.reference,
         Warehouse: adjustment.warehouse_name,
         Type: adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
-        'Total Products': adjustment.item_count || 0
+        'Products': adjustment.product_names || 'N/A'
       })) || []
     )
 
@@ -221,7 +221,7 @@ export default function AdjustmentList() {
                     <th className="text-left p-3 font-medium">Reference</th>
                     <th className="text-left p-3 font-medium">Warehouse</th>
                     <th className="text-left p-3 font-medium">Type</th>
-                    <th className="text-right p-3 font-medium">Total Products</th>
+                    <th className="text-left p-3 font-medium">Products</th>
                     <th className="text-right p-3 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -252,8 +252,8 @@ export default function AdjustmentList() {
                         <td className="p-3">
                           {getStatusBadge(adjustment.type)}
                         </td>
-                        <td className="p-3 text-right">
-                          {adjustment.item_count}
+                        <td className="p-3 max-w-xs truncate" title={adjustment.product_names}>
+                          {adjustment.product_names || 'N/A'}
                         </td>
                         <td className="p-3 text-right">
                           <TableActions

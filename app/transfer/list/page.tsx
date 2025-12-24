@@ -207,8 +207,8 @@ export default function TransferListPage() {
                       <td className="p-2 font-medium">{transfer.reference}</td>
                       <td className="p-2">{transfer.from_warehouse?.name || '-'}</td>
                       <td className="p-2">{transfer.to_warehouse?.name || '-'}</td>
-                      <td className="p-2">{transfer.items_count || 0}</td>
-                      <td className="p-2 font-medium">${Number(transfer.grand_total || 0).toFixed(2)}</td>
+                      <td className="p-2">{transfer.transfer_items?.length || 0}</td>
+                      <td className="p-2 font-medium">${Number(transfer.total || 0).toFixed(2)}</td>
                       <td className="p-2">{getStatusBadge(transfer.status)}</td>
                       <td className="p-2 text-right">
                         <TableActions

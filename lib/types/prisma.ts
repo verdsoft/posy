@@ -321,7 +321,10 @@ export type Adjustment = Prisma.adjustmentsGetPayload<{
       }
     }
   }
-}>
+}
+}> & {
+  product_names?: string
+}
 
 export type AdjustmentItem = Prisma.adjustment_itemsGetPayload<{
   include: {

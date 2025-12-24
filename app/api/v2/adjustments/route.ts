@@ -101,6 +101,15 @@ export async function GET(req: NextRequest): Promise<NextResponse<Adjustment | P
             select: {
               adjustment_items: true
             }
+          },
+          adjustment_items: {
+            include: {
+              products: {
+                select: {
+                  name: true
+                }
+              }
+            }
           }
         }
       }),
@@ -111,7 +120,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<Adjustment | P
     const formattedAdjustments = adjustments.map(adj => ({
       ...adj,
       warehouse_name: adj.warehouses?.name,
-      item_count: adj._count.adjustment_items
+      item_count: adj._count.adjustment_items,
+      product_names: adj.adjustment_items.map(item => item.products?.name).filter(Boolean).join(', ') || 'N/A'
     }))
 
     return NextResponse.json({
@@ -184,7 +194,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Adjustmen
 
     // Validate warehouse exists
     const warehouseExists = await prisma.warehouses.findUnique({
-      where: { id: warehouse_id }
+      where: { id: parseInt(warehouse_id.toString()) }
     })
 
     if (!warehouseExists) {
@@ -233,7 +243,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Adjustmen
       const adjustment = await tx.adjustments.create({
         data: {
           reference: adjustmentReference,
-          warehouse_id,
+          warehouse_id: parseInt(warehouse_id.toString()),
           date: new Date(date),
           type,
           notes,

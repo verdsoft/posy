@@ -153,20 +153,30 @@ export async function POST(req: NextRequest) {
         }
       })
 
-      // Create transfer items
+      // Create transfer items and update stock
       if (body.items && Array.isArray(body.items)) {
         for (const item of body.items) {
+          const quantity = parseFloat(item.quantity)
+
           await tx.transfer_items.create({
             data: {
               transfer_id: transfer.id,
               product_id: item.product_id,
-              quantity: parseFloat(item.quantity),
+              quantity: quantity,
               unit_cost: parseFloat(item.net_unit_cost || item.unit_cost || 0),
               discount: parseFloat(item.discount || 0),
               tax: parseFloat(item.tax || 0),
               subtotal: parseFloat(item.subtotal)
             }
           })
+
+          // Decrement stock from source product
+          if (body.status === 'completed' || body.status === 'sent') {
+            await tx.products.update({
+              where: { id: item.product_id },
+              data: { stock: { decrement: quantity } }
+            })
+          }
         }
       }
 
@@ -186,9 +196,30 @@ export async function PUT(req: NextRequest) {
     if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const result = await prisma.$transaction(async (tx) => {
-      // Update transfer
+      const transferId = parseInt(body.id)
+
+      // 1. Fetch existing items to restore stock if needed
+      const existingItems = await tx.transfer_items.findMany({
+        where: { transfer_id: transferId }
+      })
+
+      const existingTransfer = await tx.transfers.findUnique({
+        where: { id: transferId }
+      })
+
+      // Restore stock if it was previously deducted (status was completed/sent)
+      if (existingTransfer && (existingTransfer.status === 'completed' || existingTransfer.status === 'sent')) {
+        for (const item of existingItems) {
+          await tx.products.update({
+            where: { id: item.product_id },
+            data: { stock: { increment: item.quantity } }
+          })
+        }
+      }
+
+      // 2. Update transfer
       const transfer = await tx.transfers.update({
-        where: { id: parseInt(body.id) },
+        where: { id: transferId },
         data: {
           reference: body.reference,
           from_warehouse_id: body.from_warehouse_id,
@@ -206,24 +237,35 @@ export async function PUT(req: NextRequest) {
         }
       })
 
-      // Delete existing items and create new ones
-      if (body.items && Array.isArray(body.items)) {
-        await tx.transfer_items.deleteMany({
-          where: { transfer_id: transfer.id }
-        })
+      // 3. Delete existing items
+      await tx.transfer_items.deleteMany({
+        where: { transfer_id: transfer.id }
+      })
 
+      // 4. Create new items and deduct stock
+      if (body.items && Array.isArray(body.items)) {
         for (const item of body.items) {
+          const quantity = parseFloat(item.quantity)
+
           await tx.transfer_items.create({
             data: {
               transfer_id: transfer.id,
               product_id: item.product_id,
-              quantity: parseFloat(item.quantity),
+              quantity: quantity,
               unit_cost: parseFloat(item.net_unit_cost || item.unit_cost || 0),
               discount: parseFloat(item.discount || 0),
               tax: parseFloat(item.tax || 0),
               subtotal: parseFloat(item.subtotal)
             }
           })
+
+          // Decrement stock for new items if status is completed/sent
+          if (body.status === 'completed' || body.status === 'sent') {
+            await tx.products.update({
+              where: { id: item.product_id },
+              data: { stock: { decrement: quantity } }
+            })
+          }
         }
       }
 
@@ -244,14 +286,34 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     await prisma.$transaction(async (tx) => {
+      const transferId = parseInt(id)
+
+      // Fetch items and transfer status to decide if stock needs restoration
+      const items = await tx.transfer_items.findMany({
+        where: { transfer_id: transferId }
+      })
+      const transfer = await tx.transfers.findUnique({
+        where: { id: transferId }
+      })
+
+      // Restore stock if transfer was completed/sent
+      if (transfer && (transfer.status === 'completed' || transfer.status === 'sent')) {
+        for (const item of items) {
+          await tx.products.update({
+            where: { id: item.product_id },
+            data: { stock: { increment: item.quantity } }
+          })
+        }
+      }
+
       // Delete transfer items first
       await tx.transfer_items.deleteMany({
-        where: { transfer_id: parseInt(id) }
+        where: { transfer_id: transferId }
       })
 
       // Delete transfer
       await tx.transfers.delete({
-        where: { id: parseInt(id) }
+        where: { id: transferId }
       })
     })
 
