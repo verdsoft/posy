@@ -48,7 +48,7 @@ export interface SalesChart {
 
 export const dashboardApi = createApi({
   reducerPath: 'dashboardApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/dashboard' }),
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/dashboard' }),
   tagTypes: ['DashboardStats', 'TopProducts', 'LowStock', 'RecentTransactions', 'SalesChart'],
   endpoints: (builder) => ({
     getDashboardStats: builder.query<DashboardStats, void>({

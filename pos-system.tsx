@@ -298,7 +298,7 @@ export default function POSSystem() {
                 <SelectItem value="walk-in-customer">walk-in-customer</SelectItem>
               </SelectContent>
             </Select>
-            <Button size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 bg-purple-600">
+            <Button size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 bg-[#1a237e]">
               <ChevronDown className="h-3 w-3" />
             </Button>
           </div>
@@ -337,7 +337,7 @@ export default function POSSystem() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-6 w-6 p-0 bg-purple-600 text-white border-purple-600"
+                  className="h-6 w-6 p-0 bg-[#1a237e] text-white border-purple-600"
                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                 >
                   <Minus className="h-3 w-3" />
@@ -346,7 +346,7 @@ export default function POSSystem() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-6 w-6 p-0 bg-purple-600 text-white border-purple-600"
+                  className="h-6 w-6 p-0 bg-[#1a237e] text-white border-purple-600"
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
                 >
                   <Plus className="h-3 w-3" />
@@ -426,7 +426,7 @@ export default function POSSystem() {
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <Button className="bg-purple-600 hover:bg-purple-700" onClick={handlePayNow}>
+          <Button className="bg-[#1a237e] hover:bg-purple-700" onClick={handlePayNow}>
             <CreditCard className="h-4 w-4 mr-2" />
             Pay Now
           </Button>
@@ -457,7 +457,7 @@ export default function POSSystem() {
                 Product
               </Button>
               <div className="ml-auto">
-                <Button className="bg-purple-600 hover:bg-purple-700">
+                <Button className="bg-[#1a237e] hover:bg-purple-700">
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
@@ -509,7 +509,7 @@ export default function POSSystem() {
                 key={page}
                 variant={currentPage === page ? "default" : "ghost"}
                 size="sm"
-                className={currentPage === page ? "bg-purple-600" : ""}
+                className={currentPage === page ? "bg-[#1a237e]" : ""}
                 onClick={() => setCurrentPage(page)}
               >
                 {page}
@@ -619,14 +619,14 @@ export default function POSSystem() {
                   rows={3}
                 />
               </div>
-              <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleSubmitPayment}>
+              <Button className="bg-[#1a237e] hover:bg-purple-700" onClick={handleSubmitPayment}>
                 Submit
               </Button>
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span>Total Products</span>
-                <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
+                <div className="bg-[#1a237e] text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
                   {cartItems.length}
                 </div>
               </div>
@@ -721,7 +721,7 @@ export default function POSSystem() {
               </div>
             </div>
 
-            <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={handlePrintReceipt}>
+            <Button className="w-full bg-[#1a237e] hover:bg-purple-700" onClick={handlePrintReceipt}>
               🖨️ Print
             </Button>
           </div>

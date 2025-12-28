@@ -51,8 +51,8 @@ export default function SupplierReport() {
   })
 
   const filteredSuppliers = useMemo(() => {
-    if(!suppliers) return [];
-    return suppliers.filter(supplier =>
+    if(!suppliers?.data) return [];
+    return suppliers.data.filter(supplier =>
         supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         supplier.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         supplier.phone?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -371,7 +371,7 @@ export default function SupplierReport() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={isUpdating || !formData.name || !formData.email}
                 >

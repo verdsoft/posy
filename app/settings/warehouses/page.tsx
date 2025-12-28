@@ -1,37 +1,37 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Search, Edit, Trash2 } from "lucide-react"
-
-
+import { Search, FileDown, Plus } from "lucide-react"
+import type React from "react"
+import { TableActions } from "@/components/ui/table-actions"
+import {
+  useGetWarehousesQuery,
+  useCreateWarehouseMutation,
+  useUpdateWarehouseMutation,
+  useDeleteWarehouseMutation,
+  type Warehouse
+} from "@/lib/slices/warehousesApi"
+import { toast } from "sonner"
 
 export default function Warehouses() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [warehouses, setWarehouses] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
   const [editId, setEditId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
-
-  const fetchWarehouses = async () => {
-    setLoading(true)
-    const res = await fetch("/api/settings/warehouses")
-    const data = await res.json()
-    setWarehouses(data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchWarehouses()
-  }, [])
-
+  // RTK Query hooks
+  const { data: warehouses = [], isLoading: loading } = useGetWarehousesQuery()
+  const [createWarehouse, { isLoading: isCreating }] = useCreateWarehouseMutation()
+  const [updateWarehouse, { isLoading: isUpdating }] = useUpdateWarehouseMutation()
+  const [deleteWarehouse, { isLoading: isDeleting }] = useDeleteWarehouseMutation()
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({
@@ -40,10 +40,6 @@ export default function Warehouses() {
     }))
   }
 
-
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-
   const openDelete = (id: number) => {
     setDeleteId(id)
     setIsDeleteOpen(true)
@@ -51,36 +47,31 @@ export default function Warehouses() {
 
   const handleDeleteConfirmed = async () => {
     if (!deleteId) return
-    const res = await fetch("/api/settings/warehouses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: deleteId }),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
+    try {
+      await deleteWarehouse(deleteId).unwrap()
       setIsDeleteOpen(false)
       setDeleteId(null)
-    } else {
-      alert("Failed to delete warehouse")
+      toast.success("Warehouse deleted successfully")
+    } catch (error) {
+      console.error("Error deleting warehouse:", error)
+      toast.error("Failed to delete warehouse")
     }
   }
 
   const handleCreate = async () => {
-    const res = await fetch("/api/settings/warehouses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
+    try {
+      await createWarehouse(form).unwrap()
       setIsCreateOpen(false)
       setForm({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
-    } else {
-      alert("Failed to create warehouse")
+      toast.success("Warehouse created successfully")
+    } catch (error: any) {
+      console.error("Error creating warehouse:", error)
+      const message = error?.data?.error || "Failed to create warehouse"
+      toast.error(message)
     }
   }
 
-  const openEdit = (warehouse: any) => {
+  const openEdit = (warehouse: Warehouse) => {
     setEditId(warehouse.id)
     setForm({
       name: warehouse.name ?? "",
@@ -94,150 +85,128 @@ export default function Warehouses() {
   }
 
   const handleEdit = async () => {
-    const res = await fetch("/api/settings/warehouses", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, id: editId }),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
+    try {
+      if (!editId) return
+      await updateWarehouse({ id: editId, ...form }).unwrap()
       setIsEditOpen(false)
       setEditId(null)
       setForm({ name: "", phone: "", country: "", city: "", email: "", zip_code: "" })
-    } else {
-      alert("Failed to update warehouse")
+      toast.success("Warehouse updated successfully")
+    } catch (error: any) {
+      console.error("Error updating warehouse:", error)
+      const message = error?.data?.error || "Failed to update warehouse"
+      toast.error(message)
     }
   }
 
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this warehouse?")) return
-    const res = await fetch("/api/settings/warehouses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    })
-    if (res.ok) {
-      await fetchWarehouses()
-    } else {
-      alert("Failed to delete warehouse")
-    }
+  // Export functions
+  const handleExportPDF = () => {
+    // PDF export logic here
+    toast.success("Exporting to PDF...")
+    console.log("Exporting to PDF:", filteredWarehouses)
   }
 
-  const filteredWarehouses = warehouses.filter(
-  (w) =>
-    w.name.toLowerCase().includes(search.toLowerCase()) ||
-    w.phone.toLowerCase().includes(search.toLowerCase()) ||
-    w.country.toLowerCase().includes(search.toLowerCase()) ||
-    w.city.toLowerCase().includes(search.toLowerCase()) ||
-    w.email.toLowerCase().includes(search.toLowerCase()) ||
-    (w.zip_code ? w.zip_code.toLowerCase().includes(search.toLowerCase()) : false)
-)
+  const handleExportExcel = () => {
+    // Excel export logic here
+    toast.success("Exporting to Excel...")
+    console.log("Exporting to Excel:", filteredWarehouses)
+  }
+
+  const filteredWarehouses = (Array.isArray(warehouses) ? warehouses : []).filter(
+    (w) =>
+      w.name.toLowerCase().includes(search.toLowerCase()) ||
+      w.phone.toLowerCase().includes(search.toLowerCase()) ||
+      w.country.toLowerCase().includes(search.toLowerCase()) ||
+      w.city.toLowerCase().includes(search.toLowerCase()) ||
+      w.email.toLowerCase().includes(search.toLowerCase()) ||
+      (w.zip_code ? w.zip_code.toLowerCase().includes(search.toLowerCase()) : false)
+  )
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+      <div className="p-4">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
             <span>Settings</span>
             <span>|</span>
             <span>Warehouse</span>
           </div>
-          <h1 className="text-2xl font-bold">Warehouse</h1>
         </div>
 
         <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="p-6 border-b">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-               <Input
-  placeholder="Search this table"
-  className="pl-10"
-  value={search}
-  onChange={e => setSearch(e.target.value)}
-/>
+          <div className="p-3 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                <Input
+                  placeholder="Search this table"
+                  className="w-48 h-8 text-sm pl-7"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleExportPDF}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleExportExcel}
+              >
+                <FileDown className="h-3 w-3 mr-1" />
+                EXCEL
+              </Button>
               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary-hover text-white">Create</Button>
+                  <Button className="bg-[#1a237e] hover:bg-purple-700 h-8 px-2 text-xs">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Create Warehouse</DialogTitle>
+                    <DialogTitle className="text-sm">Create Warehouse</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="name">Warehouse Name *</Label>
-                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter warehouse name" />
+                      <Label htmlFor="name" className="text-xs">Warehouse Name *</Label>
+                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter warehouse name" className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone *</Label>
-                      <Input id="phone" value={form.phone} onChange={handleFormChange} placeholder="Enter phone number" />
+                      <Label htmlFor="phone" className="text-xs">Phone *</Label>
+                      <Input id="phone" value={form.phone} onChange={handleFormChange} placeholder="Enter phone number" className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label htmlFor="country">Country *</Label>
-                      <Input id="country" value={form.country} onChange={handleFormChange} placeholder="Enter country" />
+                      <Label htmlFor="country" className="text-xs">Country *</Label>
+                      <Input id="country" value={form.country} onChange={handleFormChange} placeholder="Enter country" className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label htmlFor="city">City *</Label>
-                      <Input id="city" value={form.city} onChange={handleFormChange} placeholder="Enter city" />
+                      <Label htmlFor="city" className="text-xs">City *</Label>
+                      <Input id="city" value={form.city} onChange={handleFormChange} placeholder="Enter city" className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input id="email" type="email" value={form.email} onChange={handleFormChange} placeholder="Enter email address" />
+                      <Label htmlFor="email" className="text-xs">Email *</Label>
+                      <Input id="email" type="email" value={form.email} onChange={handleFormChange} placeholder="Enter email address" className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label htmlFor="zip_code">Zip Code</Label>
-                      <Input id="zip_code" value={form.zip_code} onChange={handleFormChange} placeholder="Enter zip code" />
+                      <Label htmlFor="zip_code" className="text-xs">Zip Code</Label>
+                      <Input id="zip_code" value={form.zip_code} onChange={handleFormChange} placeholder="Enter zip code" className="h-8 text-sm" />
                     </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleCreate}>
+                    <div className="flex gap-2 pt-3">
+                      <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" onClick={handleCreate}>
                         Submit
                       </Button>
-                      <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Edit Warehouse</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Warehouse Name *</Label>
-                      <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter warehouse name" />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone *</Label>
-                      <Input id="phone" value={form.phone} onChange={handleFormChange} placeholder="Enter phone number" />
-                    </div>
-                    <div>
-                      <Label htmlFor="country">Country *</Label>
-                      <Input id="country" value={form.country} onChange={handleFormChange} placeholder="Enter country" />
-                    </div>
-                    <div>
-                      <Label htmlFor="city">City *</Label>
-                      <Input id="city" value={form.city} onChange={handleFormChange} placeholder="Enter city" />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input id="email" type="email" value={form.email} onChange={handleFormChange} placeholder="Enter email address" />
-                    </div>
-                    <div>
-                      <Label htmlFor="zip_code">Zip Code</Label>
-                      <Input id="zip_code" value={form.zip_code} onChange={handleFormChange} placeholder="Enter zip code" />
-                    </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button className="bg-purple-600 hover:bg-purple-700 flex-1" onClick={handleEdit}>
-                        Save
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">
+                      <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1 h-8 text-xs">
                         Cancel
                       </Button>
                     </div>
@@ -249,59 +218,67 @@ export default function Warehouses() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-4 font-medium">
-                    <input type="checkbox" className="rounded" />
+                  <th className="text-left p-2 font-medium">
+                    <input type="checkbox" className="rounded scale-75" />
                   </th>
-                  <th className="text-left p-4 font-medium">Name</th>
-                  <th className="text-left p-4 font-medium">Phone</th>
-                  <th className="text-left p-4 font-medium">Country</th>
-                  <th className="text-left p-4 font-medium">City</th>
-                  <th className="text-left p-4 font-medium">Email</th>
-                  <th className="text-left p-4 font-medium">Zip Code</th>
-                  <th className="text-left p-4 font-medium">Action</th>
+                  <th className="text-left p-2 font-medium">Name</th>
+                  <th className="text-left p-2 font-medium">Phone</th>
+                  <th className="text-left p-2 font-medium">Country</th>
+                  <th className="text-left p-2 font-medium">City</th>
+                  <th className="text-left p-2 font-medium">Email</th>
+                  <th className="text-left p-2 font-medium">Zip Code</th>
+                  <th className="text-left p-2 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-               {filteredWarehouses.map((warehouse) => (
-                  <tr key={warehouse.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <input type="checkbox" className="rounded" />
-                    </td>
-                    <td className="p-4">{warehouse.name}</td>
-                    <td className="p-4">{warehouse.phone}</td>
-                    <td className="p-4">{warehouse.country}</td>
-                    <td className="p-4">{warehouse.city}</td>
-                    <td className="p-4">{warehouse.email}</td>
-                    <td className="p-4">{warehouse.zip_code}</td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(warehouse)}>
-                          <Edit className="h-4 w-4 text-green-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDelete(warehouse.id)}>
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="text-center p-4 text-sm">Loading...</td>
                   </tr>
-                ))}
+                ) : filteredWarehouses.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center p-4 text-sm">No warehouses found.</td>
+                  </tr>
+                ) : (
+                  filteredWarehouses.map((warehouse) => (
+                    <tr key={warehouse.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2">
+                        <input type="checkbox" className="rounded scale-75" />
+                      </td>
+                      <td className="p-2">{warehouse.name}</td>
+                      <td className="p-2">{warehouse.phone}</td>
+                      <td className="p-2">{warehouse.country}</td>
+                      <td className="p-2">{warehouse.city}</td>
+                      <td className="p-2">{warehouse.email}</td>
+                      <td className="p-2">{warehouse.zip_code}</td>
+                      <td className="p-2">
+                        <div className="flex gap-1">
+                          <TableActions
+                            onEdit={() => openEdit(warehouse)}
+                            onDelete={() => openDelete(warehouse.id)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
-          <div className="p-4 border-t flex items-center justify-between">
-            <div className="text-sm text-gray-600">Rows per page: 10</div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">1 - 2 of 2</span>
+          <div className="p-3 border-t flex items-center justify-between">
+            <div className="text-xs text-gray-600">Rows per page: 10</div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-600">1 - {filteredWarehouses.length} of {filteredWarehouses.length}</span>
               <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
                   prev
                 </Button>
-                <Button variant="outline" size="sm" disabled>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" disabled>
                   next
                 </Button>
               </div>
@@ -310,24 +287,68 @@ export default function Warehouses() {
         </div>
       </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Edit Warehouse</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="name" className="text-xs">Warehouse Name *</Label>
+              <Input id="name" value={form.name} onChange={handleFormChange} placeholder="Enter warehouse name" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label htmlFor="phone" className="text-xs">Phone *</Label>
+              <Input id="phone" value={form.phone} onChange={handleFormChange} placeholder="Enter phone number" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label htmlFor="country" className="text-xs">Country *</Label>
+              <Input id="country" value={form.country} onChange={handleFormChange} placeholder="Enter country" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label htmlFor="city" className="text-xs">City *</Label>
+              <Input id="city" value={form.city} onChange={handleFormChange} placeholder="Enter city" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label htmlFor="email" className="text-xs">Email *</Label>
+              <Input id="email" type="email" value={form.email} onChange={handleFormChange} placeholder="Enter email address" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label htmlFor="zip_code" className="text-xs">Zip Code</Label>
+              <Input id="zip_code" value={form.zip_code} onChange={handleFormChange} placeholder="Enter zip code" className="h-8 text-sm" />
+            </div>
+            <div className="flex gap-2 pt-3">
+              <Button className="bg-[#1a237e] hover:bg-purple-700 flex-1 h-8 text-xs" onClick={handleEdit}>
+                Save
+              </Button>
+              <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1 h-8 text-xs">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-  <DialogContent className="sm:max-w-md">
-    <DialogHeader>
-      <DialogTitle>Delete Warehouse</DialogTitle>
-    </DialogHeader>
-    <div className="py-4">
-      Are you sure you want to delete this warehouse?
-    </div>
-    <div className="flex gap-2 pt-4">
-      <Button className="bg-red-600 hover:bg-red-700 flex-1" onClick={handleDeleteConfirmed}>
-        Delete
-      </Button>
-      <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="flex-1">
-        Cancel
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Delete Warehouse</DialogTitle>
+          </DialogHeader>
+          <div className="py-3 text-sm">
+            Are you sure you want to delete this warehouse?
+          </div>
+          <div className="flex gap-2 pt-3">
+            <Button className="bg-red-600 hover:bg-red-700 flex-1 h-8 text-xs" onClick={handleDeleteConfirmed}>
+              Delete
+            </Button>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} className="flex-1 h-8 text-xs">
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

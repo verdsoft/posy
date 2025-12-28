@@ -49,8 +49,8 @@ export default function BestCustomers() {
   })
 
   const bestCustomers = useMemo(() => {
-    if (!customers) return [];
-    return [...customers]
+    if (!customers?.data) return [];
+    return [...customers.data]
         .filter(c => c.total_sales > 0)
         .sort((a, b) => b.total_sales - a.total_sales);
   }, [customers]);
@@ -383,7 +383,7 @@ export default function BestCustomers() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={isUpdating || !formData.name}
                 >

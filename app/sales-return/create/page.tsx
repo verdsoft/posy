@@ -5,11 +5,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, X, Minus, Plus } from "lucide-react"
+import { Search, X, Minus, Plus, Check, ChevronsUpDown } from "lucide-react" // Added Check, ChevronsUpDown
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type React from "react"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
+import { useGetSalesQuery, useGetSaleByIdQuery } from "@/lib/slices/salesApi"
+import { useCreateSalesReturnMutation } from "@/lib/slices/returnsApi"
+import { cn } from "@/lib/utils"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface Product {
   id: string
@@ -35,94 +53,62 @@ interface CartItem {
 export default function CreateSalesReturn() {
   const router = useRouter()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [customers, setCustomers] = useState<{id: string, name: string}[]>([])
-  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
-  const [sales, setSales] = useState<{id: string, reference: string}[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState("")
   const [selectedWarehouse, setSelectedWarehouse] = useState("")
   const [selectedSale, setSelectedSale] = useState("")
+  const [openSale, setOpenSale] = useState(false) // Added state
   const [taxRate, setTaxRate] = useState(0)
   const [discount, setDiscount] = useState(0)
   const [shipping, setShipping] = useState(0)
   const [status, setStatus] = useState("completed")
   const [notes, setNotes] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [saleItems, setSaleItems] = useState<any[]>([])
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Fetch customers
-        const customersRes = await fetch('/api/customers')
-        const customersData = await customersRes.json()
-        setCustomers(customersData)
-        
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        const warehousesData = await warehousesRes.json()
-        setWarehouses(warehousesData)
-        
-        // Fetch recent sales
-        const salesRes = await fetch('/api/pos/sales')
-        const salesData = await salesRes.json()
-        console.log('Sales data:', salesData) // Debug log
-        setSales(salesData || [])
-        
-        if (!salesData || salesData.length === 0) {
-          toast.error("No sales found. Please create some sales first.")
-        }
-        
-      } catch (error) {
-        toast.error("Failed to load initial data")
-        console.error(error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchData()
-  }, [])
+  // RTK Query hooks
+  const { data: customersData } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
+  const { data: warehousesData } = useGetWarehousesQuery()
+  const { data: salesData, isLoading: isSalesLoading } = useGetSalesQuery({ page: 1, limit: 100, search: "" })
+  const { data: saleData } = useGetSaleByIdQuery(selectedSale, { skip: !selectedSale })
+  const [createSalesReturn, { isLoading }] = useCreateSalesReturnMutation()
 
-  // Fetch sale items when sale is selected
+  const customers = customersData?.data || []
+  const warehouses = warehousesData || []
+  const sales = salesData?.data || []
+
+  // Load sale items when sale is selected
   useEffect(() => {
-    const fetchSaleItems = async () => {
-      if (!selectedSale) return
-      
-      try {
-        const res = await fetch(`/api/pos/sales/${selectedSale}`)
-        if (!res.ok) {
-          if (res.status === 404) {
-            toast.error("Sale not found")
-            return
-          }
-          throw new Error("Failed to fetch sale items")
-        }
-        const data = await res.json()
-        setSaleItems(data.items || [])
-        
-        // Set customer from sale
-        if (data.customer_id) {
-          setSelectedCustomer(data.customer_id)
-        }
-        
-        // Set warehouse from sale
-        if (data.warehouse_id) {
-          setSelectedWarehouse(data.warehouse_id)
-        }
-        
-      } catch (error) {
-        toast.error("Failed to load sale items")
-        console.error(error)
-      }
+    if (saleData) {
+      const items = saleData.sale_items || []
+      setSaleItems(items)
+      setSelectedCustomer(String(saleData.customer_id || ""))
+      setSelectedWarehouse(String(saleData.warehouse_id || ""))
+      setTaxRate(Number(saleData.tax_rate) || 0)
+      setDiscount(Number(saleData.discount) || 0)
+      setShipping(Number(saleData.shipping) || 0)
+
+      // Populate cart with sale items
+      setCartItems(items.map((item: any) => ({
+        id: Date.now().toString() + Math.random(),
+        product_id: item.product_id,
+        sale_item_id: item.id,
+        name: item.products?.name || `Product ${item.product_id}`,
+        price: Number(item.unit_price) || 0,
+        quantity: Number(item.quantity) || 0,
+        discount: Number(item.discount) || 0,
+        tax: Number(item.tax) || 0,
+        subtotal: Number(item.subtotal) || 0,
+        maxQuantity: Number(item.quantity) || 0
+      })))
     }
-    
-    fetchSaleItems()
-  }, [selectedSale])
+  }, [saleData])
+
+  // Show warning if no sales available
+  useEffect(() => {
+    if (!isSalesLoading && sales.length === 0) {
+      toast.error("No sales found. Please create some sales first.")
+    }
+  }, [sales, isSalesLoading])
 
   // Search products
   useEffect(() => {
@@ -138,7 +124,7 @@ export default function CreateSalesReturn() {
         }
       }
     }
-    
+
     const timer = setTimeout(searchProducts, 300)
     return () => clearTimeout(timer)
   }, [searchTerm])
@@ -153,18 +139,18 @@ export default function CreateSalesReturn() {
     // Find if this product exists in the original sale
     const saleItem = saleItems.find(item => item.product_id === product.id)
     const maxQty = saleItem ? saleItem.quantity : 0
-    
+
     setCartItems(prev => {
       const existingItem = prev.find(item => item.product_id === product.id)
       if (existingItem) {
         const newQty = Math.min(existingItem.quantity + 1, maxQty)
-        return prev.map(item => 
-          item.product_id === product.id 
-            ? { 
-                ...item, 
-                quantity: newQty,
-                subtotal: newQty * item.price
-              } 
+        return prev.map(item =>
+          item.product_id === product.id
+            ? {
+              ...item,
+              quantity: newQty,
+              subtotal: newQty * item.price
+            }
             : item
         )
       } else {
@@ -190,32 +176,32 @@ export default function CreateSalesReturn() {
   const updateQuantity = (id: string, quantity: number) => {
     const item = cartItems.find(item => item.id === id)
     if (!item) return
-    
+
     quantity = Math.max(0, Math.min(quantity, item.maxQuantity))
-    
+
     if (quantity <= 0) {
       setCartItems(cartItems.filter(item => item.id !== id))
     } else {
-      setCartItems(cartItems.map(item => 
-        item.id === id 
-          ? { 
-              ...item, 
-              quantity,
-              subtotal: quantity * item.price
-            } 
+      setCartItems(cartItems.map(item =>
+        item.id === id
+          ? {
+            ...item,
+            quantity,
+            subtotal: quantity * item.price
+          }
           : item
       ))
     }
   }
 
   const updateItemPrice = (id: string, price: number) => {
-    setCartItems(cartItems.map(item => 
-      item.id === id 
-        ? { 
-            ...item, 
-            price,
-            subtotal: item.quantity * price
-          } 
+    setCartItems(cartItems.map(item =>
+      item.id === id
+        ? {
+          ...item,
+          price,
+          subtotal: item.quantity * price
+        }
         : item
     ))
   }
@@ -236,8 +222,6 @@ export default function CreateSalesReturn() {
       return
     }
 
-    setIsLoading(true)
-    
     try {
       const returnData = {
         sale_id: selectedSale,
@@ -263,25 +247,13 @@ export default function CreateSalesReturn() {
         }))
       }
 
-      const response = await fetch('/api/sales-returns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(returnData)
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create sales return')
-      }
-
+      await createSalesReturn(returnData).unwrap()
       toast.success("Sales return created successfully")
       router.push('/sales-return/list')
-    } catch (error) {
-      toast.error("Failed to create sales return")
+    } catch (error: any) {
+      const message = error?.data?.error || "Failed to create sales return"
+      toast.error(message)
       console.error(error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -301,30 +273,61 @@ export default function CreateSalesReturn() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium">Date *</label>
-              <Input 
-                type="date" 
+              <Input
+                type="date"
                 defaultValue={new Date().toISOString().slice(0, 10)}
-                className="mt-1" 
+                className="mt-1"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Sale Reference *</label>
-              <Select 
-                value={selectedSale}
-                onValueChange={setSelectedSale}
-                disabled={sales.length === 0}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={sales.length === 0 ? "No sales available" : "Select Sale"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sales.map(sale => (
-                    <SelectItem key={sale.id} value={sale.id}>
-                      {sale.reference}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openSale} onOpenChange={setOpenSale}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openSale}
+                    className={cn(
+                      "w-full justify-between mt-1",
+                      !selectedSale && "text-muted-foreground"
+                    )}
+                    disabled={sales.length === 0}
+                  >
+                    {selectedSale
+                      ? sales.find((sale) => sale.id === selectedSale)?.reference
+                      : sales.length === 0 ? "No sales available" : "Select Sale"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search sale reference..." />
+                    <CommandList>
+                      <CommandEmpty>No sale found.</CommandEmpty>
+                      <CommandGroup>
+                        {sales.map((sale) => (
+                          <CommandItem
+                            key={sale.id}
+                            value={sale.reference}
+                            onSelect={() => {
+                              setSelectedSale(sale.id === selectedSale ? "" : sale.id)
+                              setOpenSale(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedSale === sale.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {sale.reference}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {sales.length === 0 && (
                 <p className="text-sm text-red-500 mt-1">
                   No sales found. Please create some sales first to create sales returns.
@@ -333,7 +336,7 @@ export default function CreateSalesReturn() {
             </div>
             <div>
               <label className="text-sm font-medium">Customer *</label>
-              <Select 
+              <Select
                 value={selectedCustomer}
                 onValueChange={setSelectedCustomer}
               >
@@ -342,7 +345,7 @@ export default function CreateSalesReturn() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
+                    <SelectItem key={customer.id} value={String(customer.id)}>
                       {customer.name}
                     </SelectItem>
                   ))}
@@ -360,7 +363,7 @@ export default function CreateSalesReturn() {
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map(warehouse => (
-                    <SelectItem key={warehouse.id} value={warehouse.id}>
+                    <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                       {warehouse.name}
                     </SelectItem>
                   ))}
@@ -373,19 +376,19 @@ export default function CreateSalesReturn() {
             <label className="text-sm font-medium">Product</label>
             <div className="relative mt-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                placeholder="Scan/Search Product by Code Name" 
-                className="pl-10" 
+              <Input
+                placeholder="Scan/Search Product by Code Name"
+                className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             {/* Product search results */}
             {searchTerm && products.length > 0 && (
               <div className="mt-2 border rounded-md max-h-60 overflow-auto">
                 {products.map(product => (
-                  <div 
+                  <div
                     key={product.id}
                     className="p-2 hover:bg-gray-50 cursor-pointer flex justify-between items-center border-b"
                     onClick={() => addToCart(product)}
@@ -433,7 +436,7 @@ export default function CreateSalesReturn() {
                           <div className="font-medium">{item.name}</div>
                         </td>
                         <td className="p-3 border">
-                          <Input 
+                          <Input
                             type="number"
                             min="0"
                             step="0.01"
@@ -455,7 +458,7 @@ export default function CreateSalesReturn() {
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <Input 
+                            <Input
                               type="number"
                               min="1"
                               max={item.maxQuantity}
@@ -475,8 +478,8 @@ export default function CreateSalesReturn() {
                         </td>
                         <td className="p-3 border">${item.subtotal}</td>
                         <td className="p-3 border">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => removeItem(item.id)}
                           >
@@ -497,9 +500,9 @@ export default function CreateSalesReturn() {
                 <div>
                   <label className="text-sm font-medium">Order Tax</label>
                   <div className="flex mt-1">
-                    <Input 
-                      placeholder="0" 
-                      className="rounded-r-none" 
+                    <Input
+                      placeholder="0"
+                      className="rounded-r-none"
                       value={taxRate}
                       onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
                     />
@@ -511,9 +514,9 @@ export default function CreateSalesReturn() {
                 <div>
                   <label className="text-sm font-medium">Discount</label>
                   <div className="flex mt-1">
-                    <Input 
-                      placeholder="0" 
-                      className="rounded-r-none" 
+                    <Input
+                      placeholder="0"
+                      className="rounded-r-none"
                       value={discount}
                       onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                     />
@@ -525,9 +528,9 @@ export default function CreateSalesReturn() {
                 <div>
                   <label className="text-sm font-medium">Shipping</label>
                   <div className="flex mt-1">
-                    <Input 
-                      placeholder="0" 
-                      className="rounded-r-none" 
+                    <Input
+                      placeholder="0"
+                      className="rounded-r-none"
                       value={shipping}
                       onChange={(e) => setShipping(parseFloat(e.target.value) || 0)}
                     />
@@ -540,7 +543,7 @@ export default function CreateSalesReturn() {
 
               <div>
                 <label className="text-sm font-medium">Status *</label>
-                <Select 
+                <Select
                   value={status}
                   onValueChange={setStatus}
                 >
@@ -556,17 +559,17 @@ export default function CreateSalesReturn() {
 
               <div>
                 <label className="text-sm font-medium">Note</label>
-                <Textarea 
-                  placeholder="A few words ..." 
-                  className="mt-1" 
+                <Textarea
+                  placeholder="A few words ..."
+                  className="mt-1"
                   rows={4}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
 
-              <Button 
-                className="bg-purple-600 hover:bg-purple-700"
+              <Button
+                className="bg-[#1a237e] hover:bg-purple-700"
                 onClick={handleSubmit}
                 disabled={isLoading}
               >

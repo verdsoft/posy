@@ -1,32 +1,24 @@
 "use client"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { format } from "date-fns"
-import { Search, ChevronLeft, ChevronRight, FileDown, Eye, Edit, Trash2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, FileDown, Plus } from "lucide-react"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { toast } from "sonner"
+import { useGetOrganizationQuery } from "@/lib/slices/hrmV2Api"
+import { generatePDF } from "@/lib/utils/pdf-generator"
 
-import DashboardLayout from "../../../components/dashboard-layout"
+import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import AuthGuard from "@/components/AuthGuard"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -52,14 +44,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Adjustment, AdjustmentItem, AdjustmentDetails, PaginatedAdjustmentResponse } from "@/lib/types/adjustment"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" // Keep for Dialog internal table
+import type { AdjustmentDetails } from "@/lib/types/adjustment"
 import { useGetAdjustmentsQuery, useDeleteAdjustmentMutation } from "@/lib/slices/adjustmentsApi"
+import { TableActions } from "@/components/ui/table-actions"
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+
 
 export default function AdjustmentList() {
   const [page, setPage] = useState(1)
@@ -78,29 +68,25 @@ export default function AdjustmentList() {
     limit,
     search: searchQuery
   })
+  const { data: orgData } = useGetOrganizationQuery()
   const [deleteAdjustment, { isLoading: isDeleting }] = useDeleteAdjustmentMutation()
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Adjustment List', 14, 16)
-    
     const tableData = data?.data.map(adjustment => [
       format(new Date(adjustment.date), 'MMM dd, yyyy'),
       adjustment.reference,
       adjustment.warehouse_name,
       adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
-      adjustment.item_count?.toString() || '0'
+      adjustment.product_names || 'N/A'
     ]) || []
-    
-    autoTable(doc, {
-      head: [['Date', 'Reference', 'Warehouse', 'Type', 'Total Products']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
+
+    generatePDF({
+      title: 'Adjustments List',
+      columns: ['Date', 'Reference', 'Warehouse', 'Type', 'Products'],
+      rows: tableData,
+      organization: orgData,
+      filename: 'adjustments.pdf'
     })
-    
-    doc.save('adjustments.pdf')
   }
 
   const exportToExcel = () => {
@@ -110,10 +96,10 @@ export default function AdjustmentList() {
         Reference: adjustment.reference,
         Warehouse: adjustment.warehouse_name,
         Type: adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1),
-        'Total Products': adjustment.item_count || 0
+        'Products': adjustment.product_names || 'N/A'
       })) || []
     )
-    
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Adjustments")
     XLSX.writeFile(workbook, "adjustments.xlsx")
@@ -148,7 +134,7 @@ export default function AdjustmentList() {
 
   const handleDeleteAdjustment = async () => {
     if (!adjustmentToDelete) return
-    
+
     try {
       await deleteAdjustment(adjustmentToDelete).unwrap()
       toast.success("Adjustment deleted successfully")
@@ -161,6 +147,17 @@ export default function AdjustmentList() {
     }
   }
 
+  const getStatusBadge = (type: string) => {
+    return (
+      <Badge
+        variant={type === 'addition' ? 'default' : 'destructive'}
+        className="text-xs"
+      >
+        {type.charAt(0).toUpperCase() + type.slice(1)}
+      </Badge>
+    )
+  }
+
   return (
     <AuthGuard>
       <DashboardLayout>
@@ -171,197 +168,158 @@ export default function AdjustmentList() {
               <span>|</span>
               <span>Adjustments</span>
             </div>
-            <h1 className="text-xl font-semibold">Adjustments</h1>
+            {/* <h1 className="text-xl font-semibold">Adjustments</h1> */}
           </div>
 
-          <Card>
-            <CardHeader className="p-4 pb-0">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <form onSubmit={handleSearch} className="flex items-center gap-2">
-                  <div className="relative w-full md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search adjustments..."
-                      className="pl-10"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" variant="outline" size="sm">
-                    Search
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-3 border-b flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative w-full md:w-auto">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Search adjustments..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-64 h-8 text-sm pl-8"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs flex-1 md:flex-none"
+                  onClick={exportToPDF}
+                >
+                  <FileDown className="h-3 w-3 mr-1" /> PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs flex-1 md:flex-none"
+                  onClick={exportToExcel}
+                >
+                  <FileDown className="h-3 w-3 mr-1" /> Excel
+                </Button>
+                <Link href="/adjustment/create" className="flex-1 md:flex-none">
+                  <Button className="bg-[#1a237e] hover:bg-purple-700 h-8 px-3 text-xs w-full">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create Adjustment
                   </Button>
-                </form>
+                </Link>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[#f8f9fa]">
+                  <tr>
+                    <th className="text-left p-3 font-medium">
+                      <input type="checkbox" className="rounded border-gray-300" />
+                    </th>
+                    <th className="text-left p-3 font-medium">Date</th>
+                    <th className="text-left p-3 font-medium">Reference</th>
+                    <th className="text-left p-3 font-medium">Warehouse</th>
+                    <th className="text-left p-3 font-medium">Type</th>
+                    <th className="text-left p-3 font-medium">Products</th>
+                    <th className="text-right p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={7} className="text-center p-8 text-muted-foreground">Loading...</td>
+                    </tr>
+                  ) : isError ? (
+                    <tr>
+                      <td colSpan={7} className="text-center p-8 text-red-500">Failed to load adjustments</td>
+                    </tr>
+                  ) : data?.data.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center p-8 text-muted-foreground">No adjustments found</td>
+                    </tr>
+                  ) : (
+                    data?.data.map((adjustment) => (
+                      <tr key={adjustment.id} className="border-b hover:bg-gray-50 transition-colors">
+                        <td className="p-3">
+                          <input type="checkbox" className="rounded border-gray-300" />
+                        </td>
+                        <td className="p-3">
+                          {format(new Date(adjustment.date), 'MMM dd, yyyy')}
+                        </td>
+                        <td className="p-3 font-medium">{adjustment.reference}</td>
+                        <td className="p-3">{adjustment.warehouse_name}</td>
+                        <td className="p-3">
+                          {getStatusBadge(adjustment.type)}
+                        </td>
+                        <td className="p-3 max-w-xs truncate" title={adjustment.product_names}>
+                          {adjustment.product_names || 'N/A'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <TableActions
+                            onView={() => handleViewAdjustment(adjustment.id)}
+                            onEdit={() => router.push(`/adjustment/edit/${adjustment.id}`)}
+                            onDelete={() => handleDeleteClick(adjustment.id)}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {data && (
+              <div className="p-3 border-t flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-muted-foreground">
+                  Showing {((data.pagination.page - 1) * data.pagination.limit) + 1} to {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} of {data.pagination.total} entries
+                </div>
+
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportToPDF}
+                  <Select
+                    value={limit.toString()}
+                    onValueChange={(value) => setLimit(Number(value))}
                   >
-                    <FileDown className="h-4 w-4 mr-2" /> PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportToExcel}
-                  >
-                    <FileDown className="h-4 w-4 mr-2" /> Excel
-                  </Button>
-                  <Link href="/adjustment/create">
-                    <Button size="sm">Create Adjustment</Button>
-                  </Link>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[120px]">Date</TableHead>
-                      <TableHead className="w-[150px]">Reference</TableHead>
-                      <TableHead className="w-[180px]">Warehouse</TableHead>
-                      <TableHead className="w-[120px]">Type</TableHead>
-                      <TableHead className="w-[120px] text-right">Total Products</TableHead>
-                      <TableHead className="w-[150px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 5 }).map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[180px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-4 w-[120px] ml-auto" /></TableCell>
-                          <TableCell className="flex gap-2 w-[150px]">
-                            <Skeleton className="h-8 w-8 rounded" />
-                            <Skeleton className="h-8 w-8 rounded" />
-                            <Skeleton className="h-8 w-8 rounded" />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : isError ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                          Failed to load adjustments
-                        </TableCell>
-                      </TableRow>
-                    ) : data?.data.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                          No adjustments found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      data?.data.map((adjustment) => (
-                        <TableRow key={adjustment.id}>
-                          <TableCell className="w-[120px]">
-                            {format(new Date(adjustment.date), 'MMM dd, yyyy')}
-                          </TableCell>
-                          <TableCell className="w-[150px]">{adjustment.reference}</TableCell>
-                          <TableCell className="w-[180px]">{adjustment.warehouse_name}</TableCell>
-                          <TableCell className="w-[120px]">
-                            <Badge 
-                              variant={adjustment.type === 'addition' ? 'default' : 'destructive'}
-                              className="text-xs"
-                            >
-                              {adjustment.type.charAt(0).toUpperCase() + adjustment.type.slice(1)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="w-[120px] text-right">
-                            {adjustment.item_count}
-                          </TableCell>
-                          <TableCell className="w-[150px]">
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleViewAdjustment(adjustment.id)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => router.push(`/adjustment/edit/${adjustment.id}`)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteClick(adjustment.id)}
-                                className="text-destructive hover:text-destructive/80"
-                                disabled={isDeleting}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    <SelectTrigger className="h-7 w-[60px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((size) => (
+                        <SelectItem key={size} value={size.toString()} className="text-xs">
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              {data && (
-                <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">Rows per page</p>
-                    <Select
-                      value={limit.toString()}
-                      onValueChange={(value) => setLimit(Number(value))}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => Math.max(old - 1, 1))}
+                      disabled={page === 1}
                     >
-                      <SelectTrigger className="h-8 w-[70px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[10, 25, 50, 100].map((size) => (
-                          <SelectItem key={size} value={size.toString()}>
-                            {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1 px-2">
+                      {/* Simplified pagination for now */}
+                      <span className="text-xs">Page {page} of {data.pagination.totalPages}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setPage((old) => old + 1)}
+                      disabled={page >= (data.pagination.totalPages || 1)}
+                    >
+                      Next
+                    </Button>
                   </div>
-
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPage((old) => Math.max(old - 1, 1))}
-                          disabled={page === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-2" />
-                          Previous
-                        </Button>
-                      </PaginationItem>
-                      
-                      <span className="text-sm text-muted-foreground mx-4">
-                        Page {page} of {data.pagination.totalPages}
-                      </span>
-
-                      <PaginationItem>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPage((old) => old + 1)}
-                          disabled={page >= (data?.pagination.totalPages || 1)}
-                        >
-                          Next
-                          <ChevronRight className="h-4 w-4 ml-2" />
-                        </Button>
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* View Adjustment Dialog */}
@@ -453,24 +411,24 @@ export default function AdjustmentList() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the adjustment
-              and remove its data from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteAdjustment}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete Adjustment"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </DashboardLayout>
-  </AuthGuard>
-)
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the adjustment
+                and remove its data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAdjustment}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete Adjustment"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </DashboardLayout>
+    </AuthGuard>
+  )
 }

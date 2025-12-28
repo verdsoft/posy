@@ -11,6 +11,9 @@ import { Search, Plus, Minus, X } from "lucide-react"
 import { searchProducts } from "@/lib/api"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+import { useCreateQuotationMutation } from "@/lib/slices/quotationsApi"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
 
 interface Product {
   id: string
@@ -42,9 +45,7 @@ interface QuotationItem {
 }
 
 export default function CreateQuotation() {
-  
-  const [ loading,setLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [customerId, setCustomerId] = useState("")
   const [warehouseId, setWarehouseId] = useState("")
@@ -57,8 +58,15 @@ export default function CreateQuotation() {
   const [orderTax, setOrderTax] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [shipping, setShipping] = useState<number>(0);
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+
+  // RTK Query hooks
+  const { data: customersData, isLoading: isLoadingCustomers } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
+  const { data: warehousesData, isLoading: isLoadingWarehouses } = useGetWarehousesQuery()
+  const [createQuotation, { isLoading: isSubmitting }] = useCreateQuotationMutation()
+
+  const customers = customersData?.data || []
+  const warehouses = warehousesData || []
+  const loading = isLoadingCustomers || isLoadingWarehouses
 
 
   const subtotal = useMemo(() => {
@@ -80,7 +88,7 @@ export default function CreateQuotation() {
     return subtotal + taxAmount - discountValue + shippingValue;
   }, [subtotal, taxAmount, discount, shipping]);
 
- 
+
   // Modify your updateItem function to ensure numbers
   const updateItem = (id: string, field: string, value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
@@ -91,34 +99,6 @@ export default function CreateQuotation() {
     );
   };
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-
-        // Fetch customers
-        const customersRes = await fetch('/api/customers')
-        if (customersRes.ok) {
-          const customersData = await customersRes.json()
-          setCustomers(customersData.data || [])
-        }
-
-        // Fetch warehouses
-        const warehousesRes = await fetch('/api/settings/warehouses')
-        if (warehousesRes.ok) {
-          const warehousesData = await warehousesRes.json()
-          setWarehouses(warehousesData)
-        }
-      } catch (error) {
-        console.error("Failed to load data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
 
 
 
@@ -175,102 +155,80 @@ export default function CreateQuotation() {
 
 
   // Update the handleSubmit function
-const handleSubmit = async () => {
-  console.log("1 - Start of handleSubmit");
+  const handleSubmit = async () => {
+    console.log("1 - Start of handleSubmit");
 
-  if (!customerId || !warehouseId || items.length === 0) {
-    toast.error("Please fill all required fields and add at least one product");
-    return;
-  }
-
-  try {
-    console.log("2 - Before getting user_id");
-    const user_id = localStorage.getItem('UserId');
-    if (!user_id) throw new Error("User authentication required");
-
-    console.log("3 - Before calculations");
-    
-    // Ensure all calculations use proper decimal formatting
-    const subtotal = parseFloat(
-      items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0).toFixed(2)
-    );
-
-    const tax_amount = Number(
-      (subtotal * (Number(orderTax) / 100)).toFixed(2)
-    );
-
-    const total = Number(
-      (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
-    );
-
-
-    console.log("4 - Before fetch", {
-      customerId,
-      warehouseId,
-      subtotal,
-      items
-    });
-
-    // Format all numbers to 2 decimal places before sending
-    const payload = {
-      reference: `QT-${Date.now().toString().slice(-6)}`,
-      date,
-      valid_until: validUntil || null,
-      customer_id: customerId,
-      warehouse_id: warehouseId,
-      subtotal: Number(subtotal),
-      tax_rate: Number(Number(orderTax)),
-      tax_amount: Number(tax_amount),
-      discount: Number(Number(discount)),
-      shipping: Number(Number(shipping)),
-      total: Number(total),
-      status,
-      notes: note || null,
-      created_by: user_id,
-      items: items.map(item => ({
-        product_id: item.id,
-        quantity: Number(Number(item.quantity)),
-        unit_price: Number(Number(item.price)),
-        discount: Number(Number(item.discount || 0)),
-        tax: Number(Number(item.tax || 0)),
-        subtotal: Number((
-          Number(item.price) * Number(item.quantity) - 
-          Number(item.discount || 0) + 
-          Number(item.tax || 0)
-        ))
-      }))
-    };
-
-    console.log("Formatted Payload:", payload);
-
-    const response = await fetch('/api/quotations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    console.log("5 - After fetch, before response check");
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log("API Error Response:", errorText);
-      
+    if (!customerId || !warehouseId || items.length === 0) {
+      toast.error("Please fill all required fields and add at least one product");
+      return;
     }
- toast.success("Quotation created successfully");
-    console.log("6 - After response check");
-  
-    console.log("API", response);
-   
 
-  } catch (error: unknown) {
-    console.error("Full Error:", error);
-    const message = error instanceof Error ? error.message : "An unexpected error occurred";
-    toast.error(message);
-  } finally {
-    setIsSubmitting(false);
-    console.log("7 - Final cleanup");
-  }
-};
+    try {
+      console.log("2 - Before getting user_id");
+      const user_id = localStorage.getItem('UserId');
+      if (!user_id) throw new Error("User authentication required");
+
+      console.log("3 - Before calculations");
+
+      // Ensure all calculations use proper decimal formatting
+      const subtotal = parseFloat(
+        items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0).toFixed(2)
+      );
+
+      const tax_amount = Number(
+        (subtotal * (Number(orderTax) / 100)).toFixed(2)
+      );
+
+      const total = Number(
+        (subtotal + tax_amount - Number(discount) + Number(shipping)).toFixed(2)
+      );
+
+
+      console.log("4 - Before fetch", {
+        customerId,
+        warehouseId,
+        subtotal,
+        items
+      });
+
+      // Format all numbers to 2 decimal places before sending
+      const payload = {
+        reference: `QT-${Date.now().toString().slice(-6)}`,
+        date,
+        valid_until: validUntil || null,
+        customer_id: customerId,
+        warehouse_id: warehouseId,
+        subtotal: Number(subtotal),
+        tax_rate: Number(Number(orderTax)),
+        tax_amount: Number(tax_amount),
+        discount: Number(Number(discount)),
+        shipping: Number(Number(shipping)),
+        total: Number(total),
+        status,
+        notes: note || null,
+        created_by: user_id,
+        items: items.map(item => ({
+          product_id: item.id,
+          quantity: Number(Number(item.quantity)),
+          unit_price: Number(Number(item.price)),
+          discount: Number(Number(item.discount || 0)),
+          tax: Number(Number(item.tax || 0)),
+          subtotal: Number((
+            Number(item.price) * Number(item.quantity) -
+            Number(item.discount || 0) +
+            Number(item.tax || 0)
+          ))
+        }))
+      };
+
+      await createQuotation(payload).unwrap()
+      toast.success("Quotation created successfully")
+    } catch (error: any) {
+      console.error("Full Error:", error);
+      const message = error?.data?.error || error?.message || "Failed to create quotation";
+      toast.error(message);
+    }
+  };
 
 
   if (loading) {
@@ -283,7 +241,7 @@ const handleSubmit = async () => {
 
   return (
 
-    
+
     <DashboardLayout>
       <div className="p-6">
         <div className="mb-6">

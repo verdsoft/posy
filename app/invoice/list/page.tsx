@@ -13,7 +13,7 @@ import * as XLSX from 'xlsx'
 // PDF generation moved to server-side API routes
 import { useGetOrganizationQuery } from '@/lib/slices/organizationApi'
 import type React from "react"
-import { useGetInvoicesQuery, useDeleteInvoiceMutation, useGetInvoiceByIdQuery, useGetInvoiceItemsQuery } from "@/lib/slices/invoicesApi"
+import { useGetInvoicesQuery, useDeleteInvoiceMutation, useGetInvoiceByIdQuery, useGetInvoiceItemsQuery } from "@/lib/slices/invoicesV2Api"
 import { Invoice, InvoiceItem } from "@/lib/types/invoice"
 import { toast } from "sonner"
 import {

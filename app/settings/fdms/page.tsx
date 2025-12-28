@@ -348,36 +348,45 @@ export default function FDMSSettingsPage() {
         </TabsContent>
 
         <TabsContent value="status" className="space-y-6">
-          {statusData?.data && (
+          {statusData?.data?.statistics && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{statusData.data.statistics.totalTransactions}</div>
+                  <div className="text-2xl font-bold">{statusData.data.statistics.totalTransactions || 0}</div>
                   <p className="text-sm text-gray-600">Total Transactions</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{statusData.data.statistics.todayTransactions}</div>
+                  <div className="text-2xl font-bold">{statusData.data.statistics.todayTransactions || 0}</div>
                   <p className="text-sm text-gray-600">Today's Transactions</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-red-600">{statusData.data.statistics.failedTransactions}</div>
+                  <div className="text-2xl font-bold text-red-600">{statusData.data.statistics.failedTransactions || 0}</div>
                   <p className="text-sm text-gray-600">Failed Transactions</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-orange-600">{statusData.data.statistics.offlineQueueSize}</div>
+                  <div className="text-2xl font-bold text-orange-600">{statusData.data.statistics.offlineQueueSize || 0}</div>
                   <p className="text-sm text-gray-600">Offline Queue</p>
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {statusData?.data && !statusData.data.statistics && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No statistics available. Make sure FDMS is configured and connected.
+              </AlertDescription>
+            </Alert>
           )}
 
           {statusData?.data?.device && (

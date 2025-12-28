@@ -3,20 +3,24 @@ import { PurchaseReturn, PaginatedPurchaseReturnsResponse, SalesReturn, Paginate
 
 export const returnsApi = createApi({
   reducerPath: "returnsApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api/v2" }),
   tagTypes: ["SalesReturn", "PurchaseReturn"],
   endpoints: (builder) => ({
     // Sales Return endpoints
     getSalesReturns: builder.query<PaginatedSalesReturnsResponse, { page: number; limit: number; search: string }>({
-    query: ({ page, limit, search }) => `/sales-returns?page=${page}&limit=${limit}&search=${search}`,
-    providesTags: (result) =>
+      query: ({ page, limit, search }) => `/sales-returns?page=${page}&limit=${limit}&search=${search}`,
+      providesTags: (result) =>
         result
-            ? [
-                ...result.data.map(({ id }) => ({ type: 'SalesReturn' as const, id })),
-                { type: 'SalesReturn', id: 'LIST' },
-            ]
-            : [{ type: 'SalesReturn', id: 'LIST' }],
-}),
+          ? [
+            ...result.data.map(({ id }) => ({ type: 'SalesReturn' as const, id })),
+            { type: 'SalesReturn', id: 'LIST' },
+          ]
+          : [{ type: 'SalesReturn', id: 'LIST' }],
+    }),
+    getSalesReturnById: builder.query<{ data: SalesReturn }, string>({
+      query: (id) => `/sales-returns?id=${id}`,
+      providesTags: (result, error, id) => [{ type: 'SalesReturn', id }],
+    }),
     createSalesReturn: builder.mutation<SalesReturn, Partial<SalesReturn>>({
       query: (body) => ({
         url: "sales-returns",
@@ -25,9 +29,17 @@ export const returnsApi = createApi({
       }),
       invalidatesTags: ["SalesReturn"],
     }),
+    updateSalesReturn: builder.mutation<SalesReturn, Partial<SalesReturn>>({
+      query: (body) => ({
+        url: `sales-returns?id=${body.id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'SalesReturn', id }, { type: 'SalesReturn', id: 'LIST' }],
+    }),
     deleteSalesReturn: builder.mutation<void, string>({
       query: (id) => ({
-        url: `sales-returns/${id}`,
+        url: `sales-returns?id=${id}`,
         method: "DELETE",
       }),
       invalidatesTags: ["SalesReturn"],
@@ -35,26 +47,38 @@ export const returnsApi = createApi({
 
     // Purchase Return endpoints
     getPurchaseReturns: builder.query<PaginatedPurchaseReturnsResponse, { page: number; limit: number; search: string }>({
-    query: ({ page, limit, search }) => `/purchases-return?page=${page}&limit=${limit}&search=${search}`,
-    providesTags: (result) =>
+      query: ({ page, limit, search }) => `/purchases-returns?page=${page}&limit=${limit}&search=${search}`,
+      providesTags: (result) =>
         result
-            ? [
-                ...result.data.map(({ id }) => ({ type: 'PurchaseReturn' as const, id })),
-                { type: 'PurchaseReturn', id: 'LIST' },
-            ]
-            : [{ type: 'PurchaseReturn', id: 'LIST' }],
-}),
+          ? [
+            ...result.data.map(({ id }) => ({ type: 'PurchaseReturn' as const, id })),
+            { type: 'PurchaseReturn', id: 'LIST' },
+          ]
+          : [{ type: 'PurchaseReturn', id: 'LIST' }],
+    }),
+    getPurchaseReturnById: builder.query<{ data: PurchaseReturn }, string>({
+      query: (id) => `/purchases-returns?id=${id}`,
+      providesTags: (result, error, id) => [{ type: 'PurchaseReturn', id }],
+    }),
     createPurchaseReturn: builder.mutation<PurchaseReturn, Partial<PurchaseReturn>>({
       query: (body) => ({
-        url: "purchases-return",
+        url: "purchases-returns",
         method: "POST",
         body,
       }),
       invalidatesTags: ["PurchaseReturn"],
     }),
+    updatePurchaseReturn: builder.mutation<PurchaseReturn, Partial<PurchaseReturn>>({
+      query: (body) => ({
+        url: `purchases-returns?id=${body.id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'PurchaseReturn', id }, { type: 'PurchaseReturn', id: 'LIST' }],
+    }),
     deletePurchaseReturn: builder.mutation<void, string>({
       query: (id) => ({
-        url: `purchases-return?id=${id}`,
+        url: `purchases-returns?id=${id}`,
         method: "DELETE",
       }),
       invalidatesTags: (result, error, id) => [{ type: 'PurchaseReturn', id }],
@@ -64,9 +88,13 @@ export const returnsApi = createApi({
 
 export const {
   useGetSalesReturnsQuery,
+  useGetSalesReturnByIdQuery,
   useCreateSalesReturnMutation,
+  useUpdateSalesReturnMutation,
   useDeleteSalesReturnMutation,
   useGetPurchaseReturnsQuery,
+  useGetPurchaseReturnByIdQuery,
   useCreatePurchaseReturnMutation,
+  useUpdatePurchaseReturnMutation,
   useDeletePurchaseReturnMutation,
 } = returnsApi

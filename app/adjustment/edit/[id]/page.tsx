@@ -80,7 +80,7 @@ export default function EditAdjustmentPage() {
   useEffect(() => {
     const fetchWarehouses = async () => {
       try {
-        const response = await fetch('/api/settings/warehouses')
+        const response = await fetch('/api/v2/settings/warehouses')
         const data = await response.json()
         setWarehouses(data)
       } catch {}

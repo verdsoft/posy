@@ -39,10 +39,10 @@ const initialState: AuthState = {
 }
 
 // RTK Query API
- const authApi = createApi({
+export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: API_URL,
+    baseUrl: "",
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as { auth: AuthState }).auth.token
       if (token) {
@@ -55,7 +55,7 @@ const initialState: AuthState = {
   endpoints: (builder) => ({
     login: builder.mutation<AuthResponse, LoginRequest>({
       query: (credentials) => ({
-        url: "/users/login",
+        url: `${API_URL}/users/login`,
         method: "POST",
         body: credentials,
       }),
@@ -79,18 +79,18 @@ const initialState: AuthState = {
     }),
     signup: builder.mutation<{ message: string }, SignupRequest>({
       query: (userData) => ({
-        url: "/users",
+        url: `${API_URL}/users`,
         method: "POST",
         body: userData,
       }),
     }),
     getProfile: builder.query<User, void>({
-      query: () => "/users/profile",
+      query: () => `${API_URL}/users/profile`,
       providesTags: ["User"],
     }),
     refreshToken: builder.mutation<AuthResponse, void>({
       query: () => ({
-        url: "/users/refresh",
+        url: `${API_URL}/users/refresh`,
         method: "POST",
       }),
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
@@ -167,5 +167,3 @@ export const {
 export const { setCredentials, logout, setUser, loadFromStorage } = authSlice.actions
 export default authSlice.reducer
 
-// Export the API reducer for store configuration
-export { authApi }

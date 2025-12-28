@@ -2,35 +2,44 @@
 import { Category, Brand, Unit, Warehouse, Adjustment, PaginatedResponse, AdjustmentItem } from "@/lib/types"
 
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch("/api/settings/categories")
-  return res.json()
+  const res = await fetch(`/api/v2/settings/categories`)
+  const data = await res.json()
+  return data.data || data // Handle V2 paginated wrapper if present
 }
 
 export async function fetchBrands(): Promise<Brand[]> {
-  const res = await fetch("/api/settings/brands")
-  return res.json()
+  const res = await fetch("/api/v2/settings/brands")
+  const data = await res.json()
+  return data.data || data
 }
 
 export async function fetchCustomers() {
-  const res = await fetch("/api/customers")
+  const res = await fetch("/api/v2/customers")
   if (!res.ok) throw new Error("Failed to fetch customers")
-  return res.json()
+  const data = await res.json()
+  return data.data || data
 }
 
 export async function fetchSuppliers() {
-  const res = await fetch("/api/suppliers")
+  const res = await fetch("/api/v2/suppliers")
   if (!res.ok) throw new Error("Failed to fetch suppliers")
-  return res.json()
+  const data = await res.json()
+  return data.data || data
 }
 
 export async function fetchUnits(): Promise<Unit[]> {
-  const res = await fetch("/api/settings/units")
-  return res.json()
+  const res = await fetch("/api/v2/settings/units")
+  const data = await res.json()
+  return data.data || data
 }
 
 export async function fetchWarehouses(): Promise<Warehouse[]> {
-  const res = await fetch("/api/settings/warehouses")
-  return res.json()
+  // Warehouse V2 endpoint usually returns list directly or in data.
+  // Checking typical V2 pattern, it's often paginated { data: [], ... } or just [] if simple list.
+  // We'll assume { data: ... } or array.
+  const res = await fetch("/api/v2/settings/warehouses")
+  const data = await res.json()
+  return Array.isArray(data) ? data : (data.data || [])
 }
 
 // lib/api.ts
@@ -45,7 +54,8 @@ export async function createAdjustment(data: {
   }[];
   notes?: string;
 }): Promise<{ adjustment_id: string; reference: string }> {
-  const res = await fetch("/api/adjustments", {
+  // Adjust input data to match V2 expectation if needed (e.g. types)
+  const res = await fetch("/api/v2/adjustments", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -54,7 +64,8 @@ export async function createAdjustment(data: {
   })
 
   if (!res.ok) {
-    throw new Error("Failed to create adjustment")
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to create adjustment")
   }
 
   return res.json()
@@ -65,16 +76,16 @@ export async function fetchAdjustments(params?: {
   date?: string;
   page?: number;
   limit?: number;
-  search?: string; // 👈 ADD THIS
+  search?: string;
 }): Promise<PaginatedResponse<Adjustment>> {
-  const url = new URL("/api/adjustments", window.location.origin);
+  const url = new URL("/api/v2/adjustments", window.location.origin);
 
   if (params) {
     if (params.warehouse_id) url.searchParams.append("warehouse_id", params.warehouse_id);
     if (params.date) url.searchParams.append("date", params.date);
     if (params.page) url.searchParams.append("page", params.page.toString());
     if (params.limit) url.searchParams.append("limit", params.limit.toString());
-    if (params.search) url.searchParams.append("search", params.search); // 👈 ADD THIS
+    if (params.search) url.searchParams.append("search", params.search);
   }
 
   const res = await fetch(url.toString());
@@ -84,11 +95,11 @@ export async function fetchAdjustments(params?: {
 
 
 export async function fetchAdjustmentDetails(id: string): Promise<Adjustment & { items: AdjustmentItem[] }> {
-  const res = await fetch(`/api/adjustments/${id}`)
+  // Use V2 query param style
+  const res = await fetch(`/api/v2/adjustments?id=${id}`)
   if (!res.ok) {
     throw new Error("Failed to fetch adjustment details")
   }
-
   return res.json()
 }
 
@@ -102,7 +113,12 @@ export interface ProductSearchResult {
 }
 
 export async function searchProducts(query: string) {
-  const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`)
+  // Use V2 products endpoint with search param
+  const res = await fetch(`/api/v2/products?search=${encodeURIComponent(query)}&limit=10`)
   if (!res.ok) throw new Error("Failed to search products")
-  return await res.json()
+  const data = await res.json()
+  // V2 returns a paginated response { data: [...] }
+  // We need to map it to what the UI expects if different, or just return the array
+  // The UI expects an array of products.
+  return data.data || []
 }

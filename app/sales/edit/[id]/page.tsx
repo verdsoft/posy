@@ -10,6 +10,10 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
 import type React from "react"
+import { useGetSaleByIdQuery, useUpdateSaleMutation } from "@/lib/slices/salesApi"
+import { useGetCustomersQuery } from "@/lib/slices/customersApi"
+import { useGetWarehousesQuery } from "@/lib/slices/warehousesApi"
+import { useGetProductsQuery } from "@/lib/slices/productsApi"
 
 interface Product {
     id: string
@@ -34,95 +38,55 @@ export default function EditSale() {
     const router = useRouter()
     const { id } = useParams()
     const [cartItems, setCartItems] = useState<CartItem[]>([])
-    const [products, setProducts] = useState<Product[]>([])
     const [searchTerm, setSearchTerm] = useState("")
-    const [customers, setCustomers] = useState<{ id: string, name: string }[]>([])
-    const [warehouses, setWarehouses] = useState<{ id: string, name: string }[]>([])
     const [selectedCustomer, setSelectedCustomer] = useState("")
     const [selectedWarehouse, setSelectedWarehouse] = useState("")
     const [taxRate, setTaxRate] = useState(0)
     const [discount, setDiscount] = useState(0)
     const [shipping, setShipping] = useState(0)
     const [status, setStatus] = useState("completed")
-    const [paymentStatus, setPaymentStatus] = useState("pending")
+    const [paymentStatus, setPaymentStatus] = useState("unpaid")
     const [notes, setNotes] = useState("")
-    const [isLoading, setIsLoading] = useState(false)
-    const [saleData, setSaleData] = useState<any>(null)
 
-    // Fetch sale data and initial data
+    // RTK Query hooks
+    const { data: saleData, isLoading: isSaleLoading } = useGetSaleByIdQuery(id as string, { skip: !id })
+    const { data: customersData } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
+    const { data: warehousesData } = useGetWarehousesQuery()
+    const { data: productsData } = useGetProductsQuery({ page: 1, limit: 100, search: searchTerm })
+    const [updateSale, { isLoading: isUpdating }] = useUpdateSaleMutation()
+
+    const customers = customersData?.data || []
+    const warehouses = warehousesData || []
+    const products = productsData?.data || []
+
+    // Load sale data when it's fetched
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setIsLoading(true)
+        if (saleData) {
+            setSelectedCustomer(String(saleData.customer_id || ""))
+            setSelectedWarehouse(String(saleData.warehouse_id || ""))
+            setTaxRate(Number(saleData.tax_rate) || 0)
+            setDiscount(Number(saleData.discount) || 0)
+            setShipping(Number(saleData.shipping) || 0)
+            setStatus(saleData.status || "completed")
+            setPaymentStatus(saleData.payment_status || "unpaid")
+            setNotes(saleData.notes || "")
 
-                // Fetch sale data
-                const saleRes = await fetch(`/api/pos/sales/${id}`)
-                if (!saleRes.ok) throw new Error("Failed to fetch sale")
-                const saleData = await saleRes.json()
-                setSaleData(saleData)
-
-                // Set form values from sale data
-                setSelectedCustomer(saleData.customer_id)
-                setSelectedWarehouse(saleData.warehouse_id)
-                setTaxRate(saleData.tax_rate)
-                setDiscount(saleData.discount)
-                setShipping(saleData.shipping)
-                setStatus(saleData.status)
-                setPaymentStatus(saleData.payment_status)
-                setNotes(saleData.notes || "")
-
-                // Convert sale items to cart items
-                const items = saleData.items.map((item: any) => ({
-                    id: item.id,
-                    product_id: item.product_id,
-                    name: item.product_name || `Product ${item.product_id}`,
-                    price: item.price,
-                    quantity: item.quantity,
-                    discount: item.discount || 0,
-                    tax: item.tax || 0,
-                    subtotal: item.subtotal
+            // Convert sale items to cart items
+            if (saleData.sale_items && Array.isArray(saleData.sale_items)) {
+                const items = saleData.sale_items.map((item: any) => ({
+                    id: String(item.id),
+                    product_id: String(item.product_id),
+                    name: item.products?.name || `Product ${item.product_id}`,
+                    price: Number(item.price) || 0,
+                    quantity: Number(item.quantity) || 0,
+                    discount: Number(item.discount) || 0,
+                    tax: Number(item.tax) || 0,
+                    subtotal: Number(item.subtotal) || 0
                 }))
                 setCartItems(items)
-
-                // Fetch customers
-                const customersRes = await fetch('/api/customers')
-                const customersData = await customersRes.json()
-                setCustomers(customersData)
-
-                // Fetch warehouses
-                const warehousesRes = await fetch('/api/settings/warehouses')
-                const warehousesData = await warehousesRes.json()
-                setWarehouses(warehousesData)
-
-            } catch (error) {
-                toast.error("Failed to load data")
-                console.error(error)
-            } finally {
-                setIsLoading(false)
             }
         }
-
-        fetchData()
-    }, [id])
-
-    // Search products
-    useEffect(() => {
-        const searchProducts = async () => {
-            if (searchTerm.trim()) {
-                try {
-                    const res = await fetch(`/api/products?search=${searchTerm}`)
-                    const data = await res.json()
-                    setProducts(data)
-                } catch (error) {
-                    toast.error("Failed to search products")
-                    console.error(error)
-                }
-            }
-        }
-
-        const timer = setTimeout(searchProducts, 300)
-        return () => clearTimeout(timer)
-    }, [searchTerm])
+    }, [saleData])
 
     // Calculate totals
     const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0)
@@ -205,55 +169,41 @@ export default function EditSale() {
             return
         }
 
-        setIsLoading(true)
-
         try {
-            const saleData = {
-                customer_id: selectedCustomer,
-                warehouse_id: selectedWarehouse,
+            const updateData = {
+                customer_id: Number(selectedCustomer),
+                warehouse_id: Number(selectedWarehouse),
                 date: new Date().toISOString().slice(0, 10),
-                subtotal,
-                tax_rate: taxRate,
-                tax_amount: taxAmount,
-                discount,
-                shipping,
-                total,
+                subtotal: Number(subtotal),
+                tax_rate: Number(taxRate),
+                tax_amount: Number(taxAmount),
+                discount: Number(discount),
+                shipping: Number(shipping),
+                total: Number(total),
                 status,
                 payment_status: paymentStatus,
                 notes,
                 items: cartItems.map(item => ({
-                    product_id: item.product_id,
-                    quantity: item.quantity,
-                    price: item.price,
-                    discount: item.discount,
-                    tax: item.tax,
-                    subtotal: item.subtotal
+                    product_id: Number(item.product_id),
+                    quantity: Number(item.quantity),
+                    price: Number(item.price),
+                    discount: Number(item.discount),
+                    tax: Number(item.tax),
+                    subtotal: Number(item.subtotal)
                 }))
             }
 
-            const response = await fetch(`/api/pos/sales/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(saleData)
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to update sale')
-            }
-
+            await updateSale({ id: id as string, data: updateData }).unwrap()
             toast.success("Sale updated successfully")
             router.push('/sales/list')
-        } catch (error) {
-            toast.error("Failed to update sale")
+        } catch (error: any) {
+            const message = error?.data?.error || "Failed to update sale"
+            toast.error(message)
             console.error(error)
-        } finally {
-            setIsLoading(false)
         }
     }
 
-    if (isLoading && !saleData) {
+    if (isSaleLoading) {
         return (
             <DashboardLayout>
                 <div className="p-6">
@@ -317,7 +267,7 @@ export default function EditSale() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {customers.map(customer => (
-                                        <SelectItem key={customer.id} value={customer.id}>
+                                        <SelectItem key={customer.id} value={String(customer.id)}>
                                             {customer.name}
                                         </SelectItem>
                                     ))}
@@ -335,7 +285,7 @@ export default function EditSale() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {warehouses.map(warehouse => (
-                                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                                        <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                                             {warehouse.name}
                                         </SelectItem>
                                     ))}
@@ -393,7 +343,7 @@ export default function EditSale() {
                                         <th className="text-left p-3 border">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="bg-white">
                                     {cartItems.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="text-center py-8 text-gray-500 border">
@@ -414,7 +364,7 @@ export default function EditSale() {
                                                         step="0.01"
                                                         value={item.price}
                                                         onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value))}
-                                                        className="w-24"
+                                                        className="w-24 border-gray-300"
                                                     />
                                                 </td>
                                                 <td className="p-3 border">
@@ -422,7 +372,7 @@ export default function EditSale() {
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="h-6 w-6 p-0"
+                                                            className="h-8 w-8 p-0"
                                                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                                         >
                                                             <Minus className="h-3 w-3" />
@@ -432,19 +382,19 @@ export default function EditSale() {
                                                             min="1"
                                                             value={item.quantity}
                                                             onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
-                                                            className="w-16 text-center"
+                                                            className="w-16 text-center h-8 border-gray-300"
                                                         />
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="h-6 w-6 p-0"
+                                                            className="h-8 w-8 p-0"
                                                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                                         >
                                                             <Plus className="h-3 w-3" />
                                                         </Button>
                                                     </div>
                                                 </td>
-                                                <td className="p-3 border">${item.subtotal}</td>
+                                                <td className="p-3 border">${item.subtotal.toFixed(2)}</td>
                                                 <td className="p-3 border">
                                                     <Button
                                                         variant="ghost"
@@ -463,7 +413,6 @@ export default function EditSale() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Left column */}
                         <div className="space-y-4">
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
@@ -475,44 +424,129 @@ export default function EditSale() {
                                             value={taxRate}
                                             onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
                                         />
-
-                                        <Button
-                                            className="bg-purple-600 hover:bg-purple-700"
-                                            onClick={handleSubmit}
-                                            disabled={isLoading}
-                                        >
-                                            {isLoading ? "Updating..." : "Update Sale"}
-                                        </Button>
-                                    </div>
-
-                                    {/* Right column - Order Summary */}
-                                    <div className="space-y-4">
-                                        <div className="bg-gray-50 p-4 rounded">
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between">
-                                                    <span>Subtotal</span>
-                                                    <span>${subtotal}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Order Tax</span>
-                                                    <span>${Number(taxAmount)} = ${taxAmount} ({taxRate}%)</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Discount</span>
-                                                    <span>${discount}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Shipping</span>
-                                                    <span>${shipping}</span>
-                                                </div>
-                                                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                                                    <span>Grand Total</span>
-                                                    <span>${total}</span>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center justify-center px-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r text-gray-500 text-sm">
+                                            %
                                         </div>
                                     </div>
                                 </div>
+                                <div>
+                                    <label className="text-sm font-medium">Discount</label>
+                                    <div className="flex mt-1">
+                                        <Input
+                                            placeholder="0"
+                                            className="rounded-r-none"
+                                            value={discount}
+                                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                        />
+                                        <div className="flex items-center justify-center px-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r text-gray-500 text-sm">
+                                            $
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Shipping</label>
+                                    <div className="flex mt-1">
+                                        <Input
+                                            placeholder="0"
+                                            className="rounded-r-none"
+                                            value={shipping}
+                                            onChange={(e) => setShipping(parseFloat(e.target.value) || 0)}
+                                        />
+                                        <div className="flex items-center justify-center px-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r text-gray-500 text-sm">
+                                            $
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Status *</label>
+                                <Select
+                                    value={status}
+                                    onValueChange={setStatus}
+                                >
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="ordered">Ordered</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Payment Status *</label>
+                                <Select
+                                    value={paymentStatus}
+                                    onValueChange={setPaymentStatus}
+                                >
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="paid">Paid</SelectItem>
+                                        <SelectItem value="partial">Partial</SelectItem>
+                                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                                        <SelectItem value="due">Due</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Note</label>
+                                <Textarea
+                                    placeholder="A few words ..."
+                                    className="mt-1"
+                                    rows={4}
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 p-4 rounded border border-gray-200">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Subtotal</span>
+                                        <span className="font-medium">${Number(subtotal).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Order Tax ({taxRate}%)</span>
+                                        <span className="font-medium">${Number(taxAmount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Discount</span>
+                                        <span className="font-medium text-red-500">-${Number(discount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Shipping</span>
+                                        <span className="font-medium">${Number(shipping).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center font-bold text-lg border-t pt-3 mt-2">
+                                        <span>Grand Total</span>
+                                        <span className="text-purple-700">${Number(total).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <Button
+                                    className="flex-1 bg-[#1a237e] hover:bg-purple-700 h-10 text-base"
+                                    onClick={handleSubmit}
+                                    disabled={isUpdating}
+                                >
+                                    {isUpdating ? <span className="flex items-center gap-2"><div className="animate-spin rounded-full h-4 w-4 border-2 border-white" />Updating...</span> : "Update Sale"}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 h-10 text-base"
+                                    onClick={() => router.push('/sales/list')}
+                                >
+                                    Cancel
+                                </Button>
                             </div>
                         </div>
                     </div>

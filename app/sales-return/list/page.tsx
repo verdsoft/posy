@@ -16,6 +16,8 @@ import { useGetSalesReturnsQuery, useDeleteSalesReturnMutation } from "@/lib/sli
 import { SalesReturn } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
+import { TableActions } from "@/components/ui/table-actions"
+import { ViewSalesReturnDialog } from "@/components/returns/view-sales-return-dialog"
 
 export default function SalesReturnList() {
   const router = useRouter()
@@ -112,8 +114,10 @@ export default function SalesReturnList() {
                       <TableCell>{ret.status}</TableCell>
                       <TableCell>${ret.total}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedReturn(ret); setIsViewDialogOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(ret)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                        <TableActions
+                          onView={() => { setSelectedReturn(ret); setIsViewDialogOpen(true); }}
+                          onDelete={() => openDeleteDialog(ret)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))
@@ -121,7 +125,7 @@ export default function SalesReturnList() {
               </TableBody>
             </Table>
           </div>
-          
+
           {pagination && (
             <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-4 p-4">
               <div className="flex items-center gap-2">
@@ -156,7 +160,7 @@ export default function SalesReturnList() {
                       Previous
                     </Button>
                   </PaginationItem>
-                  
+
                   <span className="text-sm text-muted-foreground mx-4">
                     Page {page} of {pagination.totalPages}
                   </span>
@@ -178,56 +182,29 @@ export default function SalesReturnList() {
           )}
         </div>
       </div>
-      
+
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Delete Sales Return</DialogTitle>
-                  <DialogDescription>
-                      Are you sure you want to delete this sales return? This action cannot be undone.
-                  </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                  <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Delete"}
-                  </Button>
-              </DialogFooter>
-          </DialogContent>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Sales Return</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this sales return? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
-      {selectedReturn && isViewDialogOpen && (
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Sales Return Details</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 overflow-y-auto flex-1">
-                  <div>
-                    <p className="text-sm text-gray-500">Date</p>
-                    <p className="font-medium">{selectedReturn.date}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Reference</p>
-                    <p className="font-medium">{selectedReturn.reference}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Status</p>
-                    <p className="font-medium">{selectedReturn.status}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Total</p>
-                    <p className="font-medium">${Number(selectedReturn.total).toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="flex justify-end pt-4 border-t bg-white">
-                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                    Close
-                  </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
-      )}
+      <ViewSalesReturnDialog
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        salesReturn={selectedReturn}
+      />
     </DashboardLayout>
   )
 }

@@ -8,6 +8,7 @@ import { DateRangePicker } from "../../../components/date-range-picker"
 import { Search, Eye, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useGetPurchasesQuery, useUpdatePurchaseMutation, useDeletePurchaseMutation } from "@/lib/slices/purchasesApi"
 
 interface Purchase {
   id: string
@@ -29,14 +30,19 @@ interface Purchase {
 }
 
 export default function PurchaseReport() {
-  const [purchases, setPurchases] = useState<Purchase[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null)
+
+  // RTK Query hooks
+  const { data: purchasesData, isLoading: loading } = useGetPurchasesQuery({ page: 1, limit: 10000, search: searchTerm })
+  const [updatePurchase] = useUpdatePurchaseMutation()
+  const [deletePurchase] = useDeletePurchaseMutation()
+
+  const purchases = purchasesData?.data || []
   const [formData, setFormData] = useState({
     reference: "",
     supplier_id: "",
@@ -55,25 +61,6 @@ export default function PurchaseReport() {
     notes: ""
   })
 
-  // Fetch purchases
-  useEffect(() => {
-    const fetchPurchases = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/purchases')
-        if (!res.ok) throw new Error("Failed to fetch purchases")
-        const data = await res.json()
-        setPurchases(data.data || [])
-      } catch (error) {
-        toast.error("Failed to load purchases")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchPurchases()
-  }, [])
 
   // Filter purchases based on search
   const filteredPurchases = Array.isArray(purchases) ? purchases.filter(purchase =>
@@ -85,20 +72,9 @@ export default function PurchaseReport() {
   // Handle edit purchase
   const handleEdit = async () => {
     if (!selectedPurchase) return
-    
+
     try {
-      const res = await fetch('/api/purchases', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id: selectedPurchase.id })
-      })
-      
-      if (!res.ok) throw new Error("Failed to update purchase")
-      
-      const updatedPurchase = await res.json()
-      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.map(p =>
-        p.id === selectedPurchase.id ? { ...p, ...updatedPurchase } : p
-      ) : [])
+      await updatePurchase({ id: selectedPurchase.id, data: formData }).unwrap()
       setShowEditModal(false)
       resetForm()
       toast.success("Purchase updated successfully")
@@ -111,15 +87,9 @@ export default function PurchaseReport() {
   // Handle delete purchase
   const handleDelete = async () => {
     if (!selectedPurchase) return
-    
+
     try {
-      const res = await fetch(`/api/purchases?id=${selectedPurchase.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete purchase")
-      
-      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.filter(p => p.id !== selectedPurchase.id) : [])
+      await deletePurchase(selectedPurchase.id).unwrap()
       setShowDeleteModal(false)
       toast.success("Purchase deleted successfully")
     } catch (error) {
@@ -596,7 +566,7 @@ export default function PurchaseReport() {
               </div>
               <div className="col-span-2">
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-700" 
+                  className="bg-[#1a237e] hover:bg-purple-700" 
                   onClick={handleEdit}
                   disabled={!formData.reference || !formData.date}
                 >

@@ -1,75 +1,76 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getConnection } from "@/lib/mysql"
+import { prisma } from "@/lib/prisma"
 
 // GET: List all brands
 export async function GET() {
-  const pool = getConnection()
-  let conn
   try {
-    conn = await pool.getConnection()
-    const [rows]: any = await conn.query("SELECT * FROM brands")
-    return NextResponse.json(rows)
+    const brands = await prisma.brands.findMany({
+      orderBy: { created_at: 'desc' }
+    })
+    return NextResponse.json(brands)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error fetching brands:", error)
+    return NextResponse.json({ error: "Failed to fetch brands" }, { status: 500 })
   }
 }
 
 // POST: Create a new brand
 export async function POST(req: NextRequest) {
-  const pool = getConnection()
-  let conn
   try {
-    conn = await pool.getConnection()
     const { name, description } = await req.json()
     if (!name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
-    const [result]: any = await conn.execute("INSERT INTO brands (name, description) VALUES (?, ?)", [
-      name,
-      description || "",
-    ])
-    const [rows]: any = await conn.query("SELECT * FROM brands WHERE id = ?", [result.insertId])
-    return NextResponse.json(rows[0])
+
+    const brand = await prisma.brands.create({
+      data: {
+        name,
+        description: description || null
+      }
+    })
+
+    return NextResponse.json(brand)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error creating brand:", error)
+    return NextResponse.json({ error: "Failed to create brand" }, { status: 500 })
   }
 }
 
 // PUT: Update a brand
 export async function PUT(req: NextRequest) {
-  const pool = getConnection()
-  let conn
   try {
-    conn = await pool.getConnection()
     const { id, name, description } = await req.json()
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
-    await conn.execute("UPDATE brands SET name=?, description=? WHERE id=?", [name, description || "", id])
-    const [rows]: any = await conn.query("SELECT * FROM brands WHERE id = ?", [id])
-    return NextResponse.json(rows[0])
+
+    const brand = await prisma.brands.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        description: description || null,
+        updated_at: new Date()
+      }
+    })
+
+    return NextResponse.json(brand)
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error updating brand:", error)
+    return NextResponse.json({ error: "Failed to update brand" }, { status: 500 })
   }
 }
 
 // DELETE: Delete a brand
 export async function DELETE(req: NextRequest) {
-  const pool = getConnection()
-  let conn
   try {
-    conn = await pool.getConnection()
     const { id } = await req.json()
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
-    await conn.execute("DELETE FROM brands WHERE id = ?", [id])
+
+    await prisma.brands.delete({
+      where: { id: parseInt(id) }
+    })
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  } finally {
-    if (conn) conn.release()
+    console.error("Error deleting brand:", error)
+    return NextResponse.json({ error: "Failed to delete brand" }, { status: 500 })
   }
 }

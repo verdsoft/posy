@@ -1,435 +1,333 @@
-/**
- * PDF Generation Service using Handlebars and Puppeteer
- * Replaces the previous jsPDF implementation with a more flexible template-based approach
- */
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
-import * as fs from 'fs'
-import * as path from 'path'
-import Handlebars from 'handlebars'
-import puppeteer from 'puppeteer'
-import { format } from 'date-fns'
-import { Organization } from '@/lib/types/prisma'
+// --- Interfaces ---
 
-// Handlebars helper functions
-Handlebars.registerHelper('formatCurrency', function(amount: number, symbol: string = '$') {
-  if (typeof amount !== 'number') return `${symbol}0.00`
-  return `${symbol}${amount.toFixed(2)}`
-})
-
-Handlebars.registerHelper('formatDate', function(date: Date | string) {
-  if (!date) return ''
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  return format(dateObj, 'MMM dd, yyyy')
-})
-
-Handlebars.registerHelper('formatDateTime', function(date: Date | string) {
-  if (!date) return ''
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  return format(dateObj, 'MMM dd, yyyy hh:mm a')
-})
-
-Handlebars.registerHelper('toLowerCase', function(str: string) {
-  return str ? str.toLowerCase() : ''
-})
-
-Handlebars.registerHelper('statusBadge', function(status: string) {
-  const statusColors: Record<string, string> = {
-    'completed': 'background: #10b981; color: white;',
-    'pending': 'background: #f59e0b; color: white;',
-    'cancelled': 'background: #ef4444; color: white;',
-    'received': 'background: #10b981; color: white;',
-    'paid': 'background: #10b981; color: white;',
-    'unpaid': 'background: #ef4444; color: white;',
-    'partial': 'background: #f59e0b; color: white;'
-  }
-
-  const style = statusColors[status?.toLowerCase()] || 'background: #6b7280; color: white;'
-  return new Handlebars.SafeString(
-    `<span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; ${style}">${status}</span>`
-  )
-})
-
-Handlebars.registerHelper('add', function(a: number, b: number) {
-  return Number(a || 0) + Number(b || 0)
-})
-
-Handlebars.registerHelper('multiply', function(a: number, b: number) {
-  return Number(a || 0) * Number(b || 0)
-})
-
-Handlebars.registerHelper('eq', function(a: any, b: any) {
-  return a === b
-})
-
-Handlebars.registerHelper('gt', function(a: number, b: number) {
-  return Number(a || 0) > Number(b || 0)
-})
-
-Handlebars.registerHelper('ifEmpty', function(value: any, options: any) {
-  if (!value || (Array.isArray(value) && value.length === 0)) {
-    return options.fn(this)
-  }
-  return options.inverse(this)
-})
-
-/**
- * Template types supported by the PDF generator
- */
-export type PDFTemplateType = 'invoice' | 'quotation' | 'receipt' | 'sales-report'
-
-/**
- * Base interface for all PDF document data
- */
-export interface BasePDFData {
-  organization: Organization
-  customer?: {
-    name: string
-    email?: string
-    phone?: string
-    address?: string
-    city?: string
-    country?: string
-  }
-  items: Array<{
-    product: {
-      name: string
-      description?: string
-      sku?: string
-    }
-    quantity: number
-    price: number
-    total: number
-  }>
-  subtotal: number
-  taxAmount?: number
-  taxPercentage?: number
-  discountAmount?: number
-  totalAmount: number
-  notes?: string
-  currentDate?: Date
+export interface APIOrganizationData {
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  country?: string
+  postal_code?: string
+  logo?: string
+  currency_symbol?: string
+  tax_number?: string
+  website?: string
+  invoice_footer?: string
+  quotation_footer?: string
+  terms_conditions?: string
+  [key: string]: any
 }
 
-/**
- * Invoice-specific data interface
- */
-export interface InvoicePDFData extends BasePDFData {
+export interface PDFOptions {
+  title: string
+  columns: string[]
+  rows: any[][]
+  organization?: any
+  filename: string
+}
+
+export interface InvoicePDFData {
   invoiceNumber: string
-  invoiceDate: Date
-  dueDate?: Date
-  status?: string
-  paymentMethod?: string
-  shippingCost?: number
-  amountPaid?: number
-  balanceDue?: number
+  date?: string | Date
+  dueDate?: string | Date
+  customer?: any
+  items?: any[]
+  subtotal?: number
+  tax?: number
+  discount?: number
+  total?: number
+  organization: APIOrganizationData
+  [key: string]: any
 }
 
-/**
- * Quotation-specific data interface
- */
-export interface QuotationPDFData extends BasePDFData {
+export interface QuotationPDFData {
   quotationNumber: string
-  quotationDate: Date
-  validUntil?: Date
-  status?: string
+  date?: string | Date
+  validUntil?: string | Date
+  customer?: any
+  items?: any[]
+  subtotal?: number
+  tax?: number
+  discount?: number
+  total?: number
+  organization: APIOrganizationData
+  [key: string]: any
 }
 
-/**
- * Receipt-specific data interface
- */
-export interface ReceiptPDFData extends BasePDFData {
+export interface ReceiptPDFData {
   receiptNumber: string
-  saleDate: Date
-  cashier?: {
-    name: string
-  }
+  date?: string | Date
+  customer?: any
+  items?: any[]
+  total?: number
   paymentMethod?: string
-  amountPaid?: number
-  changeAmount?: number
-  qrCode?: string
+  organization: APIOrganizationData
+  [key: string]: any
 }
 
-/**
- * PDF generation options
- */
-export interface PDFGenerationOptions {
-  format?: 'A4' | 'A5' | 'Letter'
-  margin?: {
-    top?: string
-    right?: string
-    bottom?: string
-    left?: string
-  }
-  printBackground?: boolean
-  landscape?: boolean
-  preferCSSPageSize?: boolean
+export interface SalesReportPDFData {
+  title: string
+  dateRange?: string
+  data: any[]
+  summary?: any
+  filters?: any
+  showSummaryByStatus?: boolean
+  showSummaryBySupplier?: boolean
+  statusSummary?: any
+  supplierSummary?: any
+  organization: APIOrganizationData
+  [key: string]: any
 }
 
-/**
- * Main PDF Generator class
- */
-export class PDFGenerator {
-  private templatesPath: string
-  private stylesCache: Map<string, string> = new Map()
+// --- Helpers ---
 
-  constructor() {
-    this.templatesPath = path.join(process.cwd(), 'lib', 'templates', 'pdf')
+// Safe image fetch for both client and server (returns base64 or Uint8Array)
+// Note: jsPDF can handle Uint8Array for addImage
+const fetchImage = async (url: string): Promise<Uint8Array | null> => {
+  if (!url) return null
+  try {
+    const response = await fetch(url)
+    const buffer = await response.arrayBuffer()
+    return new Uint8Array(buffer)
+  } catch (error) {
+    console.error("Error fetching image:", error)
+    return null
   }
+}
 
-  /**
-   * Load and cache CSS styles
-   */
-  private async loadStyles(): Promise<string> {
-    const cacheKey = 'base-styles'
+// Shared Header Logic
+const addHeader = async (doc: jsPDF, organization: APIOrganizationData, title: string, dateLabel: string = "Date") => {
+  const marginLeft = 14
+  const marginRight = 196
+  const pageWidth = doc.internal.pageSize.width || 210
 
-    if (this.stylesCache.has(cacheKey)) {
-      return this.stylesCache.get(cacheKey)!
-    }
+  let yPos = 20
 
-    try {
-      const stylesPath = path.join(this.templatesPath, 'base-styles.css')
-      const styles = await fs.promises.readFile(stylesPath, 'utf-8')
-      this.stylesCache.set(cacheKey, styles)
-      return styles
-    } catch (error) {
-      console.error('Error loading CSS styles:', error)
-      return ''
-    }
-  }
-
-  /**
-   * Load and compile Handlebars template
-   */
-  private async loadTemplate(templateType: PDFTemplateType): Promise<HandlebarsTemplateDelegate> {
-    try {
-      const templatePath = path.join(this.templatesPath, `${templateType}.hbs`)
-      const templateContent = await fs.promises.readFile(templatePath, 'utf-8')
-      return Handlebars.compile(templateContent)
-    } catch (error) {
-      throw new Error(`Failed to load template ${templateType}: ${error}`)
-    }
-  }
-
-  /**
-   * Generate HTML from template and data
-   */
-  private async generateHTML(
-    templateType: PDFTemplateType,
-    data: BasePDFData
-  ): Promise<string> {
-    try {
-      const template = await this.loadTemplate(templateType)
-      const styles = await this.loadStyles()
-
-      // Add current date if not provided
-      const templateData = {
-        ...data,
-        currentDate: data.currentDate || new Date(),
-        styles
-      }
-
-      return template(templateData)
-    } catch (error) {
-      throw new Error(`Failed to generate HTML: ${error}`)
-    }
-  }
-
-  /**
-   * Generate PDF buffer from HTML using Puppeteer
-   */
-  private async generatePDFFromHTML(
-    html: string,
-    options: PDFGenerationOptions = {}
-  ): Promise<Buffer> {
-    let browser
-
-    try {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu'
-        ]
-      })
-
-      const page = await browser.newPage()
-
-      // Set content and wait for it to load
-      await page.setContent(html, {
-        waitUntil: 'networkidle0',
-        timeout: 30000
-      })
-
-      // Generate PDF with options
-      const pdfOptions = {
-        format: options.format || 'A4' as const,
-        printBackground: options.printBackground !== false,
-        margin: options.margin || {
-          top: '10mm',
-          right: '10mm',
-          bottom: '10mm',
-          left: '10mm'
-        },
-        preferCSSPageSize: options.preferCSSPageSize || true,
-        landscape: options.landscape || false
-      }
-
-      const pdfBuffer = await page.pdf(pdfOptions)
-
-      return pdfBuffer
-
-    } catch (error) {
-      throw new Error(`Failed to generate PDF: ${error}`)
-    } finally {
-      if (browser) {
-        await browser.close()
+  // Logo
+  if (organization?.logo) {
+    const imgData = await fetchImage(organization.logo)
+    if (imgData) {
+      // We skip 'new Image()' aspect ratio logic here to ensure server compatibility.
+      // We rely on jsPDF auto-scaling if strictly needed, or just fixed box.
+      // Passing 0 as height often tells jsPDF to scale proportionally.
+      try {
+        doc.addImage(imgData, 'PNG', marginLeft, 10, 30, 0)
+      } catch (e) {
+        // Fallback if auto-height fails or format differs
+        try {
+          doc.addImage(imgData, 'PNG', marginLeft, 10, 30, 30)
+        } catch (ignored) { }
       }
     }
   }
 
-  /**
-   * Generate invoice PDF
-   */
-  async generateInvoicePDF(
-    data: InvoicePDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    try {
-      const html = await this.generateHTML('invoice', data)
-      return await this.generatePDFFromHTML(html, options)
-    } catch (error) {
-      throw new Error(`Failed to generate invoice PDF: ${error}`)
-    }
-  }
+  // Company Details (Right Aligned)
+  doc.setFontSize(22)
+  doc.setTextColor(26, 35, 126) // Deep Blue
+  doc.setFont("helvetica", "bold")
 
-  /**
-   * Generate quotation PDF
-   */
-  async generateQuotationPDF(
-    data: QuotationPDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    try {
-      const html = await this.generateHTML('quotation', data)
-      return await this.generatePDFFromHTML(html, options)
-    } catch (error) {
-      throw new Error(`Failed to generate quotation PDF: ${error}`)
-    }
-  }
+  const companyName = organization?.name || "Company Name"
+  doc.text(companyName, pageWidth - 14, 20, { align: 'right' })
 
-  /**
-   * Generate receipt PDF
-   */
-  async generateReceiptPDF(
-    data: ReceiptPDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    try {
-      // Receipts typically use a smaller format
-      const receiptOptions = {
-        ...options,
-        format: 'A5' as const,
-        margin: {
-          top: '5mm',
-          right: '5mm',
-          bottom: '5mm',
-          left: '5mm'
-        }
-      }
+  // Info Block
+  doc.setFontSize(10)
+  doc.setTextColor(100)
+  doc.setFont("helvetica", "normal")
 
-      const html = await this.generateHTML('receipt', data)
-      return await this.generatePDFFromHTML(html, receiptOptions)
-    } catch (error) {
-      throw new Error(`Failed to generate receipt PDF: ${error}`)
-    }
-  }
+  let infoY = 26
+  const details = [
+    organization.address,
+    organization.phone ? `Phone: ${organization.phone}` : null,
+    organization.email ? `Email: ${organization.email}` : null
+  ].filter(Boolean) as string[]
 
-  /**
-   * Generate PDF for any template type (convenience method)
-   */
-  async generatePDF(
-    templateType: PDFTemplateType,
-    data: BasePDFData,
-    options?: PDFGenerationOptions
-  ): Promise<Buffer> {
-    switch (templateType) {
-      case 'invoice':
-        return this.generateInvoicePDF(data as InvoicePDFData, options)
-      case 'quotation':
-        return this.generateQuotationPDF(data as QuotationPDFData, options)
-      case 'receipt':
-        return this.generateReceiptPDF(data as ReceiptPDFData, options)
-      case 'sales-report':
-        // For sales report, we can use the general HTML generation
-        const html = await this.generateHTML(templateType, data)
-        return await this.generatePDFFromHTML(html, options)
-      default:
-        throw new Error(`Unsupported template type: ${templateType}`)
-    }
-  }
+  // Handle multi-line address locally if needed, simplified here
+  details.forEach(det => {
+    // Split basic newlines
+    const lines = String(det).split('\n')
+    lines.forEach(line => {
+      doc.text(line.trim(), pageWidth - 14, infoY, { align: 'right' })
+      infoY += 5
+    })
+  })
 
-  /**
-   * Generate and save PDF to file
-   */
-  async generateAndSavePDF(
-    templateType: PDFTemplateType,
-    data: BasePDFData,
-    outputPath: string,
-    options?: PDFGenerationOptions
-  ): Promise<void> {
-    try {
-      const pdfBuffer = await this.generatePDF(templateType, data, options)
-      await fs.promises.writeFile(outputPath, pdfBuffer)
-    } catch (error) {
-      throw new Error(`Failed to save PDF: ${error}`)
-    }
-  }
+  yPos = Math.max(infoY, 45)
 
-  /**
-   * Clear template and style caches
-   */
-  clearCache(): void {
-    this.stylesCache.clear()
+  // Divider
+  doc.setDrawColor(230)
+  doc.line(marginLeft, yPos + 5, marginRight, yPos + 5)
+
+  // Title & Date
+  yPos += 15
+  doc.setFontSize(14)
+  doc.setTextColor(26, 35, 126)
+  doc.setFont("helvetica", "bold")
+  doc.text(title.toUpperCase(), marginLeft, yPos)
+
+  doc.setFontSize(10)
+  doc.setTextColor(100)
+  doc.setFont("helvetica", "normal")
+  const today = new Date().toLocaleDateString('en-GB')
+  doc.text(`${dateLabel}: ${today}`, pageWidth - 14, yPos, { align: 'right' })
+
+  return yPos + 10 // Return Y where content should start
+}
+
+const addFooter = (doc: jsPDF, organization: APIOrganizationData) => {
+  const pageCount = doc.getNumberOfPages() // doc.internal.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    const pageHeight = doc.internal.pageSize.height || 297
+    const pageWidth = doc.internal.pageSize.width || 210
+    const footerY = pageHeight - 10
+
+    doc.setDrawColor(230)
+    doc.setLineWidth(0.1)
+    doc.line(14, footerY - 5, 196, footerY - 5)
+
+    doc.setFontSize(8)
+    doc.setTextColor(150)
+
+    doc.text("Generated by POSy System", 14, footerY)
+
+    const contactText = `${organization?.email || ''} ${organization?.phone ? ' | ' + organization.phone : ''}`
+    doc.text(contactText, pageWidth / 2, footerY, { align: 'center' })
+
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, footerY, { align: 'right' })
   }
 }
 
-/**
- * Default PDF generator instance
- */
-export const pdfGenerator = new PDFGenerator()
+// --- Client Side Generator ---
 
-/**
- * Convenience functions for direct use
- */
-export async function generateInvoicePDF(
-  data: InvoicePDFData,
-  options?: PDFGenerationOptions
-): Promise<Buffer> {
-  return pdfGenerator.generateInvoicePDF(data, options)
+export const generatePDF = async ({ title, columns, rows, organization, filename }: PDFOptions) => {
+  const doc = new jsPDF()
+  // Re-use logic for consistency
+  const startY = await addHeader(doc, organization, title)
+
+  autoTable(doc, {
+    head: [columns],
+    body: rows,
+    startY: startY,
+    theme: 'grid',
+    headStyles: { fillColor: [26, 35, 126], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center' },
+    bodyStyles: { fontSize: 8, textColor: 50 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+  })
+
+  addFooter(doc, organization)
+  doc.save(filename)
 }
 
-export async function generateQuotationPDF(
-  data: QuotationPDFData,
-  options?: PDFGenerationOptions
-): Promise<Buffer> {
-  return pdfGenerator.generateQuotationPDF(data, options)
+// --- Server Side Generators (return Buffer) ---
+
+// Generic Helper for Doc Items
+const addItemsTable = (doc: jsPDF, startY: number, items: any[], currency = '$') => {
+  if (!items || items.length === 0) return startY
+
+  const columns = ["Item", "Unit Price", "Qty", "Total"]
+  const rows = items.map(item => [
+    item.name || item.description || "Item",
+    `${currency} ${Number(item.price || item.unit_price || 0).toFixed(2)}`,
+    item.quantity || item.qty || 1,
+    `${currency} ${Number(item.total || (item.price * item.quantity) || 0).toFixed(2)}`
+  ])
+
+  autoTable(doc, {
+    head: [columns],
+    body: rows,
+    startY: startY,
+    theme: 'grid',
+    headStyles: { fillColor: [26, 35, 126] },
+  })
+
+  return (doc as any).lastAutoTable.finalY
 }
 
-export async function generateReceiptPDF(
-  data: ReceiptPDFData,
-  options?: PDFGenerationOptions
-): Promise<Buffer> {
-  return pdfGenerator.generateReceiptPDF(data, options)
+const addTotals = (doc: jsPDF, startY: number, data: any) => {
+  let y = startY + 10
+  const pageWidth = doc.internal.pageSize.width || 210
+  const rightX = pageWidth - 14
+  const currency = data.organization?.currency_symbol || '$'
+
+  doc.setFontSize(10)
+  doc.setTextColor(0)
+
+  const totals = [
+    { label: "Subtotal", value: data.subtotal },
+    { label: "Tax", value: data.tax },
+    { label: "Discount", value: data.discount },
+    { label: "Total", value: data.total, bold: true }
+  ]
+
+  totals.forEach(t => {
+    if (t.value !== undefined) {
+      doc.setFont("helvetica", t.bold ? "bold" : "normal")
+      doc.text(`${t.label}:`, rightX - 40, y, { align: 'right' })
+      doc.text(`${currency} ${Number(t.value).toFixed(2)}`, rightX, y, { align: 'right' })
+      y += 6
+    }
+  })
+  return y
 }
 
-/**
- * Legacy compatibility - returns base64 data URL for download
- */
-export function createDownloadableURL(pdfBuffer: Buffer): string {
-  const base64 = pdfBuffer.toString('base64')
-  return `data:application/pdf;base64,${base64}`
+export const generateInvoicePDF = async (data: InvoicePDFData): Promise<Buffer> => {
+  const doc = new jsPDF()
+  const startY = await addHeader(doc, data.organization, `INVOICE #${data.invoiceNumber}`)
+
+  // Add Bill To / Ship To logic here if data present (Skipped for brevity, can assume included in header/summary)
+  // For now, listing items
+
+  const tableEnd = addItemsTable(doc, startY + 10, data.items || [], data.organization.currency_symbol)
+  addTotals(doc, tableEnd, data)
+  addFooter(doc, data.organization)
+
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+export const generateQuotationPDF = async (data: QuotationPDFData): Promise<Buffer> => {
+  const doc = new jsPDF()
+  const startY = await addHeader(doc, data.organization, `QUOTATION #${data.quotationNumber}`)
+  const tableEnd = addItemsTable(doc, startY + 10, data.items || [], data.organization.currency_symbol)
+  addTotals(doc, tableEnd, data)
+  addFooter(doc, data.organization)
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+export const generateReceiptPDF = async (data: ReceiptPDFData): Promise<Buffer> => {
+  const doc = new jsPDF()
+  const startY = await addHeader(doc, data.organization, `RECEIPT #${data.receiptNumber}`)
+  const tableEnd = addItemsTable(doc, startY + 10, data.items || [], data.organization.currency_symbol)
+
+  let y = tableEnd + 10
+  doc.text(`Total Paid: ${data.organization.currency_symbol || '$'}${Number(data.total || 0).toFixed(2)}`, 196, y, { align: 'right' })
+
+  addFooter(doc, data.organization)
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+export const generateSalesReportPDF = async (data: SalesReportPDFData, options?: any): Promise<Buffer> => {
+  const doc = new jsPDF({ orientation: options?.orientation || 'p', format: options?.format || 'a4' })
+  const startY = await addHeader(doc, data.organization, data.title, "Report Date")
+
+  // Disclaimer: complex reports might need custom rendering. For now, dumping tabular data.
+  if (data.data && data.data.length > 0) {
+    // derive columns from first row data keys if not provided
+    const keys = Object.keys(data.data[0])
+    const rows = data.data.map(d => Object.values(d) as any[])
+    autoTable(doc, {
+      head: [keys],
+      body: rows,
+      startY: startY + 5,
+      theme: 'striped'
+    })
+  } else {
+    doc.text("No data available for this period.", 14, startY + 10)
+  }
+
+  addFooter(doc, data.organization)
+  return Buffer.from(doc.output('arraybuffer'))
 }

@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
         id: true,
         code: true,
         name: true,
+        cost: true,
         price: true,
         stock: true,
         warehouse_id: true

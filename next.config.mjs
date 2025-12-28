@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Replace next-transpile-modules with native transpilePackages
-  transpilePackages: ['jspdf', 'canvg', 'core-js'],
+  // transpilePackages: ['jspdf', 'canvg'],
 
   eslint: {
     ignoreDuringBuilds: true,
@@ -24,7 +24,21 @@ const nextConfig = {
       },
     });
 
-    // Exclude Puppeteer and related modules from client-side bundle
+    // Handle PDFKit font files (.afm files)
+    config.module.rules.push({
+      test: /\.afm$/,
+      type: 'asset/source',
+    });
+
+    // Server-side: Keep PDFKit external to access font files from node_modules
+    if (isServer) {
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push('pdfkit');
+      }
+    }
+
+    // Client-side: Exclude server-only modules from bundle
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -47,16 +61,14 @@ const nextConfig = {
 
       config.externals = config.externals || [];
       config.externals.push({
-        puppeteer: 'puppeteer',
-        'puppeteer-core': 'puppeteer-core',
-        handlebars: 'handlebars',
+        pdfkit: 'pdfkit',
       });
     }
 
     return config;
   },
- 
-  
+
+
 };
 
 

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type {
   Quotation,
- 
+
   PaginatedResponse,
   ApiResponse,
- 
+
 } from "@/lib/types/prisma"
 
 /**
@@ -28,28 +28,46 @@ export async function GET(req: NextRequest): Promise<NextResponse<Quotation | Pa
         include: {
           customers: { select: { name: true } },
           warehouses: { select: { name: true } },
-          quotation_items: true,
+          quotation_items: {
+            include: {
+              products: { select: { name: true, code: true } }
+            }
+          },
         },
       })
-      
+
       if (!quotation) {
         return NextResponse.json(
           { error: "Quotation not found" },
           { status: 404 }
         )
       }
-      
-      return NextResponse.json(quotation)
+
+      const formattedQuotation = {
+        ...quotation,
+        customer_name: quotation.customers?.name || null,
+        warehouse_name: quotation.warehouses?.name || null,
+        quotation_items: quotation.quotation_items?.map((item: any) => ({
+          ...item,
+          products: {
+            ...item.products,
+            name: item.products?.name || 'Unknown',
+            code: item.products?.code || 'N/A'
+          }
+        })) || []
+      }
+
+      return NextResponse.json(formattedQuotation)
     }
 
     // Get list of quotations with pagination and search
     const where = search
       ? {
-          OR: [
-            { reference: { contains: search, mode: 'insensitive' as const } },
-            { customers: { name: { contains: search, mode: 'insensitive' as const } } },
-          ],
-        }
+        OR: [
+          { reference: { contains: search, mode: 'insensitive' as const } },
+          { customers: { name: { contains: search, mode: 'insensitive' as const } } },
+        ],
+      }
       : {}
 
     const [quotations, total] = await Promise.all([

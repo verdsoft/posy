@@ -29,11 +29,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<Adjustment | P
       const adjustment = await prisma.adjustments.findUnique({
         where: { id: parseInt(id) },
         include: {
-          warehouse: { select: { id: true, name: true } },
-          createdBy: { select: { id: true, name: true } },
-          items: {
+          warehouses: { select: { id: true, name: true } },
+          users: { select: { id: true, name: true } },
+          adjustment_items: {
             include: {
-              product: { select: { id: true, name: true, code: true } }
+              products: { select: { id: true, name: true, code: true } }
             }
           }
         }
@@ -46,7 +46,18 @@ export async function GET(req: NextRequest): Promise<NextResponse<Adjustment | P
         )
       }
 
-      return NextResponse.json(adjustment)
+      // Map to legacy keys for frontend compatibility
+      const mappedAdjustment = {
+        ...adjustment,
+        warehouse: adjustment.warehouses,
+        createdBy: adjustment.users,
+        items: adjustment.adjustment_items.map(item => ({
+          ...item,
+          product: item.products
+        }))
+      }
+
+      return NextResponse.json(mappedAdjustment)
     }
 
     // Build where clause for filters
@@ -84,11 +95,20 @@ export async function GET(req: NextRequest): Promise<NextResponse<Adjustment | P
         take: limit,
         orderBy: { date: "desc" },
         include: {
-          warehouse: { select: { name: true } },
-          createdBy: { select: { name: true } },
+          warehouses: { select: { name: true } },
+          users: { select: { name: true } },
           _count: {
             select: {
-              items: true
+              adjustment_items: true
+            }
+          },
+          adjustment_items: {
+            include: {
+              products: {
+                select: {
+                  name: true
+                }
+              }
             }
           }
         }
@@ -99,8 +119,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<Adjustment | P
     // Format response to match existing expectations
     const formattedAdjustments = adjustments.map(adj => ({
       ...adj,
-      warehouse_name: adj.warehouse?.name,
-      item_count: adj._count.items
+      warehouse_name: adj.warehouses?.name,
+      item_count: adj._count.adjustment_items,
+      product_names: adj.adjustment_items.map(item => item.products?.name).filter(Boolean).join(', ') || 'N/A'
     }))
 
     return NextResponse.json({
@@ -173,7 +194,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Adjustmen
 
     // Validate warehouse exists
     const warehouseExists = await prisma.warehouses.findUnique({
-      where: { id: warehouse_id }
+      where: { id: parseInt(warehouse_id.toString()) }
     })
 
     if (!warehouseExists) {
@@ -222,12 +243,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<Adjustmen
       const adjustment = await tx.adjustments.create({
         data: {
           reference: adjustmentReference,
-          warehouse_id,
+          warehouse_id: parseInt(warehouse_id.toString()),
           date: new Date(date),
           type,
           notes,
           created_by: validCreatedBy,
-          items: {
+          adjustment_items: {
             create: items.map((item: any) => ({
               product_id: item.product_id,
               quantity: parseFloat(item.quantity),
@@ -237,10 +258,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<Adjustmen
           }
         },
         include: {
-          warehouse: { select: { name: true } },
-          items: {
+          warehouses: { select: { name: true } },
+          adjustment_items: {
             include: {
-              product: { select: { name: true, code: true } }
+              products: { select: { name: true, code: true } }
             }
           }
         }
@@ -319,7 +340,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Adjustment
     // Check if adjustment exists
     const existingAdjustment = await prisma.adjustments.findUnique({
       where: { id: parseInt(id) },
-      include: { items: true }
+      include: { adjustment_items: true }
     })
 
     if (!existingAdjustment) {
@@ -332,7 +353,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Adjustment
     // Update adjustment with items in a transaction
     const updatedAdjustment = await prisma.$transaction(async (tx) => {
       // Revert stock changes from old items
-      for (const oldItem of existingAdjustment.items) {
+      for (const oldItem of existingAdjustment.adjustment_items) {
         const oldStockChange = oldItem.type === "addition"
           ? -oldItem.quantity
           : oldItem.quantity
@@ -359,7 +380,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Adjustment
           updated_at: new Date()
         },
         include: {
-          warehouse: { select: { name: true } }
+          warehouses: { select: { name: true } }
         }
       })
 
@@ -445,10 +466,10 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Adjustme
         updated_at: new Date()
       },
       include: {
-        warehouse: { select: { name: true } },
-        items: {
+        warehouses: { select: { name: true } },
+        adjustment_items: {
           include: {
-            product: { select: { name: true, code: true } }
+            products: { select: { name: true, code: true } }
           }
         }
       }
@@ -483,7 +504,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     // Check if adjustment exists
     const existingAdjustment = await prisma.adjustments.findUnique({
       where: { id: parseInt(id) },
-      include: { items: true }
+      include: { adjustment_items: true }
     })
 
     if (!existingAdjustment) {
@@ -496,7 +517,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     // Delete adjustment and reverse stock changes in a transaction
     await prisma.$transaction(async (tx) => {
       // Reverse stock changes
-      for (const item of existingAdjustment.items) {
+      for (const item of existingAdjustment.adjustment_items) {
         const stockChange = item.type === "addition"
           ? -item.quantity
           : item.quantity

@@ -1,114 +1,159 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { Purchase } from "@/lib/types"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Purchase } from "@/lib/types/prisma" // Use types from prisma.ts as imported in api slice
 import { format } from "date-fns"
-import { Eye } from "lucide-react"
-import type React from "react"
+import { useGetPurchaseByIdQuery } from "@/lib/slices/purchasesApi"
+import { Loader2 } from "lucide-react"
 
 interface ViewPurchaseDialogProps {
-  purchase: Purchase | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  purchase: Purchase | null
 }
 
-export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchaseDialogProps) {
+export function ViewPurchaseDialog({ open, onOpenChange, purchase: initialPurchase }: ViewPurchaseDialogProps) {
+  // Fetch full purchase details to ensure we have items
+  const { data: fullPurchase, isLoading } = useGetPurchaseByIdQuery(initialPurchase?.id || '', {
+    skip: !initialPurchase?.id || !open
+  })
+
+  const purchase = fullPurchase || initialPurchase
+
   if (!purchase) return null
+
+  // Helper to identify items array 
+  const items = (purchase as any).purchase_items || (purchase as any).items || (purchase as any).products || []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Purchase Details - {purchase.reference}
-          </DialogTitle>
+          <div className="flex items-center justify-between mr-8">
+            <DialogTitle className="text-xl font-bold">Purchase Details</DialogTitle>
+            <Badge variant={purchase.status === "Received" ? "default" : "secondary"}>
+              {purchase.status}
+            </Badge>
+          </div>
+          <div className="text-sm text-muted-foreground my-1">
+            Reference: <span className="font-medium text-foreground">{purchase.reference}</span>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6 overflow-y-auto flex-1 px-1">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Date</h3>
-              <p>{format(new Date(purchase.date), "MMM dd, yyyy")}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Supplier</h3>
-              <p>{purchase.suppliers?.name || 'N/A'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Warehouse</h3>
-              <p>{purchase.warehouses?.name || 'N/A'}</p>
-            </div>
+        {isLoading && !fullPurchase ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-
-          <div className="border rounded-lg max-h-64 overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-white">
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Unit Cost</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {purchase.purchase_items?.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="font-medium">{item.products?.name || 'N/A'}</div>
-                      <div className="text-sm text-gray-500">{item.products?.code || 'N/A'}</div>
-                    </TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">${Number(item.unit_cost).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">${Number(item.subtotal).toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Notes</h3>
-              <div className="p-3 bg-gray-50 rounded-md">
-                {purchase.notes || "No notes provided"}
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 py-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Date</div>
+                <div className="text-sm">{purchase.date ? format(new Date(purchase.date), "PPP") : "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Supplier</div>
+                <div className="text-sm font-semibold">{(purchase as any).suppliers?.name || (purchase as any).supplier_name || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Warehouse</div>
+                <div className="text-sm">{(purchase as any).warehouses?.name || (purchase as any).warehouse_name || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Payment Status</div>
+                <Badge variant={purchase.payment_status === "Paid" ? "outline" : "destructive"} className="uppercase text-xs">
+                  {purchase.payment_status}
+                </Badge>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Summary</h3>
-              <div className="space-y-2 p-3 bg-gray-50 rounded-md">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>{Number(purchase.subtotal)}</span>
+            <Separator />
+
+            <div className="py-4">
+              <h3 className="font-semibold mb-3">Order Items</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-medium">Product</th>
+                      <th className="px-4 py-2 text-center font-medium">Quantity</th>
+                      <th className="px-4 py-2 text-right font-medium">Unit Cost</th>
+                      <th className="px-4 py-2 text-right font-medium">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {items.length > 0 ? (
+                      items.map((item: any, index: number) => (
+                        <tr key={index}>
+                          <td className="px-4 py-2 max-w-[200px] truncate" title={item.products?.name || item.name}>
+                            {item.products?.name || item.name || "Item"}
+                            {item.products?.code && <span className="text-muted-foreground ml-1">({item.products.code})</span>}
+                          </td>
+                          <td className="px-4 py-2 text-center">{item.quantity}</td>
+                          <td className="px-4 py-2 text-right">
+                            ${Number(item.unit_cost || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2 text-right font-medium">
+                            ${Number(item.subtotal || ((item.quantity || 0) * (item.unit_cost || 0))).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-2 text-center text-muted-foreground">
+                          No items found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex justify-end pt-4">
+              <div className="w-full md:w-1/2 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>${Number(purchase.subtotal || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Tax ({purchase.tax_rate}%):</span>
-                  <span>{Number(purchase.tax_amount)}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Order Tax ({purchase.tax_rate}%)</span>
+                  <span>${Number(purchase.tax_amount || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Discount:</span>
-                  <span>{Number(purchase.discount)}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span>-${Number(purchase.discount || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Shipping:</span>
-                  <span>{Number(purchase.shipping)}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span>${Number(purchase.shipping || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between font-bold border-t pt-2">
-                  <span>Total:</span>
-                  <span>{Number(purchase.total)}</span>
+                <Separator className="my-2" />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Grand Total</span>
+                  <span>${Number(purchase.total || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Paid Amount</span>
+                  <span>${Number(purchase.paid || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-red-600">
+                  <span>Due Amount</span>
+                  <span>${Number(purchase.due || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
-          </div>
-
-        </div>
-
-        <div className="flex justify-end pt-4 border-t bg-white">
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
-        </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

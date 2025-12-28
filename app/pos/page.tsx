@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, X,  Minus, Plus, RotateCcw, CreditCard, Maximize2, Minimize2 } from "lucide-react"
+import { Search, X, Minus, Plus, RotateCcw, CreditCard, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -20,6 +20,7 @@ import { useCreateSaleMutation } from "@/lib/slices/salesApi" // Import useCreat
 import { useSubmitFiscalInvoiceMutation, useGetFDMSStatusQuery } from "@/lib/slices/fdmsApi"
 import { useGetOrganizationQuery } from "@/lib/slices/organizationApi"
 import { toast } from "sonner" // Import toast for notifications
+import { printReceipt, getPrinterSettings } from "@/lib/utils/print"
 
 
 interface CartItem {
@@ -79,11 +80,11 @@ export default function POSSystem() {
   const router = useRouter()
 
 
-  
+
   const handleLogout = () => {
-      dispatch(logout())
-      router.push("/")
-    }
+    dispatch(logout())
+    router.push("/")
+  }
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -116,15 +117,16 @@ export default function POSSystem() {
   const { data: fdmsStatus } = useGetFDMSStatusQuery()
 
   const allCategories = useMemo(() => {
-    return categoriesData ? [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData] : [];
+    const categories = Array.isArray(categoriesData) ? categoriesData : [];
+    return [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categories];
   }, [categoriesData]);
 
   const allBrands = useMemo(() => {
-    return brandsData || [];
+    return Array.isArray(brandsData) ? brandsData : [];
   }, [brandsData]);
 
   const allWarehouses = useMemo(() => {
-    return warehousesData || [];
+    return Array.isArray(warehousesData) ? warehousesData : [];
   }, [warehousesData]);
 
   const allCustomers = useMemo(() => {
@@ -194,7 +196,7 @@ export default function POSSystem() {
     setShowPaymentModal(false)
     // Prepare sale data
     const userId = typeof window !== "undefined" ? localStorage.getItem('UserId') : null;
-    
+
     try {
       const saleData = {
         reference: `SL-${Date.now()}`,
@@ -227,7 +229,7 @@ export default function POSSystem() {
           payment_note: paymentNote,
         },
       };
-      
+
       const createdSale = await createSale(saleData).unwrap();
       toast.success("Sale created successfully!");
 
@@ -263,6 +265,37 @@ export default function POSSystem() {
         } catch (fiscalError: any) {
           console.error("Failed to submit fiscal invoice:", fiscalError);
           toast.warning("Sale completed but fiscal submission failed. Check FDMS status.");
+        }
+      }
+
+      // Auto-print receipt if enabled
+      const printerSettings = getPrinterSettings()
+      if (printerSettings?.autoPrint) {
+        const receiptData = {
+          reference: saleData.reference,
+          date: saleData.date,
+          items: cartItems.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.price * item.quantity
+          })),
+          subtotal: saleData.subtotal,
+          tax: saleData.tax_amount,
+          discount: saleData.discount,
+          shipping: saleData.shipping,
+          total: saleData.total,
+          payment_method: paymentChoice,
+          cashier: typeof window !== 'undefined' ? localStorage.getItem("username") || "Cashier" : "Cashier",
+          customer_name: selectedCustomer !== "walkin" ? customersData?.find(c => c.id === selectedCustomer)?.name : undefined,
+          zimra_qr: createdSale.data?.zimra_qr_code
+        }
+
+        try {
+          printReceipt(receiptData)
+        } catch (printError) {
+          console.error("Print error:", printError)
+          toast.warning("Sale completed but printing failed")
         }
       }
 
@@ -398,33 +431,33 @@ export default function POSSystem() {
               )}
             </button>
 
-             <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="p-0 rounded bg-transparent hover:bg-blue-50"
-                  style={{ fontSize: "13px" }}
-                  onClick={() => setProfileOpen((open) => !open)}
-                >
-                  <div className="w-8 h-8 bg-[#1a237e] rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm">U</span>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-0 rounded bg-transparent hover:bg-blue-50"
+                style={{ fontSize: "13px" }}
+                onClick={() => setProfileOpen((open) => !open)}
+              >
+                <div className="w-8 h-8 bg-[#1a237e] rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">U</span>
+                </div>
+              </Button>
+              {profileOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-4 py-3">
+                    <div className="font-semibold text-gray-800">{typeof window !== "undefined" ? localStorage.getItem("username") || "Username" : "Username"}</div>
+                    <div className="text-sm text-gray-500">{typeof window !== "undefined" ? localStorage.getItem("email") || "user@email.com" : "user@email.com"}</div>
                   </div>
-                </Button>
-                {profileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                    <div className="px-4 py-3">
-                      <div className="font-semibold text-gray-800">{typeof window !== "undefined" ? localStorage.getItem("username") || "Username" : "Username"}</div>
-                      <div className="text-sm text-gray-500">{typeof window !== "undefined" ? localStorage.getItem("email") || "user@email.com" : "user@email.com"}</div>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 border-t"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
