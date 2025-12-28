@@ -170,12 +170,58 @@ export async function POST(req: NextRequest) {
             }
           })
 
-          // Decrement stock from source product
+          // Handle stock movement if transfer is completed
           if (body.status === 'completed' || body.status === 'sent') {
+            // Get source product details
+            const sourceProduct = await tx.products.findUnique({
+              where: { id: item.product_id }
+            })
+
+            if (!sourceProduct) {
+              throw new Error(`Product with ID ${item.product_id} not found`)
+            }
+
+            // Decrement stock from source warehouse
             await tx.products.update({
               where: { id: item.product_id },
               data: { stock: { decrement: quantity } }
             })
+
+            // Check if product exists in destination warehouse
+            const destProduct = await tx.products.findFirst({
+              where: {
+                code: sourceProduct.code,
+                warehouse_id: parseInt(body.to_warehouse_id)
+              }
+            })
+
+            if (destProduct) {
+              // Product exists in destination, increment stock
+              await tx.products.update({
+                where: { id: destProduct.id },
+                data: { stock: { increment: quantity } }
+              })
+            } else {
+              // Product doesn't exist in destination, create it
+              await tx.products.create({
+                data: {
+                  name: sourceProduct.name,
+                  code: sourceProduct.code,
+                  barcode: sourceProduct.barcode,
+                  category_id: sourceProduct.category_id,
+                  brand_id: sourceProduct.brand_id,
+                  unit_id: sourceProduct.unit_id,
+                  warehouse_id: parseInt(body.to_warehouse_id),
+                  cost: sourceProduct.cost,
+                  price: sourceProduct.price,
+                  stock: quantity,
+                  alert_quantity: sourceProduct.alert_quantity,
+                  description: sourceProduct.description,
+                  image: sourceProduct.image,
+                  status: sourceProduct.status
+                }
+              })
+            }
           }
         }
       }
@@ -198,26 +244,52 @@ export async function PUT(req: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const transferId = parseInt(body.id)
 
-      // 1. Fetch existing items to restore stock if needed
-      const existingItems = await tx.transfer_items.findMany({
-        where: { transfer_id: transferId }
-      })
-
+      // 1. Fetch existing transfer and items
       const existingTransfer = await tx.transfers.findUnique({
-        where: { id: transferId }
+        where: { id: transferId },
+        include: {
+          transfer_items: {
+            include: {
+              products: true
+            }
+          }
+        }
       })
 
-      // Restore stock if it was previously deducted (status was completed/sent)
-      if (existingTransfer && (existingTransfer.status === 'completed' || existingTransfer.status === 'sent')) {
-        for (const item of existingItems) {
+      if (!existingTransfer) {
+        throw new Error('Transfer not found')
+      }
+
+      // 2. Reverse stock movements if transfer was previously completed/sent
+      if (existingTransfer.status === 'completed' || existingTransfer.status === 'sent') {
+        for (const item of existingTransfer.transfer_items) {
+          const quantity = parseFloat(item.quantity.toString())
+          const sourceProduct = item.products
+
+          // Restore stock to source warehouse
           await tx.products.update({
             where: { id: item.product_id },
-            data: { stock: { increment: item.quantity } }
+            data: { stock: { increment: quantity } }
           })
+
+          // Remove stock from destination warehouse
+          const destProduct = await tx.products.findFirst({
+            where: {
+              code: sourceProduct.code,
+              warehouse_id: existingTransfer.to_warehouse_id
+            }
+          })
+
+          if (destProduct) {
+            await tx.products.update({
+              where: { id: destProduct.id },
+              data: { stock: { decrement: quantity } }
+            })
+          }
         }
       }
 
-      // 2. Update transfer
+      // 3. Update transfer
       const transfer = await tx.transfers.update({
         where: { id: transferId },
         data: {
@@ -237,12 +309,12 @@ export async function PUT(req: NextRequest) {
         }
       })
 
-      // 3. Delete existing items
+      // 4. Delete existing items
       await tx.transfer_items.deleteMany({
         where: { transfer_id: transfer.id }
       })
 
-      // 4. Create new items and deduct stock
+      // 5. Create new items and apply stock movements
       if (body.items && Array.isArray(body.items)) {
         for (const item of body.items) {
           const quantity = parseFloat(item.quantity)
@@ -259,12 +331,55 @@ export async function PUT(req: NextRequest) {
             }
           })
 
-          // Decrement stock for new items if status is completed/sent
+          // Apply stock movements if new status is completed/sent
           if (body.status === 'completed' || body.status === 'sent') {
+            const sourceProduct = await tx.products.findUnique({
+              where: { id: item.product_id }
+            })
+
+            if (!sourceProduct) {
+              throw new Error(`Product with ID ${item.product_id} not found`)
+            }
+
+            // Decrement from source
             await tx.products.update({
               where: { id: item.product_id },
               data: { stock: { decrement: quantity } }
             })
+
+            // Check destination
+            const destProduct = await tx.products.findFirst({
+              where: {
+                code: sourceProduct.code,
+                warehouse_id: parseInt(body.to_warehouse_id)
+              }
+            })
+
+            if (destProduct) {
+              await tx.products.update({
+                where: { id: destProduct.id },
+                data: { stock: { increment: quantity } }
+              })
+            } else {
+              await tx.products.create({
+                data: {
+                  name: sourceProduct.name,
+                  code: sourceProduct.code,
+                  barcode: sourceProduct.barcode,
+                  category_id: sourceProduct.category_id,
+                  brand_id: sourceProduct.brand_id,
+                  unit_id: sourceProduct.unit_id,
+                  warehouse_id: parseInt(body.to_warehouse_id),
+                  cost: sourceProduct.cost,
+                  price: sourceProduct.price,
+                  stock: quantity,
+                  alert_quantity: sourceProduct.alert_quantity,
+                  description: sourceProduct.description,
+                  image: sourceProduct.image,
+                  status: sourceProduct.status
+                }
+              })
+            }
           }
         }
       }
@@ -288,21 +403,48 @@ export async function DELETE(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       const transferId = parseInt(id)
 
-      // Fetch items and transfer status to decide if stock needs restoration
-      const items = await tx.transfer_items.findMany({
-        where: { transfer_id: transferId }
-      })
+      // Fetch transfer and items with product details
       const transfer = await tx.transfers.findUnique({
-        where: { id: transferId }
+        where: { id: transferId },
+        include: {
+          transfer_items: {
+            include: {
+              products: true
+            }
+          }
+        }
       })
 
-      // Restore stock if transfer was completed/sent
-      if (transfer && (transfer.status === 'completed' || transfer.status === 'sent')) {
-        for (const item of items) {
+      if (!transfer) {
+        throw new Error('Transfer not found')
+      }
+
+      // Reverse stock movements if transfer was completed/sent
+      if (transfer.status === 'completed' || transfer.status === 'sent') {
+        for (const item of transfer.transfer_items) {
+          const quantity = parseFloat(item.quantity.toString())
+          const sourceProduct = item.products
+
+          // Restore stock to source warehouse
           await tx.products.update({
             where: { id: item.product_id },
-            data: { stock: { increment: item.quantity } }
+            data: { stock: { increment: quantity } }
           })
+
+          // Remove stock from destination warehouse
+          const destProduct = await tx.products.findFirst({
+            where: {
+              code: sourceProduct.code,
+              warehouse_id: transfer.to_warehouse_id
+            }
+          })
+
+          if (destProduct) {
+            await tx.products.update({
+              where: { id: destProduct.id },
+              data: { stock: { decrement: quantity } }
+            })
+          }
         }
       }
 

@@ -230,14 +230,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<Product |
       )
     }
 
-    // Check if code already exists
-    const existingProduct = await prisma.products.findUnique({
-      where: { code }
+    // Check if code already exists in the same warehouse
+    const existingProduct = await prisma.products.findFirst({
+      where: {
+        code,
+        warehouse_id: parsedWarehouseId
+      }
     })
 
     if (existingProduct) {
       return NextResponse.json(
-        { error: "Product code already exists" },
+        { error: "Product code already exists in this warehouse" },
         { status: 400 }
       )
     }
@@ -361,15 +364,18 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Product | 
       )
     }
 
-    // Check if code is being changed and if it already exists
+    // Check if code is being changed and if it already exists in the same warehouse
     if (code && code !== existingProduct.code) {
-      const duplicateCode = await prisma.products.findUnique({
-        where: { code }
+      const duplicateCode = await prisma.products.findFirst({
+        where: {
+          code,
+          warehouse_id: warehouse_id ? parseInt(warehouse_id) : existingProduct.warehouse_id
+        }
       })
 
       if (duplicateCode) {
         return NextResponse.json(
-          { error: "Product code already exists" },
+          { error: "Product code already exists in this warehouse" },
           { status: 400 }
         )
       }
@@ -484,15 +490,18 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Product 
       )
     }
 
-    // Check code uniqueness if being updated
+    // Check code uniqueness if being updated (within same warehouse)
     if (body.code && body.code !== existingProduct.code) {
-      const duplicateCode = await prisma.products.findUnique({
-        where: { code: body.code }
+      const duplicateCode = await prisma.products.findFirst({
+        where: {
+          code: body.code,
+          warehouse_id: body.warehouse_id !== undefined ? parseInt(body.warehouse_id) : existingProduct.warehouse_id
+        }
       })
 
       if (duplicateCode) {
         return NextResponse.json(
-          { error: "Product code already exists" },
+          { error: "Product code already exists in this warehouse" },
           { status: 400 }
         )
       }
