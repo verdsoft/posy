@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState} from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   BarChart3,
@@ -20,14 +20,14 @@ import {
   ChevronDown,
   Home,
   TrendingUp,
- 
+
   CreditCard,
   UserCheck,
   RefreshCw,
- 
+
   Receipt,
   Truck,
- 
+
   Zap,
   FileCheck
 } from "lucide-react"
@@ -39,7 +39,7 @@ import AuthGuard from "./AuthGuard"
 import { useGetSystemSettingsQuery } from "@/lib/slices/settingsApi"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
-type IconType =| typeof BarChart3 | typeof Package | typeof Settings | typeof FileText | typeof ShoppingCart | typeof Users | typeof ArrowLeftRight | typeof DollarSign | typeof RotateCcw | typeof Menu | typeof Bell | typeof Maximize2 | typeof Minimize2 | typeof ChevronRight | typeof ChevronDown;  
+type IconType = | typeof BarChart3 | typeof Package | typeof Settings | typeof FileText | typeof ShoppingCart | typeof Users | typeof ArrowLeftRight | typeof DollarSign | typeof RotateCcw | typeof Menu | typeof Bell | typeof Maximize2 | typeof Minimize2 | typeof ChevronRight | typeof ChevronDown;
 type UserRole = 'admin' | 'user';
 
 const menuItems = [
@@ -171,6 +171,17 @@ const menuItems = [
     ],
   },
   {
+    id: "stock-take",
+    label: "Stock Take",
+    icon: FileCheck,
+    roles: ['admin'],
+    category: "inventory",
+    submenu: [
+      { label: "Create Stock Take", href: "/stock-take/create" },
+      { label: "Stock Take List", href: "/stock-take/list" },
+    ],
+  },
+  {
     id: "people",
     label: "Contacts",
     icon: Users,
@@ -227,6 +238,7 @@ const menuItems = [
       { label: "Brands", href: "/settings/brands" },
       { label: "Currency", href: "/settings/currencies" },
       { label: "Units", href: "/settings/units" },
+      { label: "Printer", href: "/settings/printer" },
       { label: "Backup", href: "/settings/backup" },
       { label: "System Config", href: "/settings/systems" },
       { label: "ZIMRA FDMS", href: "/settings/fdms" },
@@ -248,7 +260,7 @@ const menuItems = [
 
 interface SubMenuItem {
   label: string;
-  href?: string; 
+  href?: string;
   roles?: string[];
   submenu?: SubMenuItem[];
 }
@@ -281,11 +293,10 @@ const MenuItemComponent = ({
     <div className="relative">
       {/* Main Item */}
       <div
-        className={`group relative flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-2'} py-2 rounded-md cursor-pointer transition-colors ${
-          active
-            ? "bg-blue-50 text-[#1a237e] border-l-4 border-[#1a237e]"
-            : "text-gray-700 hover:bg-gray-50"
-        }`}
+        className={`group relative flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-2'} py-2 rounded-md cursor-pointer transition-colors ${active
+          ? "bg-blue-50 text-[#1a237e] border-l-4 border-[#1a237e]"
+          : "text-gray-700 hover:bg-gray-50"
+          }`}
         onClick={() => item.submenu && onToggle()}
       >
         <div className="flex-shrink-0">
@@ -314,9 +325,8 @@ const MenuItemComponent = ({
 
             {item.submenu && (
               <ChevronRight
-                className={`h-4 w-4 transition-transform flex-shrink-0 ${
-                  isExpanded ? 'rotate-90' : ''
-                } ${active ? 'text-[#1a237e]' : 'text-gray-400'}`}
+                className={`h-4 w-4 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''
+                  } ${active ? 'text-[#1a237e]' : 'text-gray-400'}`}
               />
             )}
           </>
@@ -339,11 +349,10 @@ const MenuItemComponent = ({
               <Link
                 key={index}
                 href={subItem.href || "#"}
-                className={`flex items-center gap-3 px-3 py-1.5 rounded text-sm transition-colors ${
-                  subActive
-                    ? "bg-blue-50 text-[#1a237e] font-medium"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
+                className={`flex items-center gap-3 px-3 py-1.5 rounded text-sm transition-colors ${subActive
+                  ? "bg-blue-50 text-[#1a237e] font-medium"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
               >
                 <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
                 <span className="truncate">{subItem.label}</span>
@@ -363,11 +372,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
   const pathname = usePathname()
-   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768)
+      }
+      checkMobile()
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
+    }
+  }, [])
 
   // Get user role (replace with your actual auth logic)
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('UserRole') || 'user' : 'user'
@@ -377,7 +400,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     router.push("/")
   }
 
-    const toggleFullScreen = () => {
+  const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
@@ -390,6 +413,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       }
     }
   };
+
+  const handleMenuToggle = () => {
+    if (isMobile) {
+      setIsMobileMenuOpen(!isMobileMenuOpen)
+    } else {
+      setSidebarOpen(!sidebarOpen)
+    }
+  }
+
+  const closeMobileMenu = () => {
+    if (isMobile) {
+      setIsMobileMenuOpen(false)
+    }
+  }
 
   const isActive = (href?: string) => {
     if (!href) return false
@@ -433,111 +470,129 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // Filter submenu items based on role
-const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
-  return submenu.filter(subItem => {
-    if (!subItem.roles) return true;
-    return subItem.roles.includes(userRole as UserRole);
-  });
-};
+  const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
+    return submenu.filter(subItem => {
+      if (!subItem.roles) return true;
+      return subItem.roles.includes(userRole as UserRole);
+    });
+  };
+
+  const sidebarContent = (
+    <>
+      {/* Sidebar Header */}
+      <div className="pl-4 p-2 border-b border-gray-200">
+        <Link href="/dashboard" className="flex items-center gap-3 w-full" onClick={closeMobileMenu}>
+          <div className={`${sidebarOpen ? "w-10 h-10" : "w-8 h-8"} bg-[#1a237e] rounded-2xl flex items-center justify-center transition-all duration-300`}>
+            <img
+              src={systemSettings?.system_logo || "/PosyLogo.png"}
+              alt="POSy Logo"
+              className="w-6 h-6 object-contain filter brightness-0 invert"
+            />
+          </div>
+          {sidebarOpen && (
+            <div className="flex flex-col">
+              <span className="font-semibold text-lg text-gray-900">
+                {systemSettings?.system_title || "POSy"}
+              </span>
+              <span className="text-gray-500 text-sm">Business Suite</span>
+            </div>
+          )}
+        </Link>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto">
+        <div className={`${sidebarOpen ? 'px-4' : 'px-2'} py-2`}>
+          {/* Categorized Navigation */}
+          <div className="space-y-6">
+            {categoryOrder.map(category => {
+              const items = groupedMenuItems[category]
+              if (!items || items.length === 0) return null
+
+              return (
+                <div key={category} className={`${sidebarOpen ? 'space-y-1' : 'space-y-2'}`}>
+                  {sidebarOpen && (
+                    <div className="px-1 mb-3">
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        {categoryLabels[category] || category}
+                      </h3>
+                    </div>
+                  )}
+                  {items.map((item) => (
+                    <div key={item.id} onClick={closeMobileMenu}>
+                      <MenuItemComponent
+                        item={item}
+                        isExpanded={expandedItems[item.id]}
+                        onToggle={() => toggleItem(item.id)}
+                        sidebarOpen={sidebarOpen}
+                        isActive={isActive}
+                        filterSubmenu={filterSubmenu}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </nav>
+    </>
+  )
 
   return (
     <AuthGuard>
       <div className="flex h-screen bg-gray-50">
-        {/* Simple Clean Sidebar */}
-        <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-full overflow-hidden`}>
+        {/* Mobile Backdrop */}
+        {isMobile && isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={closeMobileMenu}
+          />
+        )}
 
-          {/* Sidebar Header */}
-          <div className="pl-4 p-2 border-b border-gray-200">
-            <Link href="/dashboard" className="flex items-center gap-3 w-full">
-              <div className={`${sidebarOpen ? "w-10 h-10" : "w-8 h-8"} bg-[#1a237e] rounded-2xl flex items-center justify-center transition-all duration-300`}>
-                <img
-                  src={systemSettings?.system_logo || "/PosyLogo.png"}
-                  alt="POSy Logo"
-                  className="w-6 h-6 object-contain filter brightness-0 invert"
-                />
-              </div>
-              {sidebarOpen && (
-                <div className="flex flex-col">
-                  <span className="font-semibold text-lg text-gray-900">
-                    {systemSettings?.system_title || "POSy"}
-                  </span>
-                  <span className="text-gray-500 text-sm">Business Suite</span>
-                </div>
-              )}
-            </Link>
-          </div>
+        {/* Sidebar - Desktop */}
+        <div className={`hidden md:flex ${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 flex-col h-full overflow-hidden`}>
+          {sidebarContent}
+        </div>
 
-
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto">
-            <div className={`${sidebarOpen ? 'px-4' : 'px-2'} py-2`}>
-              {/* Categorized Navigation */}
-              <div className="space-y-6">
-                {categoryOrder.map(category => {
-                  const items = groupedMenuItems[category]
-                  if (!items || items.length === 0) return null
-
-                  return (
-                    <div key={category} className={`${sidebarOpen ? 'space-y-1' : 'space-y-2'}`}>
-                      {sidebarOpen && (
-                        <div className="px-1 mb-3">
-                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            {categoryLabels[category] || category}
-                          </h3>
-                        </div>
-                      )}
-                      {items.map((item) => (
-                        <MenuItemComponent
-                          key={item.id}
-                          item={item}
-                          isExpanded={expandedItems[item.id]}
-                          onToggle={() => toggleItem(item.id)}
-                          sidebarOpen={sidebarOpen}
-                          isActive={isActive}
-                          filterSubmenu={filterSubmenu}
-                        />
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </nav>
-
+        {/* Sidebar - Mobile (Overlay) */}
+        <div className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 flex flex-col overflow-hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+          {sidebarContent}
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Header - Exactly as in your original design */}
-          <header className="bg-white border-b px-6 py-3 flex items-center justify-between shadow-none" style={{ fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif", fontSize: "14px" }}>
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }} onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <header className="bg-white border-b px-4 md:px-6 py-3 flex items-center justify-between shadow-none" style={{ fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif", fontSize: "14px" }}>
+            <div className="flex items-center gap-2 md:gap-4">
+              <Button variant="ghost" size="sm" className="rounded bg-transparent hover:bg-blue-50 text-blue-900 p-2" style={{ fontSize: "13px" }} onClick={handleMenuToggle}>
                 <Menu className="h-5 w-5" />
               </Button>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <Link href="/pos">
-                <Button className="bg-[#1a237e] hover:bg-[#23308c] text-white rounded shadow-none" style={{ fontSize: "13px" }}>
+                <Button className="bg-[#1a237e] hover:bg-[#23308c] text-white rounded shadow-none text-xs md:text-sm px-3 md:px-4 h-8 md:h-9" style={{ fontSize: "13px" }}>
                   POS
                 </Button>
               </Link>
-             <button
-              onClick={toggleFullScreen}
-              type="button"
-              aria-label={isFullScreen ? "Exit full screen" : "Enter full screen"}
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {isFullScreen ? (
-                <Minimize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              ) : (
-                <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              )}
-            </button>
+              <button
+                onClick={toggleFullScreen}
+                type="button"
+                aria-label={isFullScreen ? "Exit full screen" : "Enter full screen"}
+                className="hidden md:block p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                {isFullScreen ? (
+                  <Minimize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                ) : (
+                  <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                )}
+              </button>
 
 
               <NotificationsDropdown />
-              
+
               {/* Profile Dropdown */}
               <div className="relative">
                 <Button
@@ -581,7 +636,7 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
           <footer className="bg-gray-100 px-6 py-3 border-t">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-6 h-6  rounded flex items-center justify-center">
-               <img src={systemSettings?.system_logo || "/PosyLogo.png"} alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
+                <img src={systemSettings?.system_logo || "/PosyLogo.png"} alt="POSy Logo" width={64} height={64} className="w-full h-full object-cover" />
               </div>
               <span>© 2025 Developed by Verdsoft </span>
               <span className="ml-auto">All rights reserved</span>

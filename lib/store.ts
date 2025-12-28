@@ -18,7 +18,7 @@ import { settingsApi } from "./slices/settingsApi"
 import { expensesApi } from "./slices/expensesApi"
 import { returnsApi } from "./slices/returnsApi"
 import { suppliersApi } from "./slices/suppliersApi"
-import { reportsApi } from "./slices/reportsApi" 
+import { reportsApi } from "./slices/reportsApi"
 import { paymentsApi } from "./slices/paymentsApi"
 import { hrmApi } from "./slices/hrmApi"
 import { transfersApi } from "./slices/transfersApi"
@@ -38,6 +38,7 @@ import { unitsApi } from "./slices/unitsApi"
 import { warehousesApi } from "./slices/warehousesApi"
 import { hrmV2Api } from "./slices/hrmV2Api"
 import { invoicesV2Api } from "./slices/invoicesV2Api"
+import { stockTakesApi } from "./slices/stockTakesApi"
 
 export const store = configureStore({
   reducer: {
@@ -60,7 +61,7 @@ export const store = configureStore({
     [expensesApi.reducerPath]: expensesApi.reducer,
     [returnsApi.reducerPath]: returnsApi.reducer,
     [suppliersApi.reducerPath]: suppliersApi.reducer,
-    [reportsApi.reducerPath]: reportsApi.reducer, 
+    [reportsApi.reducerPath]: reportsApi.reducer,
     [paymentsApi.reducerPath]: paymentsApi.reducer,
     [hrmApi.reducerPath]: hrmApi.reducer,
     [transfersApi.reducerPath]: transfersApi.reducer,
@@ -80,6 +81,7 @@ export const store = configureStore({
     [warehousesApi.reducerPath]: warehousesApi.reducer,
     [hrmV2Api.reducerPath]: hrmV2Api.reducer,
     [invoicesV2Api.reducerPath]: invoicesV2Api.reducer,
+    [stockTakesApi.reducerPath]: stockTakesApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -93,7 +95,7 @@ export const store = configureStore({
       expensesApi.middleware,
       returnsApi.middleware,
       suppliersApi.middleware,
-      reportsApi.middleware, 
+      reportsApi.middleware,
       paymentsApi.middleware,
       hrmApi.middleware,
       transfersApi.middleware,
@@ -112,7 +114,8 @@ export const store = configureStore({
       unitsApi.middleware,
       warehousesApi.middleware,
       hrmV2Api.middleware,
-      invoicesV2Api.middleware
+      invoicesV2Api.middleware,
+      stockTakesApi.middleware
     ),
 })
 
